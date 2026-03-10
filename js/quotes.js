@@ -41,6 +41,7 @@ const Quotes = (() => {
     card.innerHTML = `
       <div class="quote-ticker">${quote.ticker}</div>
       <div class="quote-price">${formatPrice(quote.price)}</div>
+      <div class="quote-label">${quote.label || "Price"}</div>
       <div class="quote-change">
         <span class="quote-change-value">${changeStr}</span>
         <span class="quote-change-percent">${changePercentStr}</span>
