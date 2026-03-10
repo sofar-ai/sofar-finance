@@ -1,16 +1,52 @@
 /**
  * Serverless API: Prev close quote from Polygon.io (free tier)
- * Falls back to Yahoo Finance for indices not on Polygon free tier.
+ * Falls back to Yahoo Finance for indices + commodities.
  * GET /api/quote?ticker=SPY
  * GET /api/quote?ticker=I:NKY
+ * GET /api/quote?ticker=GOLD  (routes straight to Yahoo)
  */
 
-const YAHOO_MAP = {
+// Index tickers: try Polygon first, fallback to Yahoo
+const YAHOO_INDEX_MAP = {
   'I:NKY':   '^N225',
   'I:TPX':   '^TOPX',
   'I:KOSPI': '^KS11',
   'I:TAIEX': '^TWII',
 };
+
+// Commodity tickers: go straight to Yahoo (more reliable)
+const YAHOO_COMMODITY_MAP = {
+  'BTCUSD': 'BTC-USD',
+  'GOLD':   'GC=F',
+  'SILVER': 'SI=F',
+};
+
+async function fetchYahooByTicker(yahooTicker, displayTicker) {
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooTicker)}?interval=1d&range=1d`;
+  const res = await fetch(url, {
+    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SofarFinance/1.0)' },
+  });
+  if (!res.ok) throw new Error(`Yahoo ${res.status}`);
+  const data = await res.json();
+  const meta = data.chart?.result?.[0]?.meta;
+  if (!meta) throw new Error('No Yahoo data');
+  const price = meta.regularMarketPrice ?? meta.previousClose;
+  const prev  = meta.previousClose ?? meta.chartPreviousClose;
+  return {
+    ticker: displayTicker,
+    price,
+    label: 'Prev Close',
+    change: prev ? (price - prev).toFixed(2) : '0.00',
+    changePercent: prev ? ((price - prev) / prev * 100).toFixed(2) : '0.00',
+    high: meta.regularMarketDayHigh,
+    low: meta.regularMarketDayLow,
+    volume: meta.regularMarketVolume,
+    timestamp: meta.regularMarketTime
+      ? new Date(meta.regularMarketTime * 1000).toISOString()
+      : new Date().toISOString(),
+    source: 'yahoo',
+  };
+}
 
 async function fetchPolygon(ticker, apiKey) {
   const url = `https://api.polygon.io/v2/aggs/ticker/${encodeURIComponent(ticker)}/prev?adjusted=true&apiKey=${apiKey}`;
@@ -33,35 +69,6 @@ async function fetchPolygon(ticker, apiKey) {
   };
 }
 
-async function fetchYahoo(polygonTicker) {
-  const yahooTicker = YAHOO_MAP[polygonTicker];
-  if (!yahooTicker) throw new Error(`No Yahoo mapping for ${polygonTicker}`);
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooTicker)}?interval=1d&range=1d`;
-  const res = await fetch(url, {
-    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SofarFinance/1.0)' },
-  });
-  if (!res.ok) throw new Error(`Yahoo ${res.status}`);
-  const data = await res.json();
-  const meta = data.chart?.result?.[0]?.meta;
-  if (!meta) throw new Error('No Yahoo data');
-  const price = meta.regularMarketPrice ?? meta.previousClose;
-  const prev  = meta.previousClose ?? meta.chartPreviousClose;
-  return {
-    ticker: polygonTicker.includes(':') ? polygonTicker.split(':')[1] : polygonTicker,
-    price,
-    label: 'Prev Close',
-    change: prev ? (price - prev).toFixed(2) : '0.00',
-    changePercent: prev ? ((price - prev) / prev * 100).toFixed(2) : '0.00',
-    high: meta.regularMarketDayHigh,
-    low: meta.regularMarketDayLow,
-    volume: meta.regularMarketVolume,
-    timestamp: meta.regularMarketTime
-      ? new Date(meta.regularMarketTime * 1000).toISOString()
-      : new Date().toISOString(),
-    source: 'yahoo',
-  };
-}
-
 export default async function handler(req, res) {
   const { ticker = 'SPY' } = req.query;
   const apiKey = process.env.POLYGON_API_KEY;
@@ -69,13 +76,24 @@ export default async function handler(req, res) {
 
   try {
     let quote;
-    try {
+
+    // Commodities: straight to Yahoo
+    if (YAHOO_COMMODITY_MAP[ticker]) {
+      quote = await fetchYahooByTicker(YAHOO_COMMODITY_MAP[ticker], ticker);
+
+    // Indices: Polygon first, Yahoo fallback
+    } else if (YAHOO_INDEX_MAP[ticker]) {
+      try {
+        quote = await fetchPolygon(ticker, apiKey);
+      } catch {
+        quote = await fetchYahooByTicker(YAHOO_INDEX_MAP[ticker], ticker.split(':')[1]);
+      }
+
+    // Everything else (SPY, QQQ, etc.): Polygon
+    } else {
       quote = await fetchPolygon(ticker, apiKey);
-    } catch (polygonErr) {
-      console.warn(`Polygon failed for ${ticker}: ${polygonErr.message} — trying Yahoo`);
-      quote = await fetchYahoo(ticker);
     }
-    // Prev close data doesn't change intraday — cache aggressively
+
     res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
     res.status(200).json(quote);
   } catch (err) {

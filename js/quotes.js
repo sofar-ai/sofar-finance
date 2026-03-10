@@ -1,12 +1,23 @@
 /**
- * Quotes Component — sofar-finance (vertical sidebar list, 3-col layout)
+ * Quotes Component — vertical grid sidebar, 3-col layout
  * Clicking a ticker loads it in the chart.
  */
 
 const Quotes = (() => {
-  const TICKERS = ['SPY', 'QQQ', 'I:NKY', 'I:KOSPI', 'I:TAIEX'];
+  const MARKET_TICKERS    = ['SPY', 'QQQ', 'I:NKY', 'I:KOSPI', 'I:TAIEX'];
+  const COMMODITY_TICKERS = ['BTCUSD', 'GOLD', 'SILVER'];
+
+  const DISPLAY_NAMES = {
+    'BTCUSD': 'BTC',
+    'GOLD':   'GOLD',
+    'SILVER': 'SLVR',
+    'I:NKY':  'NKY',
+    'I:KOSPI':'KOSP',
+    'I:TAIEX':'TWII',
+  };
 
   function displayName(ticker) {
+    if (DISPLAY_NAMES[ticker]) return DISPLAY_NAMES[ticker];
     return ticker.includes(':') ? ticker.split(':')[1] : ticker;
   }
 
@@ -14,6 +25,9 @@ const Quotes = (() => {
     if (p == null) return '—';
     const n = typeof p === 'number' ? p : parseFloat(p);
     if (isNaN(n)) return '—';
+    // Compact for large numbers (BTC, KRW)
+    if (n >= 10000) return n.toLocaleString(undefined, { maximumFractionDigits: 0 });
+    if (n >= 1000)  return n.toLocaleString(undefined, { maximumFractionDigits: 1 });
     return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
@@ -24,29 +38,29 @@ const Quotes = (() => {
     const pctStr = isNaN(pct) ? '—' : (isUp ? `+${pct.toFixed(2)}%` : `${pct.toFixed(2)}%`);
 
     const item = document.createElement('div');
-    item.className = `quote-list-item ${colorClass}`;
+    item.className = `quote-grid-item ${colorClass}`;
     item.dataset.ticker = originalTicker;
     item.title = `Load ${displayName(originalTicker)} chart`;
     item.innerHTML = `
-      <span class="qli-ticker">${displayName(quote.ticker || originalTicker)}</span>
-      <span class="qli-right">
-        <span class="qli-price">${formatPrice(quote.price)}</span>
-        <span class="qli-change">${pctStr}</span>
-      </span>
+      <div class="qgi-ticker">${displayName(originalTicker)}</div>
+      <div class="qgi-price">${formatPrice(quote.price)}</div>
+      <div class="qgi-change">${pctStr}</div>
     `;
+    // Fix: ChartComponent is const in global scope, not on window
     item.addEventListener('click', () => {
-      if (window.ChartComponent) ChartComponent.loadTicker(originalTicker);
+      try { ChartComponent.loadTicker(originalTicker); } catch(e) { console.warn('[Quotes] chart not ready', e); }
     });
     return item;
   }
 
   function renderErrorItem(ticker) {
     const item = document.createElement('div');
-    item.className = 'quote-list-item qli-neutral';
+    item.className = 'quote-grid-item qli-neutral';
     item.dataset.ticker = ticker;
     item.innerHTML = `
-      <span class="qli-ticker">${displayName(ticker)}</span>
-      <span class="qli-right"><span class="qli-price qli-muted">—</span></span>
+      <div class="qgi-ticker">${displayName(ticker)}</div>
+      <div class="qgi-price qgi-muted">—</div>
+      <div class="qgi-change qgi-muted">—</div>
     `;
     return item;
   }
@@ -59,28 +73,33 @@ const Quotes = (() => {
     return data;
   }
 
-  async function init(containerId) {
+  async function loadSection(containerId, tickers) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    container.innerHTML = TICKERS.map(t =>
-      `<div class="quote-list-item qli-neutral"><span class="qli-ticker">${displayName(t)}</span><span class="qli-right qli-muted">…</span></div>`
+    container.innerHTML = tickers.map(t =>
+      `<div class="quote-grid-item qli-neutral"><div class="qgi-ticker">${displayName(t)}</div><div class="qgi-price qgi-muted">…</div><div class="qgi-change"></div></div>`
     ).join('');
 
-    const results = await Promise.allSettled(TICKERS.map(fetchQuote));
+    const results = await Promise.allSettled(tickers.map(fetchQuote));
     container.innerHTML = '';
     results.forEach((result, i) => {
       if (result.status === 'fulfilled') {
-        container.appendChild(renderItem(result.value, TICKERS[i]));
+        container.appendChild(renderItem(result.value, tickers[i]));
       } else {
-        console.error(`[Quotes] ${TICKERS[i]}:`, result.reason?.message);
-        container.appendChild(renderErrorItem(TICKERS[i]));
+        console.error(`[Quotes] ${tickers[i]}:`, result.reason?.message);
+        container.appendChild(renderErrorItem(tickers[i]));
       }
     });
 
-    // Default active: SPY
+    // Default active on SPY
     const spyItem = container.querySelector('[data-ticker="SPY"]');
     if (spyItem) spyItem.classList.add('active');
+  }
+
+  function init(marketId, commodityId) {
+    loadSection(marketId, MARKET_TICKERS);
+    loadSection(commodityId, COMMODITY_TICKERS);
   }
 
   return { init };
