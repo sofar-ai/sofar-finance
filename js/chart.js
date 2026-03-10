@@ -83,6 +83,8 @@ const ChartComponent = (() => {
         color: c.close >= c.open ? 'rgba(34,197,94,0.35)' : 'rgba(239,68,68,0.35)',
       })));
       inst.chart.timeScale().fitContent();
+      inst.candles = data.candles; // store for indicators
+      if (typeof Indicators !== 'undefined') Indicators.applyAll(inst);
 
       const last  = data.candles[data.candles.length - 1];
       const first = data.candles[0];
