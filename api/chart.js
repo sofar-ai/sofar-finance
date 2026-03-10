@@ -4,7 +4,10 @@
  */
 
 export default async function handler(req, res) {
-  const { ticker = 'SPY', timeframe = '1D' } = req.query;
+  const { ticker: rawTicker = 'SPY', timeframe = '1D' } = req.query;
+  // Map friendly ticker names to Polygon format
+  const TICKER_MAP = { 'BTCUSD': 'X:BTCUSD' };
+  const ticker = TICKER_MAP[rawTicker] || rawTicker;
   const apiKey = process.env.POLYGON_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'POLYGON_API_KEY not configured' });
 

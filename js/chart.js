@@ -1,126 +1,102 @@
 /**
- * Chart Component — TradingView Lightweight Charts v4
- * Candlestick + volume histogram, dark Bloomberg theme.
- * Public: init(containerId), loadTicker(ticker), setTimeframe(tf)
- * Modular — TA indicators will be added on top.
+ * Chart Component — 2x2 grid of TradingView Lightweight Charts
+ * Tickers: SPY, QQQ, DJI, BTC
+ * Public: init(), loadTicker(ticker), setTimeframe(tf), getSeries()
  */
 
 const ChartComponent = (() => {
-  let chart = null;
-  let candleSeries = null;
-  let volumeSeries = null;
-  let currentTicker = 'SPY';
+  const CHARTS = [
+    { ticker: 'SPY',    id: 'SPY', display: 'SPY'  },
+    { ticker: 'QQQ',   id: 'QQQ', display: 'QQQ'  },
+    { ticker: 'I:DJI', id: 'DJI', display: 'DJI'  },
+    { ticker: 'BTCUSD',id: 'BTC', display: 'BTC'  },
+  ];
+
+  let instances = {}; // id -> { chart, candleSeries, volumeSeries }
   let currentTimeframe = '1D';
 
-  function initChart(containerId) {
-    const container = document.getElementById(containerId);
-    if (!container || !window.LightweightCharts) {
-      console.error('[Chart] LightweightCharts not loaded or container missing');
-      return;
-    }
+  const CHART_OPTS = {
+    layout: {
+      background: { color: '#0b0e11' },
+      textColor: '#8b929e',
+      fontSize: 10,
+      fontFamily: "'IBM Plex Mono', 'Courier New', monospace",
+    },
+    grid: { vertLines: { color: '#1a1f28' }, horzLines: { color: '#1a1f28' } },
+    crosshair: { mode: 1 /* Normal */ },
+    rightPriceScale: { borderColor: '#252c38', scaleMargins: { top: 0.06, bottom: 0.25 } },
+    timeScale: { borderColor: '#252c38', timeVisible: true, secondsVisible: false },
+    handleScroll: true,
+    handleScale: true,
+  };
 
-    chart = LightweightCharts.createChart(container, {
-      layout: {
-        background: { color: '#0b0e11' },
-        textColor: '#8b929e',
-        fontSize: 11,
-        fontFamily: "'IBM Plex Mono', 'Courier New', monospace",
-      },
-      grid: {
-        vertLines: { color: '#1a1f28' },
-        horzLines: { color: '#1a1f28' },
-      },
-      crosshair: {
-        mode: LightweightCharts.CrosshairMode.Normal,
-        vertLine: { color: '#4a5060', width: 1, style: 2 },
-        horzLine: { color: '#4a5060', width: 1, style: 2 },
-      },
-      rightPriceScale: {
-        borderColor: '#252c38',
-        scaleMargins: { top: 0.08, bottom: 0.28 },
-      },
-      timeScale: {
-        borderColor: '#252c38',
-        timeVisible: true,
-        secondsVisible: false,
-      },
-      handleScroll: true,
-      handleScale: true,
+  function createInstance(canvasId) {
+    const container = document.getElementById(canvasId);
+    if (!container || !window.LightweightCharts) return null;
+
+    const chart = LightweightCharts.createChart(container, CHART_OPTS);
+
+    const candleSeries = chart.addCandlestickSeries({
+      upColor: '#22c55e', downColor: '#ef4444',
+      borderUpColor: '#22c55e', borderDownColor: '#ef4444',
+      wickUpColor: '#22c55e', wickDownColor: '#ef4444',
     });
 
-    candleSeries = chart.addCandlestickSeries({
-      upColor:        '#22c55e',
-      downColor:      '#ef4444',
-      borderUpColor:  '#22c55e',
-      borderDownColor:'#ef4444',
-      wickUpColor:    '#22c55e',
-      wickDownColor:  '#ef4444',
+    const volumeSeries = chart.addHistogramSeries({
+      priceFormat: { type: 'volume' }, priceScaleId: 'vol',
     });
-
-    volumeSeries = chart.addHistogramSeries({
-      priceFormat: { type: 'volume' },
-      priceScaleId: 'volume',
-    });
-
-    chart.priceScale('volume').applyOptions({
-      scaleMargins: { top: 0.78, bottom: 0 },
-    });
+    chart.priceScale('vol').applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
 
     const ro = new ResizeObserver(() => {
       chart.applyOptions({ width: container.clientWidth, height: container.clientHeight });
     });
     ro.observe(container);
     chart.applyOptions({ width: container.clientWidth, height: container.clientHeight });
+
+    return { chart, candleSeries, volumeSeries };
   }
 
-  function setStatus(msg, isError = false) {
-    const el = document.getElementById('chart-status');
+  function setInfo(id, msg, isError) {
+    const el = document.getElementById(`chart-info-${id}`);
     if (el) { el.textContent = msg; el.style.color = isError ? '#ef4444' : '#4a5060'; }
   }
 
-  async function loadChart(ticker, timeframe) {
-    if (!chart) return;
-    currentTicker = ticker;
-    currentTimeframe = timeframe;
-
-    const nameEl  = document.getElementById('chart-ticker');
-    const priceEl = document.getElementById('chart-price');
-    if (nameEl)  nameEl.textContent  = ticker.includes(':') ? ticker.split(':')[1] : ticker;
-    if (priceEl) priceEl.textContent = '—';
-
-    setStatus('Loading…');
-    candleSeries.setData([]);
-    volumeSeries.setData([]);
+  async function loadOne(ticker, id, timeframe) {
+    const inst = instances[id];
+    if (!inst) return;
+    inst.candleSeries.setData([]);
+    inst.volumeSeries.setData([]);
+    setInfo(id, 'Loading…');
 
     try {
       const res = await fetch(`/api/chart?ticker=${encodeURIComponent(ticker)}&timeframe=${timeframe}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.error) throw new Error(data.error);
-      if (!data.candles?.length) throw new Error('No data returned');
+      if (!data.candles?.length) throw new Error('No data');
 
-      candleSeries.setData(data.candles.map(c => ({
+      inst.candleSeries.setData(data.candles.map(c => ({
         time: c.time, open: c.open, high: c.high, low: c.low, close: c.close,
       })));
-
-      volumeSeries.setData(data.candles.map(c => ({
-        time: c.time,
-        value: c.volume,
+      inst.volumeSeries.setData(data.candles.map(c => ({
+        time: c.time, value: c.volume,
         color: c.close >= c.open ? 'rgba(34,197,94,0.35)' : 'rgba(239,68,68,0.35)',
       })));
+      inst.chart.timeScale().fitContent();
 
-      chart.timeScale().fitContent();
-
-      const last = data.candles[data.candles.length - 1];
+      const last  = data.candles[data.candles.length - 1];
+      const first = data.candles[0];
+      const priceEl = document.getElementById(`chart-price-${id}`);
       if (last && priceEl) {
-        priceEl.textContent = last.close.toLocaleString(undefined, {
-          minimumFractionDigits: 2, maximumFractionDigits: 2,
-        });
+        const chg = last.close - first.open;
+        const pct = (chg / first.open * 100).toFixed(2);
+        priceEl.textContent = last.close.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        priceEl.style.color = chg >= 0 ? '#22c55e' : '#ef4444';
+        setInfo(id, (chg >= 0 ? '+' : '') + pct + '%');
       }
-      setStatus(`${data.candles.length} bars · ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`);
     } catch (err) {
-      setStatus(`⚠ ${err.message}`, true);
-      console.error('[Chart]', err);
+      setInfo(id, `⚠ ${err.message}`, true);
+      console.error(`[Chart:${id}]`, err);
     }
   }
 
@@ -129,26 +105,30 @@ const ChartComponent = (() => {
     document.querySelectorAll('.tf-btn').forEach(btn => {
       btn.classList.toggle('active', btn.dataset.tf === tf);
     });
-    loadChart(currentTicker, tf);
+    CHARTS.forEach(({ ticker, id }) => loadOne(ticker, id, tf));
   }
 
   function loadTicker(ticker) {
-    currentTicker = ticker;
-    document.querySelectorAll('.quote-list-item').forEach(el => {
-      el.classList.toggle('active', el.dataset.ticker === ticker);
+    // Highlight the matching chart cell
+    document.querySelectorAll('.chart-grid-cell').forEach(el => {
+      el.classList.toggle('chart-cell-active', el.dataset.ticker === ticker);
     });
-    loadChart(ticker, currentTimeframe);
   }
 
-  // Expose the current series refs so TA indicators can attach
-  function getSeries() { return { chart, candleSeries, volumeSeries }; }
+  function getSeries() { return instances; }
 
-  function init(containerId) {
-    initChart(containerId);
+  function init() {
+    CHARTS.forEach(({ ticker, id }) => {
+      const inst = createInstance(`chart-canvas-${id}`);
+      if (inst) {
+        instances[id] = inst;
+        loadOne(ticker, id, currentTimeframe);
+      }
+    });
+
     document.querySelectorAll('.tf-btn').forEach(btn => {
       btn.addEventListener('click', () => setTimeframe(btn.dataset.tf));
     });
-    loadChart('SPY', '1D');
   }
 
   return { init, loadTicker, setTimeframe, getSeries };

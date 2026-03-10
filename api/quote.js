@@ -12,6 +12,7 @@ const YAHOO_INDEX_MAP = {
   'I:TPX':   '^TOPX',
   'I:KOSPI': '^KS11',
   'I:TAIEX': '^TWII',
+  'I:DJI':   '^DJI',
 };
 
 // Commodity tickers: go straight to Yahoo (more reliable)

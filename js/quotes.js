@@ -1,31 +1,25 @@
 /**
- * Quotes Component — vertical grid sidebar, 3-col layout
- * Clicking a ticker loads it in the chart.
+ * Quotes Component — vertical list sidebar
+ * Clicking a ticker highlights the corresponding chart cell.
  */
 
 const Quotes = (() => {
-  const MARKET_TICKERS    = ['SPY', 'QQQ', 'I:NKY', 'I:KOSPI', 'I:TAIEX'];
+  const MARKET_TICKERS    = ['SPY', 'QQQ', 'I:DJI', 'I:NKY', 'I:KOSPI', 'I:TAIEX'];
   const COMMODITY_TICKERS = ['BTCUSD', 'GOLD', 'SILVER'];
 
   const DISPLAY_NAMES = {
-    'BTCUSD': 'BTC',
-    'GOLD':   'GOLD',
-    'SILVER': 'SLVR',
-    'I:NKY':  'NKY',
-    'I:KOSPI':'KOSP',
-    'I:TAIEX':'TWII',
+    'I:DJI':  'DJI', 'I:NKY': 'NKY', 'I:KOSPI': 'KOSPI', 'I:TAIEX': 'TAIEX',
+    'BTCUSD': 'BTC', 'GOLD':  'GOLD', 'SILVER':  'SLVR',
   };
 
   function displayName(ticker) {
-    if (DISPLAY_NAMES[ticker]) return DISPLAY_NAMES[ticker];
-    return ticker.includes(':') ? ticker.split(':')[1] : ticker;
+    return DISPLAY_NAMES[ticker] || (ticker.includes(':') ? ticker.split(':')[1] : ticker);
   }
 
   function formatPrice(p) {
     if (p == null) return '—';
     const n = typeof p === 'number' ? p : parseFloat(p);
     if (isNaN(n)) return '—';
-    // Compact for large numbers (BTC, KRW)
     if (n >= 10000) return n.toLocaleString(undefined, { maximumFractionDigits: 0 });
     if (n >= 1000)  return n.toLocaleString(undefined, { maximumFractionDigits: 1 });
     return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -38,29 +32,28 @@ const Quotes = (() => {
     const pctStr = isNaN(pct) ? '—' : (isUp ? `+${pct.toFixed(2)}%` : `${pct.toFixed(2)}%`);
 
     const item = document.createElement('div');
-    item.className = `quote-grid-item ${colorClass}`;
+    item.className = `quote-list-item ${colorClass}`;
     item.dataset.ticker = originalTicker;
-    item.title = `Load ${displayName(originalTicker)} chart`;
     item.innerHTML = `
-      <div class="qgi-ticker">${displayName(originalTicker)}</div>
-      <div class="qgi-price">${formatPrice(quote.price)}</div>
-      <div class="qgi-change">${pctStr}</div>
+      <span class="qli-ticker">${displayName(originalTicker)}</span>
+      <span class="qli-right">
+        <span class="qli-price">${formatPrice(quote.price)}</span>
+        <span class="qli-change">${pctStr}</span>
+      </span>
     `;
-    // Fix: ChartComponent is const in global scope, not on window
     item.addEventListener('click', () => {
-      try { ChartComponent.loadTicker(originalTicker); } catch(e) { console.warn('[Quotes] chart not ready', e); }
+      try { ChartComponent.loadTicker(originalTicker); } catch(e) {}
     });
     return item;
   }
 
   function renderErrorItem(ticker) {
     const item = document.createElement('div');
-    item.className = 'quote-grid-item qli-neutral';
+    item.className = 'quote-list-item qli-neutral';
     item.dataset.ticker = ticker;
     item.innerHTML = `
-      <div class="qgi-ticker">${displayName(ticker)}</div>
-      <div class="qgi-price qgi-muted">—</div>
-      <div class="qgi-change qgi-muted">—</div>
+      <span class="qli-ticker">${displayName(ticker)}</span>
+      <span class="qli-right"><span class="qli-price qli-muted">—</span></span>
     `;
     return item;
   }
@@ -76,25 +69,18 @@ const Quotes = (() => {
   async function loadSection(containerId, tickers) {
     const container = document.getElementById(containerId);
     if (!container) return;
-
     container.innerHTML = tickers.map(t =>
-      `<div class="quote-grid-item qli-neutral"><div class="qgi-ticker">${displayName(t)}</div><div class="qgi-price qgi-muted">…</div><div class="qgi-change"></div></div>`
+      `<div class="quote-list-item qli-neutral"><span class="qli-ticker">${displayName(t)}</span><span class="qli-right qli-muted">…</span></div>`
     ).join('');
-
     const results = await Promise.allSettled(tickers.map(fetchQuote));
     container.innerHTML = '';
     results.forEach((result, i) => {
-      if (result.status === 'fulfilled') {
-        container.appendChild(renderItem(result.value, tickers[i]));
-      } else {
-        console.error(`[Quotes] ${tickers[i]}:`, result.reason?.message);
-        container.appendChild(renderErrorItem(tickers[i]));
-      }
+      container.appendChild(
+        result.status === 'fulfilled'
+          ? renderItem(result.value, tickers[i])
+          : renderErrorItem(tickers[i])
+      );
     });
-
-    // Default active on SPY
-    const spyItem = container.querySelector('[data-ticker="SPY"]');
-    if (spyItem) spyItem.classList.add('active');
   }
 
   function init(marketId, commodityId) {
