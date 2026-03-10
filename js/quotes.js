@@ -5,12 +5,12 @@
 
 const Quotes = (() => {
   const MARKET_TICKERS    = ['SPY', 'QQQ', 'I:DJI', 'I:NKY', 'I:KOSPI', 'I:TAIEX'];
-  const COMMODITY_TICKERS = ['BTCUSD', 'GOLD', 'SILVER', 'WTI', 'BRENT'];
+  const COMMODITY_TICKERS = ['VIX', 'GOLD', 'SILVER', 'WTI', 'BRENT'];
   const REFRESH_MS        = 30 * 1000; // 30s — Finnhub is real-time
 
   const DISPLAY_NAMES = {
     'I:DJI': 'DJI', 'I:NKY': 'NKY', 'I:KOSPI': 'KOSPI', 'I:TAIEX': 'TAIEX',
-    'BTCUSD': 'BTC', 'GOLD': 'GOLD', 'SILVER': 'SLVR', 'WTI': 'WTI', 'BRENT': 'BRNT',
+    'VIX': 'VIX', 'GOLD': 'GOLD', 'SILVER': 'SLVR', 'WTI': 'WTI', 'BRENT': 'BRNT',
   };
 
   function displayName(ticker) {

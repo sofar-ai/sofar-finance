@@ -1,6 +1,6 @@
 /**
  * Chart Component — 2x2 grid of TradingView Lightweight Charts
- * Tickers: SPY, QQQ, DJI, BTC
+ * Tickers: SPY, QQQ, DJI, VIX
  * Public: init(), loadTicker(ticker), setTimeframe(tf), getSeries()
  */
 
@@ -9,7 +9,7 @@ const ChartComponent = (() => {
     { ticker: 'SPY',    id: 'SPY', display: 'SPY'  },
     { ticker: 'QQQ',   id: 'QQQ', display: 'QQQ'  },
     { ticker: 'DIA',   id: 'DJI', display: 'DIA'  },
-    { ticker: 'BTCUSD',id: 'BTC', display: 'BTC'  },
+    { ticker: 'VIX',   id: 'VIX', display: 'VIX'  },
   ];
 
   let instances = {}; // id -> { chart, candleSeries, volumeSeries }

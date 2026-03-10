@@ -7,18 +7,18 @@
  *   5D  →  interval=30m range=5d
  *   1M  →  interval=1d  range=1mo
  *
- * Crypto: BTCUSD → BTC-USD
+ * VIX: VIX → ^VIX
  */
 
 const TICKER_MAP = {
-  'BTCUSD': 'BTC-USD',
-  'BTC':    'BTC-USD',
+  'VIX': '^VIX',
 };
 
 const TIMEFRAME_MAP = {
   '1D': { interval: '5m',  range: '1d'  },
-  '5D': { interval: '30m', range: '5d'  },
+  '1W': { interval: '30m', range: '5d'  },
   '1M': { interval: '1d',  range: '1mo' },
+  '1Y': { interval: '1wk', range: '1y'  },
 };
 
 export default async function handler(req, res) {

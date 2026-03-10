@@ -11,7 +11,7 @@ const YAHOO_INDEX_MAP = {
 };
 
 const YAHOO_COMMODITY_MAP = {
-  'BTCUSD': 'BTC-USD',
+  'VIX': '^VIX',
   'GOLD':   'GC=F',
   'SILVER': 'SI=F',
   'WTI':    'CL=F',
