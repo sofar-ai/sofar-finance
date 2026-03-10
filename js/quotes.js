@@ -1,7 +1,6 @@
 /**
- * Quotes Component — sofar-finance
- * Loads prev-close for all tickers once on init (no auto-refresh).
- * Falls back gracefully if a ticker errors.
+ * Quotes Component — sofar-finance (vertical sidebar list, 3-col layout)
+ * Clicking a ticker loads it in the chart.
  */
 
 const Quotes = (() => {
@@ -14,55 +13,42 @@ const Quotes = (() => {
   function formatPrice(p) {
     if (p == null) return '—';
     const n = typeof p === 'number' ? p : parseFloat(p);
-    return isNaN(n) ? '—' : n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    if (isNaN(n)) return '—';
+    return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
-  function formatNumber(n) {
-    if (n == null) return '—';
-    if (typeof n !== 'number') n = parseFloat(n);
-    return isNaN(n) ? '—' : n.toFixed(2);
-  }
+  function renderItem(quote, originalTicker) {
+    const pct = parseFloat(quote.changePercent);
+    const isUp = pct >= 0;
+    const colorClass = isUp ? 'qli-up' : 'qli-down';
+    const pctStr = isNaN(pct) ? '—' : (isUp ? `+${pct.toFixed(2)}%` : `${pct.toFixed(2)}%`);
 
-  function getChangeColor(change) {
-    const c = parseFloat(change);
-    if (c > 0) return 'up';
-    if (c < 0) return 'down';
-    return 'neutral';
-  }
-
-  function renderQuoteCard(quote) {
-    const changeNum = parseFloat(quote.change);
-    const changePercent = parseFloat(quote.changePercent);
-    const colorClass = getChangeColor(changeNum);
-    const changeStr = changeNum >= 0 ? `+${formatNumber(changeNum)}` : formatNumber(changeNum);
-    const pctStr    = changePercent >= 0 ? `+${formatNumber(changePercent)}%` : `${formatNumber(changePercent)}%`;
-
-    const card = document.createElement('div');
-    card.className = `quote-card quote-${colorClass}`;
-    card.innerHTML = `
-      <div class="quote-ticker">${displayName(quote.ticker || '')}</div>
-      <div class="quote-price">${formatPrice(quote.price)}</div>
-      <div class="quote-label">${quote.label || 'Prev Close'}</div>
-      <div class="quote-change">
-        <span class="quote-change-value">${changeStr}</span>
-        <span class="quote-change-percent">${pctStr}</span>
-      </div>
-      <div class="quote-meta">
-        <span>H: ${formatNumber(quote.high)}</span>
-        <span>L: ${formatNumber(quote.low)}</span>
-      </div>
+    const item = document.createElement('div');
+    item.className = `quote-list-item ${colorClass}`;
+    item.dataset.ticker = originalTicker;
+    item.title = `Load ${displayName(originalTicker)} chart`;
+    item.innerHTML = `
+      <span class="qli-ticker">${displayName(quote.ticker || originalTicker)}</span>
+      <span class="qli-right">
+        <span class="qli-price">${formatPrice(quote.price)}</span>
+        <span class="qli-change">${pctStr}</span>
+      </span>
     `;
-    return card;
+    item.addEventListener('click', () => {
+      if (window.ChartComponent) ChartComponent.loadTicker(originalTicker);
+    });
+    return item;
   }
 
-  function renderErrorCard(ticker) {
-    const card = document.createElement('div');
-    card.className = 'quote-card quote-neutral';
-    card.innerHTML = `
-      <div class="quote-ticker">${displayName(ticker)}</div>
-      <div class="quote-error">⚠ unavailable</div>
+  function renderErrorItem(ticker) {
+    const item = document.createElement('div');
+    item.className = 'quote-list-item qli-neutral';
+    item.dataset.ticker = ticker;
+    item.innerHTML = `
+      <span class="qli-ticker">${displayName(ticker)}</span>
+      <span class="qli-right"><span class="qli-price qli-muted">—</span></span>
     `;
-    return card;
+    return item;
   }
 
   async function fetchQuote(ticker) {
@@ -73,33 +59,28 @@ const Quotes = (() => {
     return data;
   }
 
-  async function init(containerId, statusId) {
+  async function init(containerId) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    // Placeholder skeleton cards while loading
     container.innerHTML = TICKERS.map(t =>
-      `<div class="quote-card quote-neutral"><div class="quote-ticker">${displayName(t)}</div><div class="quote-loading">…</div></div>`
+      `<div class="quote-list-item qli-neutral"><span class="qli-ticker">${displayName(t)}</span><span class="qli-right qli-muted">…</span></div>`
     ).join('');
 
-    // Fetch all tickers in parallel
     const results = await Promise.allSettled(TICKERS.map(fetchQuote));
-
     container.innerHTML = '';
     results.forEach((result, i) => {
       if (result.status === 'fulfilled') {
-        container.appendChild(renderQuoteCard(result.value));
+        container.appendChild(renderItem(result.value, TICKERS[i]));
       } else {
         console.error(`[Quotes] ${TICKERS[i]}:`, result.reason?.message);
-        container.appendChild(renderErrorCard(TICKERS[i]));
+        container.appendChild(renderErrorItem(TICKERS[i]));
       }
     });
 
-    const statusEl = document.getElementById(statusId);
-    if (statusEl) {
-      const t = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      statusEl.textContent = `as of ${t}`;
-    }
+    // Default active: SPY
+    const spyItem = container.querySelector('[data-ticker="SPY"]');
+    if (spyItem) spyItem.classList.add('active');
   }
 
   return { init };
