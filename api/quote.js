@@ -1,21 +1,15 @@
 /**
- * Serverless API: Prev close quote from Polygon.io (free tier)
- * Falls back to Yahoo Finance for indices + commodities.
+ * Quote API — Finnhub for US stocks, Yahoo for indices & commodities
+ * No Polygon references.
  * GET /api/quote?ticker=SPY
- * GET /api/quote?ticker=I:NKY
- * GET /api/quote?ticker=GOLD  (routes straight to Yahoo)
  */
 
-// Index tickers: try Polygon first, fallback to Yahoo
 const YAHOO_INDEX_MAP = {
   'I:NKY':   '^N225',
-  'I:TPX':   '^TOPX',
   'I:KOSPI': '^KS11',
   'I:TAIEX': '^TWII',
-  'I:DJI':   '^DJI',
 };
 
-// Commodity tickers: go straight to Yahoo (more reliable)
 const YAHOO_COMMODITY_MAP = {
   'BTCUSD': 'BTC-USD',
   'GOLD':   'GC=F',
@@ -24,7 +18,30 @@ const YAHOO_COMMODITY_MAP = {
   'BRENT':  'BZ=F',
 };
 
-async function fetchYahooByTicker(yahooTicker, displayTicker) {
+async function fetchFinnhub(ticker, apiKey) {
+  const url = `https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(ticker)}&token=${apiKey}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Finnhub ${res.status}`);
+  const data = await res.json();
+  if (!data.c || data.c === 0) throw new Error('No Finnhub data');
+  const price = data.c;
+  const prev  = data.pc;
+  return {
+    ticker,
+    price,
+    label: 'Live',
+    change:        (data.d  ?? price - prev).toFixed(2),
+    changePercent: (data.dp ?? ((price - prev) / prev * 100)).toFixed(2),
+    high:      data.h,
+    low:       data.l,
+    open:      data.o,
+    prevClose: prev,
+    timestamp: new Date((data.t || Date.now() / 1000) * 1000).toISOString(),
+    source: 'finnhub',
+  };
+}
+
+async function fetchYahoo(yahooTicker, displayTicker) {
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooTicker)}?interval=1d&range=1d`;
   const res = await fetch(url, {
     headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SofarFinance/1.0)' },
@@ -39,10 +56,10 @@ async function fetchYahooByTicker(yahooTicker, displayTicker) {
     ticker: displayTicker,
     price,
     label: 'Prev Close',
-    change: prev ? (price - prev).toFixed(2) : '0.00',
+    change:        prev ? (price - prev).toFixed(2) : '0.00',
     changePercent: prev ? ((price - prev) / prev * 100).toFixed(2) : '0.00',
-    high: meta.regularMarketDayHigh,
-    low: meta.regularMarketDayLow,
+    high:   meta.regularMarketDayHigh,
+    low:    meta.regularMarketDayLow,
     volume: meta.regularMarketVolume,
     timestamp: meta.regularMarketTime
       ? new Date(meta.regularMarketTime * 1000).toISOString()
@@ -51,53 +68,24 @@ async function fetchYahooByTicker(yahooTicker, displayTicker) {
   };
 }
 
-async function fetchPolygon(ticker, apiKey) {
-  const url = `https://api.polygon.io/v2/aggs/ticker/${encodeURIComponent(ticker)}/prev?adjusted=true&apiKey=${apiKey}`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Polygon ${res.status}`);
-  const data = await res.json();
-  const r = data.results?.[0];
-  if (!r) throw new Error('No Polygon data');
-  return {
-    ticker: ticker.includes(':') ? ticker.split(':')[1] : ticker,
-    price: r.c,
-    label: 'Prev Close',
-    change: (r.c - r.o).toFixed(2),
-    changePercent: ((r.c - r.o) / r.o * 100).toFixed(2),
-    high: r.h,
-    low: r.l,
-    volume: r.v,
-    timestamp: new Date(r.t).toISOString(),
-    source: 'polygon',
-  };
-}
-
 export default async function handler(req, res) {
   const { ticker = 'SPY' } = req.query;
-  const apiKey = process.env.POLYGON_API_KEY;
-  if (!apiKey) return res.status(500).json({ error: 'POLYGON_API_KEY not configured' });
+  const finnhubKey = process.env.FINNHUB_API_KEY;
 
   try {
     let quote;
 
-    // Commodities: straight to Yahoo
     if (YAHOO_COMMODITY_MAP[ticker]) {
-      quote = await fetchYahooByTicker(YAHOO_COMMODITY_MAP[ticker], ticker);
-
-    // Indices: Polygon first, Yahoo fallback
+      quote = await fetchYahoo(YAHOO_COMMODITY_MAP[ticker], ticker);
     } else if (YAHOO_INDEX_MAP[ticker]) {
-      try {
-        quote = await fetchPolygon(ticker, apiKey);
-      } catch {
-        quote = await fetchYahooByTicker(YAHOO_INDEX_MAP[ticker], ticker.split(':')[1]);
-      }
-
-    // Everything else (SPY, QQQ, etc.): Polygon
+      quote = await fetchYahoo(YAHOO_INDEX_MAP[ticker], ticker.includes(':') ? ticker.split(':')[1] : ticker);
     } else {
-      quote = await fetchPolygon(ticker, apiKey);
+      if (!finnhubKey) return res.status(500).json({ error: 'FINNHUB_API_KEY not configured' });
+      quote = await fetchFinnhub(ticker, finnhubKey);
     }
 
-    res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
+    const maxAge = quote.source === 'finnhub' ? 15 : 300;
+    res.setHeader('Cache-Control', `public, s-maxage=${maxAge}, stale-while-revalidate=${maxAge * 2}`);
     res.status(200).json(quote);
   } catch (err) {
     console.error('Quote API error:', err);
