@@ -82,14 +82,28 @@ html, body {
   50% { opacity: 0.3; }
 }
 
-.dashboard-wrapper {
+.dashboard {
   max-width: 1600px;
   margin: 0 auto;
   padding: 24px 28px;
   display: grid;
-  grid-template-columns: 220px 1fr;
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+
+.quotes-section {
+  grid-column: 1;
+}
+
+.content-with-sidebar {
+  display: grid;
+  grid-template-columns: 1fr 220px;
   gap: 24px;
   align-items: start;
+}
+
+.main-content {
+  min-width: 0;
 }
 
 /* ---- Section header ---- */
@@ -343,20 +357,113 @@ html, body {
 .trends-error { color: var(--red); }
 
 /* Responsive: collapse sidebar on narrow screens */
-@media (max-width: 800px) {
-  .dashboard-wrapper {
+@media (max-width: 1000px) {
+  .content-with-sidebar {
     grid-template-columns: 1fr;
   }
   .sidebar {
     position: static;
     max-height: none;
-    border-bottom: 1px solid var(--border);
-    padding-bottom: 16px;
-    margin-bottom: 8px;
+    border-top: 1px solid var(--border);
+    padding-top: 16px;
+    margin-top: 8px;
   }
   .trends-list {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: 0;
   }
 }
+
+/* =========================================
+   Quotes Section — Bloomberg Market Watch
+   ========================================= */
+
+.quotes-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.quote-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 12px;
+  position: relative;
+  overflow: hidden;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.quote-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--border);
+}
+
+.quote-up::before { background: var(--green); }
+.quote-down::before { background: var(--red); }
+
+.quote-card:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--accent-dim);
+}
+
+.quote-ticker {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.quote-price {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.2;
+  margin-bottom: 4px;
+}
+
+.quote-change {
+  display: flex;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.quote-up .quote-change {
+  color: var(--green);
+}
+.quote-down .quote-change {
+  color: var(--red);
+}
+.quote-neutral .quote-change {
+  color: var(--text-secondary);
+}
+
+.quote-meta {
+  display: flex;
+  gap: 12px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-muted);
+}
+
+/* Loading & error states */
+.quote-loading, .quote-error {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 20px 0;
+}
+.quote-error { color: var(--red); }
