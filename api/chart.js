@@ -1,63 +1,76 @@
 /**
- * Chart API — Finnhub candles (stocks + crypto)
- * No Polygon references.
+ * Chart API — Yahoo Finance OHLCV (no API key required)
  * GET /api/chart?ticker=SPY&timeframe=1D|5D|1M
+ *
+ * Timeframe → Yahoo params:
+ *   1D  →  interval=5m  range=1d
+ *   5D  →  interval=30m range=5d
+ *   1M  →  interval=1d  range=1mo
+ *
+ * Crypto: BTCUSD → BTC-USD
  */
 
-// Crypto tickers mapped to Finnhub exchange:pair format
-const CRYPTO_MAP = {
-  'BTCUSD': 'BINANCE:BTCUSDT',
+const TICKER_MAP = {
+  'BTCUSD': 'BTC-USD',
+  'BTC':    'BTC-USD',
+};
+
+const TIMEFRAME_MAP = {
+  '1D': { interval: '5m',  range: '1d'  },
+  '5D': { interval: '30m', range: '5d'  },
+  '1M': { interval: '1d',  range: '1mo' },
 };
 
 export default async function handler(req, res) {
   const { ticker = 'SPY', timeframe = '1D' } = req.query;
-  const apiKey = process.env.FINNHUB_API_KEY;
-  if (!apiKey) return res.status(500).json({ error: 'FINNHUB_API_KEY not configured' });
 
-  const now  = Math.floor(Date.now() / 1000);
-  const DAY  = 86400;
+  const yahooTicker = TICKER_MAP[ticker] || ticker;
+  const { interval, range } = TIMEFRAME_MAP[timeframe] || TIMEFRAME_MAP['1D'];
 
-  let resolution, from;
-  switch (timeframe) {
-    case '5D': resolution = '30'; from = now - 10 * DAY; break;
-    case '1M': resolution = 'D';  from = now - 35 * DAY; break;
-    case '1D':
-    default:   resolution = '5';  from = now - 2  * DAY; break;
-  }
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooTicker)}?interval=${interval}&range=${range}`;
 
   try {
-    const cryptoSymbol = CRYPTO_MAP[ticker];
-    const url = cryptoSymbol
-      ? `https://finnhub.io/api/v1/crypto/candle?symbol=${encodeURIComponent(cryptoSymbol)}&resolution=${resolution}&from=${from}&to=${now}&token=${apiKey}`
-      : `https://finnhub.io/api/v1/stock/candle?symbol=${encodeURIComponent(ticker)}&resolution=${resolution}&from=${from}&to=${now}&token=${apiKey}`;
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept':     'application/json',
+      },
+    });
 
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`Finnhub ${response.status}`);
+    if (!response.ok) throw new Error(`Yahoo Finance HTTP ${response.status}`);
+
     const data = await response.json();
+    const result = data?.chart?.result?.[0];
+    if (!result) throw new Error('No chart data returned');
 
-    if (data.s !== 'ok' || !data.t?.length) {
+    const timestamps = result.timestamp || [];
+    const quote      = result.indicators?.quote?.[0] || {};
+
+    if (!timestamps.length) {
       return res.status(404).json({ error: `No chart data for ${ticker}` });
     }
 
-    let candles = data.t.map((t, i) => ({
-      time: t,
-      open:   data.o[i],
-      high:   data.h[i],
-      low:    data.l[i],
-      close:  data.c[i],
-      volume: data.v[i],
-    }));
+    // Zip into candle objects; skip rows with any null OHLC value
+    const candles = [];
+    for (let i = 0; i < timestamps.length; i++) {
+      const o = quote.open?.[i];
+      const h = quote.high?.[i];
+      const l = quote.low?.[i];
+      const c = quote.close?.[i];
+      const v = quote.volume?.[i] ?? 0;
+      if (o == null || h == null || l == null || c == null) continue;
+      candles.push({ time: timestamps[i], open: o, high: h, low: l, close: c, volume: v });
+    }
 
-    // For 1D: keep only the most recent trading day
-    if (timeframe === '1D' && candles.length > 0) {
-      const lastDate = new Date(candles[candles.length - 1].time * 1000).toISOString().slice(0, 10);
-      candles = candles.filter(c => new Date(c.time * 1000).toISOString().slice(0, 10) === lastDate);
+    if (!candles.length) {
+      return res.status(404).json({ error: `No valid candles for ${ticker}` });
     }
 
     res.setHeader('Cache-Control', 'public, s-maxage=30, stale-while-revalidate=60');
     res.status(200).json({ ticker, timeframe, candles });
+
   } catch (err) {
-    console.error('Chart API error:', err);
+    console.error('Chart API error:', err.message);
     res.status(500).json({ error: err.message });
   }
 }
