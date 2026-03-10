@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Options Flow — SOFAR FINANCE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <header class="app-header">
+    <div class="app-logo">SOFAR <span>// Finance</span></div>
+    <nav class="app-nav">
+      <a href="index.html"        class="nav-tab">Market Dashboard</a>
+      <a href="options-flow.html" class="nav-tab active">Options Flow</a>
+    </nav>
+    <div class="header-meta">
+      <div><span class="live-dot"></span><span id="of-ws-status">Connecting…</span></div>
+      <div id="clock-of"></div>
+    </div>
+  </header>
+
+  <!-- Filter Bar -->
+  <div class="of-filter-bar">
+
+    <input type="text" id="of-ticker-search" class="of-ticker-input" placeholder="Ticker…" maxlength="6">
+
+    <div class="of-type-group">
+      <button class="of-type-btn active" data-type="ALL">All</button>
+      <button class="of-type-btn" data-type="CALL">Calls</button>
+      <button class="of-type-btn" data-type="PUT">Puts</button>
+    </div>
+
+    <div class="of-filter-sep"></div>
+
+    <select id="of-min-premium" class="of-select">
+      <option value="0">Any premium</option>
+      <option value="25000">$25k+</option>
+      <option value="50000">$50k+</option>
+      <option value="100000">$100k+</option>
+      <option value="500000">$500k+</option>
+    </select>
+
+    <select id="of-dte" class="of-select">
+      <option value="ANY">Any DTE</option>
+      <option value="0-7">0–7 days</option>
+      <option value="7-30">7–30 days</option>
+      <option value="30+">30+ days</option>
+    </select>
+
+    <div class="of-filter-sep"></div>
+
+    <div class="ta-toggle-item">
+      <label class="toggle-switch">
+        <input type="checkbox" id="of-sweeps-only">
+        <span class="toggle-slider"></span>
+      </label>
+      <span class="ta-toggle-label">Sweeps only</span>
+    </div>
+
+    <div class="of-refresh-info">
+      Last trade: <span id="of-last-update">—</span>
+    </div>
+
+  </div>
+
+  <!-- Main Content -->
+  <div class="of-main">
+
+    <!-- Left: Live Tape (60%) -->
+    <div class="of-tape-panel">
+      <div class="of-tape-header">
+        <span>FLAGS</span>
+        <span>TICKER</span>
+        <span>STRIKE</span>
+        <span>EXPIRY</span>
+        <span>C/P</span>
+        <span>PREMIUM</span>
+        <span>SIZE</span>
+        <span>SIDE</span>
+        <span>EXCH</span>
+      </div>
+      <div class="of-tape" id="of-tape">
+        <div class="tape-empty">[ Connecting to ThetaData… ]</div>
+      </div>
+    </div>
+
+    <!-- Right Panels (40%) -->
+    <div class="of-right-panels">
+
+      <div class="of-panel">
+        <div class="of-panel-header">TOP TICKERS BY FLOW</div>
+        <div class="of-panel-content" id="of-top-tickers">
+          <div class="of-empty">Collecting…</div>
+        </div>
+      </div>
+
+      <div class="of-panel">
+        <div class="of-panel-header">UNUSUAL ACTIVITY</div>
+        <div class="of-panel-content" id="of-unusual">
+          <div class="of-empty">Collecting…</div>
+        </div>
+      </div>
+
+      <div class="of-panel">
+        <div class="of-panel-header">GREEKS — <span id="of-greeks-ticker">SELECT A TICKER</span></div>
+        <div class="of-panel-content" id="of-greeks">
+          <div class="of-empty">Click a ticker above to load Greeks</div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- Sentiment Strip -->
+  <div class="of-sentiment-strip">
+    <span class="of-sent-label">30-MIN P/C</span>
+    <span class="of-sent-ratio" id="of-sent-ratio">—</span>
+    <div class="of-sent-bar-wrap">
+      <div id="of-sent-bar" style="display:flex;width:100%;height:100%"></div>
+    </div>
+    <span class="of-sent-text" id="of-sent-text">Calculating…</span>
+    <span class="of-sent-time" id="of-sent-time"></span>
+  </div>
+
+  <script src="js/options-flow.js"></script>
+  <script>
+    function updateClock() {
+      var el = document.getElementById('clock-of');
+      if (el) el.textContent = new Date().toLocaleTimeString([], {
+        hour: '2-digit', minute: '2-digit', second: '2-digit'
+      }) + ' ET';
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
+    OptionsFlowPage.init();
+  </script>
+
+</body>
+</html>
