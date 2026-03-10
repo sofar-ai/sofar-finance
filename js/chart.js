@@ -8,7 +8,7 @@ const ChartComponent = (() => {
   const CHARTS = [
     { ticker: 'SPY',    id: 'SPY', display: 'SPY'  },
     { ticker: 'QQQ',   id: 'QQQ', display: 'QQQ'  },
-    { ticker: 'I:DJI', id: 'DJI', display: 'DJI'  },
+    { ticker: 'DIA',   id: 'DJI', display: 'DIA'  },
     { ticker: 'BTCUSD',id: 'BTC', display: 'BTC'  },
   ];
 
