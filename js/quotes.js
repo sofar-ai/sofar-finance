@@ -5,11 +5,11 @@
 
 const Quotes = (() => {
   const MARKET_TICKERS    = ['SPY', 'QQQ', 'I:DJI', 'I:NKY', 'I:KOSPI', 'I:TAIEX'];
-  const COMMODITY_TICKERS = ['BTCUSD', 'GOLD', 'SILVER'];
+  const COMMODITY_TICKERS = ['BTCUSD', 'GOLD', 'SILVER', 'WTI', 'BRENT'];
 
   const DISPLAY_NAMES = {
     'I:DJI':  'DJI', 'I:NKY': 'NKY', 'I:KOSPI': 'KOSPI', 'I:TAIEX': 'TAIEX',
-    'BTCUSD': 'BTC', 'GOLD':  'GOLD', 'SILVER':  'SLVR',
+    'BTCUSD': 'BTC', 'GOLD': 'GOLD', 'SILVER': 'SLVR', 'WTI': 'WTI', 'BRENT': 'BRNT',
   };
 
   function displayName(ticker) {

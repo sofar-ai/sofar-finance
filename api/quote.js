@@ -20,6 +20,8 @@ const YAHOO_COMMODITY_MAP = {
   'BTCUSD': 'BTC-USD',
   'GOLD':   'GC=F',
   'SILVER': 'SI=F',
+  'WTI':    'CL=F',
+  'BRENT':  'BZ=F',
 };
 
 async function fetchYahooByTicker(yahooTicker, displayTicker) {
