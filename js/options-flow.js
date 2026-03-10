@@ -1,28 +1,37 @@
 /**
- * Options Flow Page — full-page dashboard
- * Browser-direct to ThetaData Pro at localhost:25503 / localhost:25520
+ * Options Flow Page — reads from static JSON files updated by cron job.
+ * No localhost / WebSocket / ThetaData direct calls.
+ * Data files: /data/options-flow.json, /data/flow-sentiment.json
  */
 
 const OptionsFlowPage = (() => {
-  const THETA_REST  = 'http://localhost:25503/v3';
-  const THETA_WS    = 'ws://localhost:25520';
-  const MAX_TRADES  = 3000;
-  const SENT_WIN_MS = 30 * 60 * 1000; // 30-min sentiment window
-  const PANEL_TICK  = 5000;            // update right panels every 5s
+  const STALE_MIN  = 10;
+  const PANEL_TICK = 30 * 1000;  // refresh panels every 30s (re-reads JSON)
 
-  let allTrades    = [];
-  let isPaused     = false;
-  let ws           = null;
-  let reconnTimer  = null;
-  let panelTimer   = null;
-  let contractHits = {}; // sweep detection: key -> { count, firstTime }
-  let tickerStats  = {}; // { sym: { callPrem, putPrem, count, recent[] } }
+  let allTrades   = [];
+  let isPaused    = false;
+  let panelTimer  = null;
+  let contractHits = {};
 
   let filters = {
     ticker: '', type: 'ALL', minPremium: 0, dte: 'ANY', sweepsOnly: false,
   };
 
   // ── Helpers ────────────────────────────────────────────────────────────
+
+  function timeSince(isoStr) {
+    if (!isoStr) return null;
+    const diffMin = Math.floor((Date.now() - new Date(isoStr).getTime()) / 60000);
+    if (diffMin < 1)  return 'just now';
+    if (diffMin < 60) return `${diffMin} min ago`;
+    const h = Math.floor(diffMin / 60);
+    return `${h}h ${diffMin % 60}m ago`;
+  }
+
+  function isStale(isoStr) {
+    if (!isoStr) return false;
+    return (Date.now() - new Date(isoStr).getTime()) > STALE_MIN * 60000;
+  }
 
   function calcDTE(exp) {
     const s = String(exp);
@@ -36,7 +45,7 @@ const OptionsFlowPage = (() => {
     if (!p) return '—';
     if (p >= 1e6)  return `$${(p/1e6).toFixed(2)}M`;
     if (p >= 1000) return `$${(p/1000).toFixed(0)}K`;
-    return `$${p.toFixed(0)}`;
+    return `$${(+p).toFixed(0)}`;
   }
 
   function fmtExp(exp) {
@@ -47,19 +56,17 @@ const OptionsFlowPage = (() => {
   function detectSweep(trade) {
     if (trade.sweep) return true;
     const key = `${trade.symbol}_${trade.expiration}_${trade.strike}_${trade.right}`;
-    const now = Date.now();
-    if (!contractHits[key] || now - contractHits[key].firstTime > 60000) {
-      contractHits[key] = { count: 1, firstTime: now };
-    } else {
-      contractHits[key].count++;
-    }
+    if (!contractHits[key]) contractHits[key] = { count: 1, firstTime: Date.now() };
+    else if (Date.now() - contractHits[key].firstTime > 60000) {
+      contractHits[key] = { count: 1, firstTime: Date.now() };
+    } else contractHits[key].count++;
     return contractHits[key].count >= 3;
   }
 
   // ── Filter ─────────────────────────────────────────────────────────────
 
   function passes(trade) {
-    if (filters.ticker && trade.symbol !== filters.ticker) return false;
+    if (filters.ticker && (trade.symbol || '').toUpperCase() !== filters.ticker) return false;
     const r = (trade.right || '').toUpperCase();
     if (filters.type === 'CALL' && r !== 'C') return false;
     if (filters.type === 'PUT'  && r !== 'P') return false;
@@ -67,15 +74,16 @@ const OptionsFlowPage = (() => {
     if (filters.sweepsOnly && !trade.isSweep) return false;
     if (filters.dte !== 'ANY' && trade.expiration != null) {
       const dte = calcDTE(trade.expiration);
-      if (dte == null) return true;
-      if (filters.dte === '0-7'  && !(dte >= 0 && dte <= 7))   return false;
-      if (filters.dte === '7-30' && !(dte > 7  && dte <= 30))  return false;
-      if (filters.dte === '30+'  && dte <= 30)                  return false;
+      if (dte != null) {
+        if (filters.dte === '0-7'  && !(dte >= 0 && dte <= 7))  return false;
+        if (filters.dte === '7-30' && !(dte > 7  && dte <= 30)) return false;
+        if (filters.dte === '30+'  && dte <= 30)                 return false;
+      }
     }
     return true;
   }
 
-  // ── Tape rendering ─────────────────────────────────────────────────────
+  // ── Tape ───────────────────────────────────────────────────────────────
 
   function makeRow(trade) {
     const right   = (trade.right || '?').toUpperCase();
@@ -90,7 +98,7 @@ const OptionsFlowPage = (() => {
     el.innerHTML = `
       <span class="tape-flags">${flags}</span>
       <span class="tape-sym">${trade.symbol || '—'}</span>
-      <span class="tape-strike">${trade.strike != null ? trade.strike.toFixed(0) : '—'}</span>
+      <span class="tape-strike">${trade.strike != null ? (+trade.strike).toFixed(0) : '—'}</span>
       <span class="tape-expiry">${trade.expiration ? fmtExp(trade.expiration) : '—'}</span>
       <span class="tape-cp tape-cp-${isCall?'c':'p'}">${right}</span>
       <span class="tape-prem">${fmtPrem(trade.premium)}</span>
@@ -101,50 +109,58 @@ const OptionsFlowPage = (() => {
     return el;
   }
 
-  function prependToTape(trade) {
-    if (!passes(trade)) return;
-    const tape = document.getElementById('of-tape');
-    if (!tape || isPaused) return;
-    tape.insertBefore(makeRow(trade), tape.firstChild);
-    while (tape.children.length > 600) tape.removeChild(tape.lastChild);
-  }
-
-  function rebuildTape() {
+  function rebuildTape(data) {
     const tape = document.getElementById('of-tape');
     if (!tape) return;
     tape.innerHTML = '';
-    const rows = allTrades.filter(passes).slice(0, 400);
+
+    // Status bar above tape
+    const since = timeSince(data.fetched_at);
+    const stale = isStale(data.fetched_at);
+    const statusEl = document.getElementById('of-last-update');
+    if (statusEl) {
+      statusEl.textContent = since || '—';
+      statusEl.style.color = stale ? '#f59e0b' : '';
+    }
+
+    if (!data.fetched_at) {
+      tape.innerHTML = '<div class="tape-empty">Awaiting first data fetch — check back during market hours</div>';
+      return;
+    }
+
+    if (!data.market_open) {
+      tape.insertAdjacentHTML('beforeend', '<div class="tape-empty" style="color:#f59e0b">Market Closed — showing last session data</div>');
+    } else if (stale) {
+      tape.insertAdjacentHTML('beforeend', '<div class="tape-empty" style="color:#f59e0b">⚠ Data may be stale — next update at next scheduled fetch</div>');
+    }
+
+    const rows = (data.trades || []).filter(passes).slice(0, 400);
+    if (!rows.length) {
+      tape.insertAdjacentHTML('beforeend', '<div class="tape-empty">No trades match current filters</div>');
+      return;
+    }
     rows.forEach(t => tape.appendChild(makeRow(t)));
-    if (!rows.length) tape.innerHTML = '<div class="tape-empty">No trades match current filters</div>';
   }
 
-  // ── Ticker stats ───────────────────────────────────────────────────────
-
-  function accStats(trade) {
-    const sym = trade.symbol; if (!sym) return;
-    if (!tickerStats[sym]) tickerStats[sym] = { callPrem: 0, putPrem: 0, count: 0, recent: [] };
-    const s = tickerStats[sym];
-    const r = (trade.right || '').toUpperCase();
-    const p = trade.premium || 0;
-    if (r === 'C') s.callPrem += p; else if (r === 'P') s.putPrem += p;
-    s.count++;
-    s.recent.push({ t: Date.now(), p });
-    if (s.recent.length > 2000) s.recent.shift();
-  }
-
-  // ── Top Tickers panel ──────────────────────────────────────────────────
+  // ── Right panels ───────────────────────────────────────────────────────
 
   function updateTopTickers() {
     const el = document.getElementById('of-top-tickers');
     if (!el) return;
-    const sorted = Object.entries(tickerStats)
-      .map(([sym, s]) => {
-        const total = s.callPrem + s.putPrem;
-        return { sym, total, callPct: total ? s.callPrem / total : 0.5 };
-      })
+    const stats = {};
+    allTrades.forEach(t => {
+      const sym = t.symbol; if (!sym) return;
+      if (!stats[sym]) stats[sym] = { c: 0, p: 0 };
+      const r = (t.right || '').toUpperCase();
+      const prem = t.premium || 0;
+      if (r === 'C') stats[sym].c += prem;
+      else if (r === 'P') stats[sym].p += prem;
+    });
+    const sorted = Object.entries(stats)
+      .map(([sym, s]) => ({ sym, total: s.c + s.p, callPct: s.c / (s.c + s.p || 1) }))
       .sort((a, b) => b.total - a.total).slice(0, 10);
 
-    if (!sorted.length) { el.innerHTML = '<div class="of-empty">Collecting…</div>'; return; }
+    if (!sorted.length) { el.innerHTML = '<div class="of-empty">No data yet</div>'; return; }
     el.innerHTML = '';
     sorted.forEach(({ sym, total, callPct }) => {
       const row = document.createElement('div');
@@ -152,184 +168,144 @@ const OptionsFlowPage = (() => {
       row.innerHTML = `
         <span class="of-tk-sym">${sym}</span>
         <div class="of-tk-bar">
-          <div class="of-tk-call" style="width:${(callPct*100).toFixed(1)}%"></div>
-          <div class="of-tk-put"  style="width:${((1-callPct)*100).toFixed(1)}%"></div>
+          <div class="of-tk-call" style="width:${(callPct*100).toFixed(0)}%"></div>
+          <div class="of-tk-put"  style="width:${((1-callPct)*100).toFixed(0)}%"></div>
         </div>
         <span class="of-tk-total">${fmtPrem(total)}</span>
       `;
       row.addEventListener('click', () => {
         document.getElementById('of-ticker-search').value = sym;
         setFilter('ticker', sym);
-        OptionsFlowPage.loadGreeks(sym);
       });
       el.appendChild(row);
     });
   }
 
-  // ── Unusual Activity panel ─────────────────────────────────────────────
-
   function updateUnusual() {
     const el = document.getElementById('of-unusual');
     if (!el) return;
-    const now = Date.now();
-    const win = 5 * 60 * 1000;
-    const rates = Object.entries(tickerStats).map(([sym, s]) => {
-      const recent = s.recent.filter(r => now - r.t < win).reduce((a, r) => a + r.p, 0);
-      return { sym, recent, total: s.callPrem + s.putPrem };
+    const stats = {};
+    allTrades.forEach(t => {
+      const sym = t.symbol; if (!sym) return;
+      if (!stats[sym]) stats[sym] = { total: 0, count: 0 };
+      stats[sym].total += t.premium || 0;
+      stats[sym].count++;
     });
-    const avg = rates.length ? rates.reduce((a, r) => a + r.recent, 0) / rates.length : 0;
-    const unusual = rates.filter(r => r.recent > avg * 2 && r.recent > 5000)
-      .sort((a, b) => b.recent - a.recent).slice(0, 8);
+    const avg = Object.values(stats).reduce((a, s) => a + s.total, 0) / (Object.keys(stats).length || 1);
+    const unusual = Object.entries(stats)
+      .filter(([,s]) => s.total > avg * 2 && s.total > 10000)
+      .sort((a, b) => b[1].total - a[1].total).slice(0, 8);
 
     if (!unusual.length) { el.innerHTML = '<div class="of-empty">No unusual activity detected</div>'; return; }
     el.innerHTML = '';
-    unusual.forEach(({ sym, recent }) => {
-      const mult  = avg > 0 ? (recent / avg).toFixed(1) : '—';
-      const heat  = recent > avg * 10 ? '#ef4444' : recent > avg * 5 ? '#f97316' : '#eab308';
-      const row   = document.createElement('div');
+    unusual.forEach(([sym, s]) => {
+      const mult = avg > 0 ? (s.total / avg).toFixed(1) : '—';
+      const heat = s.total > avg * 10 ? '#ef4444' : s.total > avg * 5 ? '#f97316' : '#eab308';
+      const row = document.createElement('div');
       row.className = 'of-unusual-row';
       row.innerHTML = `
         <span class="of-unu-dot" style="background:${heat};box-shadow:0 0 4px ${heat}88"></span>
         <span class="of-unu-sym">${sym}</span>
         <span class="of-unu-dev">${mult}× avg</span>
-        <span class="of-unu-prem">${fmtPrem(recent)}/5m</span>
+        <span class="of-unu-prem">${fmtPrem(s.total)}</span>
       `;
       row.addEventListener('click', () => {
         document.getElementById('of-ticker-search').value = sym;
         setFilter('ticker', sym);
-        OptionsFlowPage.loadGreeks(sym);
       });
       el.appendChild(row);
     });
   }
 
-  // ── Greeks Snapshot panel ──────────────────────────────────────────────
-
   async function loadGreeks(ticker) {
-    const el = document.getElementById('of-greeks');
+    const el  = document.getElementById('of-greeks');
     const hdr = document.getElementById('of-greeks-ticker');
     if (!el) return;
     if (hdr) hdr.textContent = ticker;
-    el.innerHTML = '<div class="of-empty">Loading…</div>';
+    // Greeks computed from local trade data (no live API)
+    const tTrades = allTrades.filter(t => t.symbol === ticker);
+    if (!tTrades.length) { el.innerHTML = '<div class="of-empty">No data for ' + ticker + '</div>'; return; }
+    const calls = tTrades.filter(t => (t.right||'').toUpperCase() === 'C');
+    const puts  = tTrades.filter(t => (t.right||'').toUpperCase() === 'P');
+    const pcRatio = calls.length ? (puts.length / calls.length).toFixed(2) : '—';
+    const callPrem = calls.reduce((a, t) => a + (t.premium||0), 0);
+    const putPrem  = puts.reduce( (a, t) => a + (t.premium||0), 0);
+    el.innerHTML = `
+      <div class="of-greeks-grid">
+        <div class="of-greek-item">
+          <div class="of-greek-label">Call Premium</div>
+          <div class="of-greek-value greek-pos">${fmtPrem(callPrem)}</div>
+        </div>
+        <div class="of-greek-item">
+          <div class="of-greek-label">Put Premium</div>
+          <div class="of-greek-value greek-neg">${fmtPrem(putPrem)}</div>
+        </div>
+        <div class="of-greek-item">
+          <div class="of-greek-label">P/C Ratio</div>
+          <div class="of-greek-value">${pcRatio}</div>
+        </div>
+        <div class="of-greek-item">
+          <div class="of-greek-label">Total Trades</div>
+          <div class="of-greek-value">${tTrades.length}</div>
+        </div>
+      </div>`;
+  }
+
+  // ── Sentiment ──────────────────────────────────────────────────────────
+
+  async function loadSentiment() {
     try {
-      const res = await fetch(`${THETA_REST}/option/snapshot/greeks?symbol=${encodeURIComponent(ticker)}`);
+      const res  = await fetch(`/data/flow-sentiment.json?v=${Date.now()}`);
+      const data = await res.json();
+      const pc   = data.pc_ratio;
+      const since = timeSince(data.fetched_at);
+
+      let sent = data.sentiment || 'NEUTRAL', sentColor;
+      if (sent === 'BEARISH')      sentColor = '#ef4444';
+      else if (sent === 'BULLISH') sentColor = '#22c55e';
+      else                         sentColor = '#f59e0b';
+
+      const callP = data.call_premium || 0;
+      const putP  = data.put_premium  || 0;
+      const total = callP + putP;
+      const callPct = total ? (callP / total * 100).toFixed(0) : 50;
+
+      const pcEl   = document.getElementById('of-sent-ratio');
+      const sentEl = document.getElementById('of-sent-text');
+      const barEl  = document.getElementById('of-sent-bar');
+      const timeEl = document.getElementById('of-sent-time');
+
+      if (pcEl)   pcEl.textContent  = pc != null ? pc.toFixed(2) : '—';
+      if (sentEl) { sentEl.textContent = `${data.market_open ? '' : '⏸ '}${sent}`; sentEl.style.color = sentColor; }
+      if (barEl)  barEl.innerHTML   = `<div class="sent-call" style="width:${callPct}%"></div><div class="sent-put" style="width:${100-callPct}%"></div>`;
+      if (timeEl) timeEl.textContent = since ? `Updated ${since}` : '';
+    } catch {}
+  }
+
+  // ── Main data load ─────────────────────────────────────────────────────
+
+  async function loadFlowData() {
+    try {
+      const res  = await fetch(`/data/options-flow.json?v=${Date.now()}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      const rows = Array.isArray(data) ? data : data.rows || data.data || data.results || [];
-      if (!rows.length) throw new Error('No data');
-
-      let netDelta = 0, ivSum = 0, ivCount = 0, maxGamma = 0, calls = 0, puts = 0;
-      rows.forEach(r => {
-        if (r.delta != null) netDelta += r.delta;
-        if (r.iv    != null) { ivSum += r.iv; ivCount++; }
-        if (r.gamma != null && Math.abs(r.gamma) > maxGamma) maxGamma = Math.abs(r.gamma);
-        const rt = (r.right || '').toUpperCase();
-        if (rt === 'C') calls++; else if (rt === 'P') puts++;
-      });
-      const avgIV  = ivCount ? (ivSum / ivCount * 100).toFixed(1) : '—';
-      const pcRatio = calls ? (puts / calls).toFixed(2) : '—';
-
-      el.innerHTML = `
-        <div class="of-greeks-grid">
-          <div class="of-greek-item">
-            <div class="of-greek-label">Net Delta</div>
-            <div class="of-greek-value ${netDelta >= 0 ? 'greek-pos':'greek-neg'}">${netDelta.toFixed(0)}</div>
-          </div>
-          <div class="of-greek-item">
-            <div class="of-greek-label">Avg IV</div>
-            <div class="of-greek-value">${avgIV}%</div>
-          </div>
-          <div class="of-greek-item">
-            <div class="of-greek-label">P/C Ratio</div>
-            <div class="of-greek-value">${pcRatio}</div>
-          </div>
-          <div class="of-greek-item">
-            <div class="of-greek-label">Peak Gamma</div>
-            <div class="of-greek-value">${maxGamma.toFixed(4)}</div>
-          </div>
-        </div>`;
-    } catch (err) {
-      el.innerHTML = `<div class="of-empty">⚠ ${err.message}</div>`;
+      allTrades = (data.trades || []).map(t => ({ ...t, isSweep: detectSweep(t) }));
+      rebuildTape(data);
+      updateTopTickers();
+      updateUnusual();
+    } catch {
+      const tape = document.getElementById('of-tape');
+      if (tape) tape.innerHTML = '<div class="tape-empty">Awaiting first data fetch — check back during market hours</div>';
     }
+    loadSentiment();
   }
-
-  // ── Sentiment Strip ────────────────────────────────────────────────────
-
-  function updateSentiment() {
-    const now = Date.now();
-    const recent = allTrades.filter(t => now - (t._at || 0) < SENT_WIN_MS);
-    let callP = 0, putP = 0;
-    recent.forEach(t => {
-      const r = (t.right || '').toUpperCase();
-      if (r === 'C') callP += t.premium || 0;
-      else if (r === 'P') putP += t.premium || 0;
-    });
-    const total = callP + putP;
-    if (!total) return;
-
-    const pc = putP / (callP || 1);
-    const callPct = (callP / total * 100).toFixed(0);
-    let sent, sentColor;
-    if (pc > 1.2)       { sent = '▼ BEARISH'; sentColor = '#ef4444'; }
-    else if (pc < 0.8)  { sent = '▲ BULLISH'; sentColor = '#22c55e'; }
-    else                { sent = '◆ NEUTRAL'; sentColor = '#f59e0b'; }
-
-    const pcEl   = document.getElementById('of-sent-ratio');
-    const sentEl = document.getElementById('of-sent-text');
-    const barEl  = document.getElementById('of-sent-bar');
-    const timeEl = document.getElementById('of-sent-time');
-
-    if (pcEl)   pcEl.textContent  = pc.toFixed(2);
-    if (sentEl) { sentEl.textContent = sent; sentEl.style.color = sentColor; }
-    if (barEl)  barEl.innerHTML   = `<div class="sent-call" style="width:${callPct}%"></div><div class="sent-put" style="width:${100-callPct}%"></div>`;
-    if (timeEl) timeEl.textContent = new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
-  }
-
-  // ── Filter setter ──────────────────────────────────────────────────────
 
   function setFilter(key, value) {
     filters[key] = value;
-    rebuildTape();
+    // Rebuild tape from cached allTrades (no re-fetch)
+    const fakeData = { fetched_at: null, market_open: false, trades: allTrades };
+    rebuildTape(fakeData);
   }
-
-  // ── WebSocket ──────────────────────────────────────────────────────────
-
-  function connectWS() {
-    if (reconnTimer) { clearTimeout(reconnTimer); reconnTimer = null; }
-    if (ws) { ws.onclose = null; ws.close(); ws = null; }
-    const statusEl = document.getElementById('of-ws-status');
-    try {
-      ws = new WebSocket(THETA_WS);
-      ws.onopen = () => {
-        if (statusEl) { statusEl.textContent = '● LIVE'; statusEl.style.color = '#22c55e'; }
-        ws.send(JSON.stringify({ req_type: 'TRADE', sec_type: 'OPTION', root: '' }));
-      };
-      ws.onmessage = (e) => {
-        try {
-          const raw = JSON.parse(e.data);
-          const trade = { ...raw, isSweep: detectSweep(raw), _at: Date.now() };
-          allTrades.unshift(trade);
-          if (allTrades.length > MAX_TRADES) allTrades.length = MAX_TRADES;
-          accStats(trade);
-          prependToTape(trade);
-          document.getElementById('of-last-update').textContent =
-            new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit' });
-        } catch {}
-      };
-      ws.onerror = () => {
-        if (statusEl) { statusEl.textContent = '⚠ WS error'; statusEl.style.color = '#f59e0b'; }
-      };
-      ws.onclose = () => {
-        if (statusEl) { statusEl.textContent = '○ Reconnecting…'; statusEl.style.color = '#4a5060'; }
-        reconnTimer = setTimeout(connectWS, 5000);
-      };
-    } catch (err) {
-      if (statusEl) statusEl.textContent = `⚠ ${err.message}`;
-      reconnTimer = setTimeout(connectWS, 10000);
-    }
-  }
-
-  // ── Init ───────────────────────────────────────────────────────────────
 
   function init() {
     // URL params
@@ -341,7 +317,7 @@ const OptionsFlowPage = (() => {
       if (inp) inp.value = pre.toUpperCase();
     }
 
-    // Filter bar wiring
+    // Filter wiring
     document.getElementById('of-ticker-search')?.addEventListener('input', e => {
       setFilter('ticker', e.target.value.trim().toUpperCase());
     });
@@ -363,35 +339,14 @@ const OptionsFlowPage = (() => {
       tape.addEventListener('mouseleave', () => isPaused = false);
     }
 
-    // Panel refresh
-    panelTimer = setInterval(() => {
-      updateTopTickers();
-      updateUnusual();
-      updateSentiment();
-    }, PANEL_TICK);
+    // Top tickers click → load Greeks
+    document.getElementById('of-top-tickers')?.addEventListener('click', e => {
+      const sym = e.target.closest('.of-ticker-row')?.querySelector('.of-tk-sym')?.textContent;
+      if (sym) loadGreeks(sym);
+    });
 
-    connectWS();
-
-    // Bootstrap snapshot
-    const sym = filters.ticker || 'SPY';
-    fetch(`${THETA_REST}/option/snapshot/quote?symbol=${encodeURIComponent(sym)}`)
-      .then(r => r.json())
-      .then(data => {
-        const rows = Array.isArray(data) ? data : data.rows || data.data || data.results || [];
-        rows.forEach(raw => {
-          const trade = { symbol: sym, ...raw, isSweep: false, _at: Date.now() - Math.random() * 120000 };
-          allTrades.push(trade);
-          accStats(trade);
-        });
-        rebuildTape();
-        updateTopTickers();
-        updateUnusual();
-        updateSentiment();
-        if (rows.length) loadGreeks(sym);
-      })
-      .catch(() => {
-        if (tape) tape.innerHTML = '<div class="tape-empty">Waiting for live stream from ThetaData…</div>';
-      });
+    loadFlowData();
+    panelTimer = setInterval(loadFlowData, PANEL_TICK);
   }
 
   return { init, setFilter, loadGreeks };
