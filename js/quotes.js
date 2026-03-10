@@ -5,7 +5,7 @@
  */
 
 const Quotes = (() => {
-  const TICKERS = ['SPY', 'QQQ', 'I:NKY', 'I:TPX', 'I:KOSPI', 'I:TAIEX'];
+  const TICKERS = ['SPY', 'QQQ', 'I:NKY', 'I:KOSPI', 'I:TAIEX'];
 
   function displayName(ticker) {
     return ticker.includes(':') ? ticker.split(':')[1] : ticker;
