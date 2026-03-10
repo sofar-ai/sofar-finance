@@ -7,7 +7,7 @@
 
 const YAHOO_MAP = {
   'I:NKY':   '^N225',
-  'I:TPX':   '^TPX',
+  'I:TPX':   '^TOPX',
   'I:KOSPI': '^KS11',
   'I:TAIEX': '^TWII',
 };
