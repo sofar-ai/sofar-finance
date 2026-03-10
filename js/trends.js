@@ -1,7 +1,7 @@
 /**
  * Trends Component — sofar-finance
  * Reads from /trends.json (analyzed every 6h alongside headlines)
- * Displays key news themes ranked by prominence score
+ * Displays as a compact Bloomberg-style sidebar list
  */
 
 const TrendsFeed = (() => {
@@ -16,39 +16,28 @@ const TrendsFeed = (() => {
       .replace(/"/g, '&quot;');
   }
 
-  function formatPostCount(n) {
-    if (!n) return null;
-    if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M posts`;
-    if (n >= 1000) return `${Math.round(n / 1000)}K posts`;
-    return `${n} posts`;
+  // Returns color hex for the dot indicator
+  function hotColor(score) {
+    if (score >= 85) return '#ef4444'; // red — very hot
+    if (score >= 65) return '#f97316'; // orange — hot
+    if (score >= 40) return '#eab308'; // yellow — warm
+    return '#4a5060';                  // grey — mild
   }
 
-  function prominenceClass(score) {
-    if (score >= 85) return 'trend-critical';
-    if (score >= 65) return 'trend-high';
-    if (score >= 40) return 'trend-medium';
-    return 'trend-low';
-  }
+  function renderTrendRow(trend, rank) {
+    const row = document.createElement('div');
+    row.className = 'trend-row';
+    row.title = trend.summary || '';
 
-  function renderTrendCard(trend) {
-    const card = document.createElement('div');
-    card.className = `trend-card ${prominenceClass(trend.prominence)}`;
+    const color = hotColor(trend.prominence);
 
-    const postCount = trend.x_posts ? formatPostCount(trend.x_posts) : null;
-    const sourcesStr = (trend.sources || []).slice(0, 4).join(' · ');
-
-    card.innerHTML = `
-      <div class="trend-header">
-        <span class="trend-name">${escapeHtml(trend.name)}</span>
-        <span class="trend-score">${trend.prominence}</span>
-      </div>
-      <div class="trend-summary">${escapeHtml(trend.summary)}</div>
-      <div class="trend-meta">
-        <span class="trend-sources">${escapeHtml(sourcesStr)}</span>
-        ${postCount ? `<span class="trend-posts">${escapeHtml(postCount)}</span>` : ''}
-      </div>
+    row.innerHTML = `
+      <span class="trend-rank">${String(rank).padStart(2, '0')}</span>
+      <span class="trend-dot" style="background:${color};box-shadow:0 0 4px ${color}88;"></span>
+      <span class="trend-label">${escapeHtml(trend.name)}</span>
+      <span class="trend-score-inline" style="color:${color}">${trend.prominence}</span>
     `;
-    return card;
+    return row;
   }
 
   function setRefreshedTime(el, fetchedAt) {
@@ -56,7 +45,7 @@ const TrendsFeed = (() => {
     const t = fetchedAt
       ? new Date(fetchedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       : '—';
-    el.textContent = `Last refreshed: ${t}`;
+    el.textContent = t;
   }
 
   async function load(containerId, timestampId) {
@@ -64,7 +53,7 @@ const TrendsFeed = (() => {
     const tsEl = document.getElementById(timestampId);
     if (!container) return;
 
-    container.innerHTML = '<div class="trends-loading">[ ANALYZING TRENDS... ]</div>';
+    container.innerHTML = '<div class="trends-loading">LOADING...</div>';
 
     try {
       const res = await fetch(`/trends.json?v=${Date.now()}`);
@@ -74,13 +63,13 @@ const TrendsFeed = (() => {
 
       container.innerHTML = '';
       if (trends.length === 0) {
-        container.innerHTML = '<div class="trends-error">⚠ No trend data available.</div>';
+        container.innerHTML = '<div class="trends-error">NO DATA</div>';
       } else {
-        trends.forEach(t => container.appendChild(renderTrendCard(t)));
+        trends.forEach((t, i) => container.appendChild(renderTrendRow(t, i + 1)));
       }
       setRefreshedTime(tsEl, data.fetched_at);
     } catch (e) {
-      container.innerHTML = `<div class="trends-error">⚠ Could not load trends — ${e.message}</div>`;
+      container.innerHTML = `<div class="trends-error">ERR: ${e.message}</div>`;
       console.error('[TrendsFeed]', e);
     }
   }
