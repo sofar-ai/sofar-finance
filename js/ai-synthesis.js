@@ -317,6 +317,7 @@ const AISynthesis = (() => {
   function renderSchedule() {
     const el = document.getElementById('ai-schedule');
     if (!el) return;
+    el.className = 'ai-schedule-sidebar';
 
     const FLOW_HOURS = [9, 11, 13, 15];
     const SYNTH_HOURS = [9, 11, 13, 15];
@@ -357,10 +358,10 @@ const AISynthesis = (() => {
     ];
 
     el.innerHTML = rows.map(r => `
-      <div class="ai-sched-row">
-        <span class="ai-sched-label">${r.label}</span>
-        <span class="ai-sched-times">${r.times}</span>
-        <span class="ai-sched-next ${r.soon ? 'ai-sched-soon' : ''}">Next: ${r.next}${r.soon ? ' ⚡' : ''}</span>
+      <div class="ai-sched-sb-row">
+        <div class="ai-sched-sb-label">${r.label}</div>
+        <div class="ai-sched-sb-times">${r.times.replace(/ · /g, '\n').replace(' ET', '').replace(/ \+ /g, '\n')}</div>
+        <div class="ai-sched-sb-next ${r.soon ? 'ai-sched-soon' : ''}">Next: ${r.next}${r.soon ? ' ⚡' : ''}</div>
       </div>`).join('');
   }
 
