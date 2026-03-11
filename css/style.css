@@ -1969,3 +1969,332 @@ body.page-scrollable {
   color: var(--text-muted);
   font-family: var(--font-mono);
 }
+
+
+/* ╔═══════════════════════════════════════════════════════════════╗
+   ║              MOBILE & RESPONSIVE STYLES                      ║
+   ║  Desktop 1200px+  →  three-column, unchanged                 ║
+   ║  Tablet  768-1199 →  two-column, sidebar below charts        ║
+   ║  Mobile  <768px   →  single column, bottom nav               ║
+   ╚═══════════════════════════════════════════════════════════════╝ */
+
+/* ─── Hide bottom nav on desktop ─────────────────────────────── */
+.mobile-bottom-nav { display: none; }
+.of-filter-toggle  { display: none; }
+
+/* ═══════════════════════════════════════════════════════════════
+   TABLET  768px – 1199px
+═══════════════════════════════════════════════════════════════ */
+@media (max-width: 1199px) {
+  .dashboard {
+    grid-template-columns: 200px 1fr;
+    grid-template-rows: auto auto;
+  }
+  .col-left  { grid-row: 1; grid-column: 1; border-right: 1px solid var(--border); }
+  .col-center{ grid-row: 1; grid-column: 2; }
+  .col-right {
+    grid-row: 2;
+    grid-column: 1 / -1;
+    border-left: none;
+    border-top: 1px solid var(--border);
+    flex-direction: row;
+    height: 260px;
+  }
+  .col-right-top    { flex: 0 0 45%; border-right: 1px solid var(--border); }
+  .col-right-middle { flex: 0 0 30%; border-right: 1px solid var(--border); }
+  .col-right-bottom { flex: 1; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MOBILE  < 768px
+═══════════════════════════════════════════════════════════════ */
+@media (max-width: 767px) {
+
+  /* ── Global ─────────────────────────────────────────────── */
+  html, body {
+    height: auto !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    min-height: 100%;
+    padding-bottom: 60px; /* bottom nav clearance */
+  }
+
+  * { -webkit-tap-highlight-color: transparent; }
+
+  /* ── Header ──────────────────────────────────────────────── */
+  .app-header {
+    padding: 0 12px;
+    height: 48px;
+  }
+  .app-nav { display: none; }
+  .app-logo { font-size: 13px; }
+  .header-meta { font-size: 10px; gap: 8px; }
+  .live-dot { width: 5px; height: 5px; }
+
+  /* ── Bottom nav ──────────────────────────────────────────── */
+  .mobile-bottom-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: 56px;
+    background: #161b22;
+    border-top: 1px solid var(--border);
+    z-index: 900;
+  }
+  .mbn-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    text-decoration: none;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    min-height: 44px;
+    transition: color 0.15s;
+  }
+  .mbn-item.active { color: var(--accent); }
+  .mbn-item:hover  { color: var(--text-secondary); }
+  .mbn-icon { font-size: 20px; line-height: 1; }
+  .mbn-label { text-transform: uppercase; }
+
+  /* ── Dashboard layout ────────────────────────────────────── */
+  .dashboard {
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: visible !important;
+    min-height: unset !important;
+    height: auto !important;
+  }
+
+  /* ── Left col → horizontal scroll quotes strip ───────────── */
+  .col-left {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    overflow: visible;
+  }
+  .col-left .col-section-header { display: none; }
+  .col-left .col-divider { display: none; }
+
+  #quotes-container,
+  #commodities-container,
+  #fx-container {
+    display: flex !important;
+    flex-direction: row !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    padding: 6px 8px !important;
+    gap: 6px !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  #quotes-container::-webkit-scrollbar,
+  #commodities-container::-webkit-scrollbar,
+  #fx-container::-webkit-scrollbar { display: none; }
+
+  .quote-list-item {
+    flex-shrink: 0 !important;
+    border: 1px solid var(--border) !important;
+    border-bottom: 1px solid var(--border) !important;
+    border-radius: 4px !important;
+    padding: 6px 10px !important;
+    min-width: 68px !important;
+    min-height: 44px !important;
+    background: var(--bg-secondary) !important;
+  }
+  .qli-ticker { font-size: 10px !important; }
+  .qli-price  { font-size: 11px !important; }
+  .qli-change { font-size: 9px !important; }
+
+  /* ── Center col ──────────────────────────────────────────── */
+  .col-center { overflow: visible; }
+
+  .chart-toolbar {
+    flex-wrap: wrap;
+    padding: 8px 10px;
+    gap: 6px;
+  }
+  .ta-divider { display: none; }
+  .tf-btn { min-height: 36px; padding: 6px 14px; font-size: 11px; }
+
+  .chart-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    height: auto !important;
+    min-height: unset !important;
+  }
+  .chart-grid-cell {
+    height: 220px !important;
+    min-height: 220px !important;
+    flex-shrink: 0 !important;
+  }
+  .chart-cell-canvas { height: 100% !important; }
+
+  /* Options panel (mini tape on dashboard) */
+  .options-panel { max-height: 260px; }
+  .options-feed  { max-height: 220px; overflow-y: auto; }
+
+  /* ── Right col → stacked ─────────────────────────────────── */
+  .col-right {
+    border-left: none;
+    border-top: 1px solid var(--border);
+    overflow: visible;
+    flex-direction: column;
+    height: auto !important;
+    min-height: unset !important;
+  }
+  .col-right-top    { flex: none; height: auto; overflow: visible; max-height: unset; }
+  .col-right-middle { flex: none; height: auto; overflow: visible; }
+  .col-right-bottom { flex: none; height: auto; overflow: visible; }
+
+  .news-feed     { max-height: 360px; overflow-y: auto; }
+  .trends-list   { overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }
+  .top-flow-list { max-height: 280px; overflow-y: auto; }
+
+  /* AI Strip */
+  .ai-strip { flex-wrap: wrap; gap: 6px; padding: 8px 10px; }
+  .ai-strip-left { flex-wrap: wrap; gap: 4px; }
+  .ai-strip-pills { flex-wrap: wrap; gap: 4px; }
+  .ai-strip-summary { font-size: 10px; }
+
+  /* ── Options Flow page ───────────────────────────────────── */
+  .of-filter-bar {
+    display: none;
+    flex-direction: column;
+    position: fixed;
+    bottom: 56px;
+    left: 0; right: 0;
+    background: #161b22;
+    border-top: 1px solid var(--border);
+    z-index: 800;
+    padding: 16px;
+    gap: 12px;
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+  .of-filter-bar.mob-open { display: flex; }
+
+  .of-filter-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 12px;
+    height: 40px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    border: none;
+    width: 100%;
+    text-align: left;
+  }
+
+  .of-ticker-input,
+  .of-select {
+    width: 100%;
+    font-size: 14px;
+    min-height: 44px;
+  }
+  .of-type-btn { min-height: 44px; font-size: 13px; padding: 8px 16px; }
+
+  .of-main {
+    flex-direction: column !important;
+    overflow: visible !important;
+    height: auto !important;
+  }
+  .of-tape-panel {
+    flex: none !important;
+    height: 50vh !important;
+    border-right: none !important;
+    border-bottom: 1px solid var(--border);
+  }
+  .of-right-panels {
+    flex: none !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: visible !important;
+    height: auto !important;
+  }
+  .of-panel {
+    flex: none !important;
+    height: 220px !important;
+    border-bottom: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .of-sentiment-strip {
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px 12px;
+    height: auto;
+    min-height: 44px;
+  }
+
+  /* ── AI Analysis page ────────────────────────────────────── */
+  .ai-page-wrap { padding: 12px; }
+
+  .ai-header-cards {
+    flex-direction: column !important;
+    gap: 8px;
+  }
+  .ai-signal-card { width: 100% !important; }
+
+  .ai-impact-grid {
+    flex-direction: column !important;
+    gap: 10px;
+  }
+  .ai-impact-card { width: 100% !important; }
+
+  .ai-tickers-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .ai-ideas-list .ai-idea { padding: 12px; }
+
+  /* Accuracy table horizontal scroll */
+  .ai-accuracy-section { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .ai-accuracy-section table { min-width: 600px; }
+
+  /* Collapsible sections */
+  .ai-section { border-radius: 0; }
+  .ai-section-title {
+    cursor: pointer;
+    user-select: none;
+    padding: 12px 0;
+    font-size: 13px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+  .ai-section-title::after {
+    content: '▾';
+    margin-left: auto;
+    font-size: 12px;
+    color: var(--text-muted);
+    transition: transform 0.2s;
+  }
+  .ai-section.collapsed .ai-section-title::after { content: '▸'; }
+  .ai-section.collapsed > *:not(.ai-section-title) { display: none !important; }
+
+  /* General touch targets */
+  button, .nav-tab, .tf-btn, .of-type-btn, .toggle-switch,
+  .quote-list-item, .of-tape-row, .of-ticker-chip {
+    min-height: 44px;
+  }
+
+  /* Font floors */
+  body { font-size: 14px !important; }
+  .col-section-header { font-size: 10px !important; }
+
+  /* Refresh modal full-width on mobile */
+  .refresh-modal-inner {
+    width: 95% !important;
+    max-height: 80vh !important;
+  }
+}
