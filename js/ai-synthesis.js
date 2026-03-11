@@ -18,6 +18,36 @@ const AISynthesis = (() => {
     return `${h}h ${m % 60}m ago`;
   }
 
+  // Returns the next scheduled cron run time: :40 of 9,11,13,15 ET on weekdays
+  function nextScheduledRun() {
+    const RUN_HOURS_ET = [9, 11, 13, 15]; // :40 past each
+    const now = new Date();
+    // Convert to ET offset (UTC-5 standard, UTC-4 daylight)
+    const etOffset = (() => {
+      const jan = new Date(now.getFullYear(), 0, 1).getTimezoneOffset();
+      const jul = new Date(now.getFullYear(), 6, 1).getTimezoneOffset();
+      const stdOffset = Math.max(jan, jul);
+      const isDST = now.getTimezoneOffset() < stdOffset;
+      return isDST ? -4 : -5;
+    })();
+    const etNow = new Date(now.getTime() + (etOffset - (-now.getTimezoneOffset()/60)) * 3600000);
+    const dayET = etNow.getDay(); // 0=Sun 6=Sat
+
+    for (let dayOffset = 0; dayOffset <= 7; dayOffset++) {
+      const checkDay = (dayET + dayOffset) % 7;
+      if (checkDay === 0 || checkDay === 6) continue; // skip weekends
+      for (const h of RUN_HOURS_ET) {
+        const candidate = new Date(etNow);
+        candidate.setDate(etNow.getDate() + dayOffset);
+        candidate.setHours(h, 40, 0, 0);
+        // Convert back to UTC for comparison
+        const candidateUTC = new Date(candidate.getTime() - etOffset * 3600000);
+        if (candidateUTC > now) return candidateUTC;
+      }
+    }
+    return null;
+  }
+
   function countdown(iso) {
     if (!iso) return '—';
     const diff = new Date(iso).getTime() - Date.now();
@@ -138,10 +168,10 @@ const AISynthesis = (() => {
 
     const metaEl = document.getElementById('ai-header-meta');
     if (metaEl) metaEl.innerHTML =
-      `Generated ${timeSince(data.generated_at)} &nbsp;·&nbsp; Next update in <span id="ai-countdown">${countdown(data.next_update)}</span>`;
+      `Generated ${timeSince(data.generated_at)} &nbsp;·&nbsp; Next update in <span id="ai-countdown">${countdown(nextScheduledRun()?.toISOString())}</span>`;
     setInterval(() => {
       const c = document.getElementById('ai-countdown');
-      if (c) c.textContent = countdown(data.next_update);
+      if (c) c.textContent = countdown(nextScheduledRun()?.toISOString());
     }, 60000);
 
     const accEl = document.getElementById('ai-header-acc');
