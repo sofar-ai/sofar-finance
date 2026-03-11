@@ -63,14 +63,17 @@ const Refresh = (() => {
   async function refresh(modal) {
     // Check server is up
     try {
-      const ping = await fetch(`${WEBHOOK}/ping`, { signal: AbortSignal.timeout(3000) });
-      if (!ping.ok) throw new Error('bad response');
-    } catch {
-      appendLog('❌ Refresh server not responding on localhost:9001.', '#ef4444');
-      appendLog('   It may have restarted. Try again in a few seconds or run:', '#ef4444');
-      appendLog('   python3 ~/scripts/refresh-server.py', '#9ca3af');
-      // Auto-close after 6s on error
-      setTimeout(() => hideModal(modal), 6000);
+      const ctrl = new AbortController();
+      const tid  = setTimeout(() => ctrl.abort(), 4000);
+      const ping = await fetch(`${WEBHOOK}/ping`, { signal: ctrl.signal });
+      clearTimeout(tid);
+      if (!ping.ok) throw new Error(`HTTP ${ping.status}`);
+    } catch (e) {
+      appendLog(`❌ Refresh server not responding on localhost:9001`, '#ef4444');
+      appendLog(`   Error: ${e.message || e}`, '#9ca3af');
+      appendLog('   Note: page is HTTPS — browser may block HTTP localhost.', '#9ca3af');
+      appendLog('   If on desktop Chrome/Firefox, try a hard reload (Ctrl+Shift+R).', '#9ca3af');
+      setTimeout(() => hideModal(modal), 8000);
       return;
     }
 
