@@ -123,6 +123,21 @@ const OptionsFlowPage = (() => {
       statusEl.style.color = stale ? '#f59e0b' : '';
     }
 
+    // Update connection status badge (was hardcoded "Connecting…")
+    const wsEl = document.getElementById('of-ws-status');
+    if (wsEl) {
+      if (!data.fetched_at) {
+        wsEl.textContent = 'No data';
+        wsEl.style.color = '#9ca3af';
+      } else if (stale) {
+        wsEl.textContent = 'Stale';
+        wsEl.style.color = '#f59e0b';
+      } else {
+        wsEl.textContent = 'Live';
+        wsEl.style.color = '#22c55e';
+      }
+    }
+
     if (!data.fetched_at) {
       tape.innerHTML = '<div class="tape-empty">Awaiting first data fetch — check back during market hours</div>';
       return;
