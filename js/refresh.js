@@ -1,156 +1,115 @@
 /**
- * Refresh — manual trigger for flow + synthesis via local webhook server
- * Requires: python3 ~/scripts/refresh-server.py running on localhost:9001
+ * Refresh — GitHub-trigger based manual refresh
+ * POST /api/trigger-refresh  → sets state to "pending"
+ * GET  /api/trigger-refresh  → polls state (pending/running/done/error)
+ * Local poller picks up "pending" within ~1 minute and runs the scripts
  */
 
 const Refresh = (() => {
-  const WEBHOOK = 'http://localhost:9001';
-  const POLL_MS  = 1000;
+  const API      = '/api/trigger-refresh';
+  const POLL_MS  = 5000;
+  const TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 
-  function initButton(buttonId, modalId) {
-    const btn   = document.getElementById(buttonId);
-    const modal = document.getElementById(modalId);
+  function initButton(buttonId) {
+    const btn = document.getElementById(buttonId);
     if (!btn) return;
 
     const handler = async () => {
+      if (btn.disabled) return;
       btn.disabled = true;
-      btn.textContent = '⏳ Running…';
-      btn.style.opacity = '0.7';
-      clearLog();
-      showModal(modal);
-
-      await refresh(modal);
-
+      await runRefresh(btn);
       btn.disabled = false;
-      btn.textContent = '🔄 Rerun Options Flow + AI Synthesis';
-      btn.style.opacity = '';
     };
-    btn.addEventListener('click', handler);
+
+    btn.addEventListener('click',    handler);
     btn.addEventListener('touchend', (e) => { e.preventDefault(); handler(); });
   }
 
-  function showModal(modal) {
-    if (modal) modal.style.display = 'flex';
+  function setState(btn, state, extra) {
+    const labels = {
+      posting:  { text: '⏳ Queuing…',      color: '#f59e0b' },
+      pending:  { text: '⏳ Queued…',        color: '#f59e0b' },
+      running:  { text: '⚙️ Running…',       color: '#60a5fa' },
+      done:     { text: `✅ Done`,            color: '#22c55e' },
+      error:    { text: '❌ Error — try again', color: '#ef4444' },
+      timeout:  { text: '❌ Timed out — try again', color: '#ef4444' },
+    };
+    const s = labels[state] || { text: state, color: '#9ca3af' };
+    btn.textContent  = extra ? `${s.text} — ${extra}` : s.text;
+    btn.style.color  = s.color;
+    btn.style.borderColor = s.color;
   }
 
-  function hideModal(modal) {
-    if (modal) modal.style.display = 'none';
-  }
+  async function runRefresh(btn) {
+    setState(btn, 'posting');
 
-  function clearLog() {
-    const el = document.getElementById('refresh-log');
-    const step = document.getElementById('refresh-step');
-    if (el) el.innerHTML = '';
-    if (step) step.textContent = 'Starting…';
-  }
-
-  function appendLog(msg, color) {
-    const logEl = document.getElementById('refresh-log');
-    if (!logEl) return;
-    const line = document.createElement('div');
-    line.className = 'refresh-log-line';
-    if (color) line.style.color = color;
-    line.textContent = msg;
-    logEl.appendChild(line);
-    logEl.scrollTop = logEl.scrollHeight;
-  }
-
-  function setStep(text) {
-    const el = document.getElementById('refresh-step');
-    if (el) el.textContent = text;
-  }
-
-  async function refresh(modal) {
-    // Check server is up
+    // POST to trigger
+    let res;
     try {
-      const ctrl = new AbortController();
-      const tid  = setTimeout(() => ctrl.abort(), 4000);
-      const ping = await fetch(`${WEBHOOK}/ping`, { signal: ctrl.signal });
-      clearTimeout(tid);
-      if (!ping.ok) throw new Error(`HTTP ${ping.status}`);
+      res = await fetch(API, { method: 'POST' });
     } catch (e) {
-      appendLog(`❌ Refresh server not responding on localhost:9001`, '#ef4444');
-      appendLog(`   Error: ${e.message || e}`, '#9ca3af');
-      appendLog('   Note: page is HTTPS — browser may block HTTP localhost.', '#9ca3af');
-      appendLog('   If on desktop Chrome/Firefox, try a hard reload (Ctrl+Shift+R).', '#9ca3af');
-      setTimeout(() => hideModal(modal), 8000);
+      setState(btn, 'error');
+      console.error('[Refresh] POST failed:', e);
       return;
     }
 
-    // Check not already running
-    try {
-      const statusRes = await fetch(`${WEBHOOK}/status`);
-      const statusData = await statusRes.json();
-      if (statusData.running) {
-        appendLog(`⏳ Already running: ${statusData.step || '…'}`, '#f59e0b');
-        appendLog('   Close this and check back shortly.', '#9ca3af');
-        pollUntilDone(modal);
-        return;
-      }
-    } catch { /* ignore */ }
-
-    // Trigger
-    appendLog('[START] Sending trigger…', '#9ca3af');
-    try {
-      const res = await fetch(`${WEBHOOK}/refresh`, { method: 'POST' });
-      if (res.status === 409) {
-        appendLog('⚠ Already running — tailing progress…', '#f59e0b');
-      } else if (res.status !== 202) {
-        const err = await res.json().catch(() => ({}));
-        appendLog(`❌ Server error: ${err.error || res.status}`, '#ef4444');
-        setTimeout(() => hideModal(modal), 5000);
-        return;
+    if (!res.ok && res.status !== 202 && res.status !== 200) {
+      const err = await res.json().catch(() => ({}));
+      console.error('[Refresh] API error:', err);
+      // If GITHUB_TOKEN not set, show helpful message
+      if (err.error?.includes('GITHUB_TOKEN')) {
+        btn.textContent = '❌ GITHUB_TOKEN not set in Vercel';
+        btn.style.color = '#ef4444';
       } else {
-        appendLog('[START] Options flow + AI synthesis running…', '#22c55e');
+        setState(btn, 'error');
       }
-    } catch (e) {
-      appendLog(`❌ Network error: ${e.message}`, '#ef4444');
-      setTimeout(() => hideModal(modal), 5000);
       return;
     }
 
-    pollUntilDone(modal);
-  }
-
-  let knownLogLen = 0;
-
-  async function pollUntilDone(modal) {
-    knownLogLen = 0;
+    // Poll for completion
+    const started = Date.now();
     while (true) {
       await new Promise(r => setTimeout(r, POLL_MS));
+
+      if (Date.now() - started > TIMEOUT_MS) {
+        setState(btn, 'timeout');
+        return;
+      }
+
+      let data;
       try {
-        const res  = await fetch(`${WEBHOOK}/status`);
-        const data = await res.json();
+        const r = await fetch(`${API}?v=${Date.now()}`);
+        data = await r.json();
+      } catch {
+        continue; // transient error, keep polling
+      }
 
-        if (data.step) setStep(data.step);
+      const state = data.state;
+      setState(btn, state);
 
-        // Append only new log lines
-        const lines = data.log || [];
-        for (let i = knownLogLen; i < lines.length; i++) {
-          const line = lines[i];
-          const color = line.startsWith('[START]') || line.includes('✓') ? '#22c55e'
-                      : line.includes('ERROR') || line.includes('error') ? '#ef4444'
-                      : '#9ca3af';
-          appendLog(line, color);
-        }
-        knownLogLen = lines.length;
-
-        if (!data.running) {
-          appendLog('', null);
-          appendLog('✓ Done! Data updated and pushed to GitHub.', '#22c55e');
-          appendLog('Dashboard will reload in 5 seconds…', '#9ca3af');
-          setStep('Complete');
+      if (state === 'done') {
+        const ago = data.completed_at
+          ? Math.round((Date.now() - new Date(data.completed_at).getTime()) / 1000)
+          : null;
+        setState(btn, 'done', ago != null ? `${ago}s ago` : '');
+        // Reload data widgets after a short pause
+        setTimeout(() => {
+          try { if (window.AISynthesis) { AISynthesis.initStrip?.() || AISynthesis.load?.('strip'); } } catch {}
+          try { if (window.TopFlow) TopFlow.load?.(); } catch {}
+          // Reset button after 8s
           setTimeout(() => {
-            hideModal(modal);
-            // Reload data widgets
-            try { AISynthesis.initStrip?.() || AISynthesis.load?.('strip'); } catch {}
-            try { TopFlow.load?.(); } catch {}
-          }, 5000);
-          break;
-        }
-      } catch (e) {
-        appendLog(`Poll error: ${e.message}`, '#ef4444');
-        break;
+            setState(btn, 'idle');
+            btn.textContent = '🔄 Rerun Options Flow + AI Synthesis';
+            btn.style.color = '';
+            btn.style.borderColor = '';
+          }, 8000);
+        }, 1500);
+        return;
+      }
+
+      if (state === 'error') {
+        setState(btn, 'error');
+        return;
       }
     }
   }
