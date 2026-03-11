@@ -216,10 +216,14 @@ const AISynthesis = (() => {
           card.className = 'ai-ticker-card ai-benchmark-card';
           card.innerHTML = `
             <div class="ai-ticker-top">
-              <span class="ai-ticker-sym ai-bench-sym">${sym}</span>
-              <span class="ai-ticker-badge" style="color:${idc};border-color:${idc}55">ID: ${b.intraday_bias||'—'}</span>
-              <span class="ai-ticker-badge" style="color:${ndc};border-color:${ndc}55">ND: ${b.next_day_bias||'—'}</span>
-              <span class="ai-ticker-badge" style="color:${ltc};border-color:${ltc}55">LT: ${b.long_term_bias||'—'}</span>
+              <div class="ai-ticker-top-row">
+                <span class="ai-ticker-sym ai-bench-sym">${sym}</span>
+              </div>
+              <div class="ai-ticker-top-row">
+                <span class="ai-ticker-badge" style="color:${idc};border-color:${idc}55">ID: ${b.intraday_bias||'—'}</span>
+                <span class="ai-ticker-badge" style="color:${ndc};border-color:${ndc}55">ND: ${b.next_day_bias||'—'}</span>
+                <span class="ai-ticker-badge" style="color:${ltc};border-color:${ltc}55">LT: ${b.long_term_bias||'—'}</span>
+              </div>
             </div>
             <div class="ai-ticker-reason">${b.analysis || ''}</div>
             <div class="ai-ticker-prices">
@@ -250,10 +254,14 @@ const AISynthesis = (() => {
           card.className = 'ai-ticker-card';
           card.innerHTML = `
             <div class="ai-ticker-top">
-              <span class="ai-ticker-sym">${t.ticker}</span>
-              <span class="ai-ticker-badge" style="color:${idc};border-color:${idc}55">ID: ${t.intraday_bias||t.short_term_bias||'—'}</span>
-              <span class="ai-ticker-badge" style="color:${ndc};border-color:${ndc}55">ND: ${t.next_day_bias||'—'}</span>
-              <span class="ai-ticker-badge" style="color:${ltc};border-color:${ltc}55">LT: ${t.long_term_bias||'—'}</span>
+              <div class="ai-ticker-top-row">
+                <span class="ai-ticker-sym">${t.ticker}</span>
+              </div>
+              <div class="ai-ticker-top-row">
+                <span class="ai-ticker-badge" style="color:${idc};border-color:${idc}55">ID: ${t.intraday_bias||t.short_term_bias||'—'}</span>
+                <span class="ai-ticker-badge" style="color:${ndc};border-color:${ndc}55">ND: ${t.next_day_bias||'—'}</span>
+                <span class="ai-ticker-badge" style="color:${ltc};border-color:${ltc}55">LT: ${t.long_term_bias||'—'}</span>
+              </div>
             </div>
             <div class="ai-ticker-reason">${t.reason || ''}</div>
             <div class="ai-ticker-prices">
