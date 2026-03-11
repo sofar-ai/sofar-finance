@@ -291,7 +291,7 @@ const Performance = (() => {
       const nd      = checks['next_day'];
       const lt      = checks['long_term'];
       const conf    = (intra || nd || lt)?.confidence_at_prediction ?? (intra || nd || lt)?.confidence ?? arch?.intraday?.confidence ?? '—';
-      const trigType = (intra || nd || lt)?.trigger_type || 'scheduled';
+      const trigType = (intra || nd || lt)?.trigger_type || arch?.trigger_type || 'scheduled';
 
       const sigCell = (tf) => {
         const c = checks[tf];
