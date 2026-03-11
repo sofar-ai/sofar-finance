@@ -184,6 +184,21 @@ const AISynthesis = (() => {
       accEl.innerHTML = `<span class="ai-acc-badge">🎯 Intraday: ${fmt('intraday')} &nbsp;·&nbsp; Next Day: ${fmt('next_day')} &nbsp;·&nbsp; 30D: ${fmt('long_term')}</span>`;
     }
 
+    // ── Calibration Notes ──
+    const calEl = document.getElementById('ai-calibration-notes');
+    if (calEl) {
+      const notes = data.calibration_notes;
+      const regime = data.regime || '';
+      if (notes && notes.length > 20) {
+        calEl.innerHTML = `
+          <div class="ai-cal-header">🧠 Calibration Notes
+            ${regime ? `<span class="ai-regime-badge">${regime.replace(/_/g,' ')}</span>` : ''}
+          </div>
+          <div class="ai-cal-text">${notes}</div>`;
+        calEl.style.display = 'block';
+      } else { calEl.style.display = 'none'; }
+    }
+
     // ── Section 1: News & Flow impact ──
     const impactEl = document.getElementById('ai-impact-grid');
     if (impactEl) impactEl.innerHTML = `
