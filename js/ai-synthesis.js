@@ -166,7 +166,44 @@ const AISynthesis = (() => {
         <div class="ai-impact-text">${data.options_flow_impact || '—'}</div>
       </div>`;
 
-    // ── Section 2: Tickers to Watch (three bias columns) ──
+    // ── Section 2a: SPY / QQQ Benchmarks ──
+    const benchEl = document.getElementById('ai-benchmarks-grid');
+    if (benchEl) {
+      const benchmarks = data.benchmarks || {};
+      const benchSyms  = Object.keys(benchmarks);
+      if (!benchSyms.length) {
+        benchEl.innerHTML = '<div class="ai-empty">No benchmark data</div>';
+      } else {
+        benchEl.innerHTML = '';
+        benchSyms.forEach(sym => {
+          const b   = benchmarks[sym];
+          const idc = signalColor(b.intraday_bias);
+          const ndc = signalColor(b.next_day_bias);
+          const ltc = signalColor(b.long_term_bias);
+          const px  = data.prices_at_generation?.[sym];
+          const cur = typeof px === 'object' ? px?.price : px;
+          const card = document.createElement('div');
+          card.className = 'ai-ticker-card ai-benchmark-card';
+          card.innerHTML = `
+            <div class="ai-ticker-top">
+              <span class="ai-ticker-sym ai-bench-sym">${sym}</span>
+              <span class="ai-ticker-badge" style="color:${idc};border-color:${idc}55">ID: ${b.intraday_bias||'—'}</span>
+              <span class="ai-ticker-badge" style="color:${ndc};border-color:${ndc}55">ND: ${b.next_day_bias||'—'}</span>
+              <span class="ai-ticker-badge" style="color:${ltc};border-color:${ltc}55">LT: ${b.long_term_bias||'—'}</span>
+            </div>
+            <div class="ai-ticker-reason">${b.analysis || ''}</div>
+            <div class="ai-ticker-prices">
+              <span class="ai-tp-item">Now: <strong>${fmtPrice(cur)}</strong></span>
+              <span class="ai-tp-item">2H: <strong style="color:${idc}">${fmtPrice(b.predicted_price_2h)}</strong> <em>${fmtChange(cur, b.predicted_price_2h)}</em></span>
+              <span class="ai-tp-item">Next Day: <strong style="color:${ndc}">${fmtPrice(b.predicted_price_nextday)}</strong> <em>${fmtChange(cur, b.predicted_price_nextday)}</em></span>
+              <span class="ai-tp-item">30D: <strong style="color:${ltc}">${fmtPrice(b.predicted_price_30d)}</strong> <em>${fmtChange(cur, b.predicted_price_30d)}</em></span>
+            </div>`;
+          benchEl.appendChild(card);
+        });
+      }
+    }
+
+    // ── Section 2b: Tickers to Watch (three bias columns) ──
     const tickEl = document.getElementById('ai-tickers-grid');
     if (tickEl) {
       const tickers = data.tickers_to_watch || [];
