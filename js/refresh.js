@@ -25,17 +25,19 @@ const Refresh = (() => {
     btn.addEventListener('touchend', (e) => { e.preventDefault(); handler(); });
   }
 
-  function setState(btn, state, extra) {
+  function setState(btn, state, extra, apiMessage) {
     const labels = {
-      posting:  { text: '⏳ Queuing…',      color: '#f59e0b' },
-      pending:  { text: '⏳ Queued…',        color: '#f59e0b' },
-      running:  { text: '⚙️ Running…',       color: '#60a5fa' },
-      done:     { text: `✅ Done`,            color: '#22c55e' },
-      error:    { text: '❌ Error — try again', color: '#ef4444' },
+      posting:  { text: '⏳ Queuing…',            color: '#f59e0b' },
+      pending:  { text: '⏳ Queued — pick up in ~1 min…', color: '#f59e0b' },
+      running:  { text: '⚙️ Running…',             color: '#60a5fa' },
+      done:     { text: '✅ Done',                  color: '#22c55e' },
+      error:    { text: '❌ Error — try again',     color: '#ef4444' },
       timeout:  { text: '❌ Timed out — try again', color: '#ef4444' },
     };
     const s = labels[state] || { text: state, color: '#9ca3af' };
-    btn.textContent  = extra ? `${s.text} — ${extra}` : s.text;
+    // Use the message from GitHub trigger file when available (shows step progress)
+    const displayText = apiMessage || (extra ? `${s.text} — ${extra}` : s.text);
+    btn.textContent  = displayText;
     btn.style.color  = s.color;
     btn.style.borderColor = s.color;
   }
@@ -85,13 +87,11 @@ const Refresh = (() => {
       }
 
       const state = data.state;
-      setState(btn, state);
+      setState(btn, state, null, data.message || null);
 
       if (state === 'done') {
-        const ago = data.completed_at
-          ? Math.round((Date.now() - new Date(data.completed_at).getTime()) / 1000)
-          : null;
-        setState(btn, 'done', ago != null ? `${ago}s ago` : '');
+        const msg = data.message || null;
+        setState(btn, 'done', null, msg);
         // Reload data widgets after a short pause
         setTimeout(() => {
           try { if (window.AISynthesis) { AISynthesis.initStrip?.() || AISynthesis.load?.('strip'); } } catch {}
