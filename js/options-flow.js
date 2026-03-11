@@ -88,9 +88,17 @@ const OptionsFlowPage = (() => {
   function makeRow(trade) {
     const right   = (trade.right || '?').toUpperCase();
     const isCall  = right === 'C' || right === 'CALL';
-    const side    = (trade.side || trade.condition || '').toUpperCase();
-    const sideLabel = side === 'A' || side === 'BUY' ? 'BUY' : side === 'B' || side === 'SELL' ? 'SELL' : side || '—';
-    const sideClass = sideLabel === 'BUY' ? 'tf-side-buy' : sideLabel === 'SELL' ? 'tf-side-sell' : '';
+    // Derive side from ask_size vs bid_size if not explicitly set
+    const rawSide = (trade.side || trade.condition || '').toUpperCase();
+    let sideLabel;
+    if (rawSide === 'A' || rawSide === 'BUY')       sideLabel = 'BUY';
+    else if (rawSide === 'B' || rawSide === 'SELL')  sideLabel = 'SELL';
+    else if (rawSide)                                sideLabel = rawSide;
+    else if (trade.ask_size != null && trade.bid_size != null)
+      sideLabel = trade.ask_size >= trade.bid_size ? 'ASK' : 'BID';
+    else sideLabel = '—';
+    const sideClass = (sideLabel === 'BUY' || sideLabel === 'ASK') ? 'tf-side-buy'
+                    : (sideLabel === 'SELL' || sideLabel === 'BID') ? 'tf-side-sell' : '';
     const flags   = `${trade.isSweep ? '🔥' : ''}${(trade.premium||0) >= 500000 ? '🐳' : ''}`;
 
     const el = document.createElement('div');
@@ -102,9 +110,9 @@ const OptionsFlowPage = (() => {
       <span class="tape-expiry">${trade.expiration ? fmtExp(trade.expiration) : '—'}</span>
       <span class="tape-cp tape-cp-${isCall?'c':'p'}">${right}</span>
       <span class="tape-prem">${fmtPrem(trade.premium)}</span>
-      <span class="tape-size">${trade.size != null ? `${trade.size}x` : '—'}</span>
+      <span class="tape-size">${(trade.size ?? trade.ask_size) != null ? `${trade.size ?? trade.ask_size}x` : '—'}</span>
       <span class="tape-side ${sideClass}">${sideLabel}</span>
-      <span class="tape-exch">${trade.exchange || ''}</span>
+      ${trade.exchange ? `<span class="tape-exch">${trade.exchange}</span>` : ''}
     `;
     return el;
   }
