@@ -1,13 +1,13 @@
 /**
  * AI Synthesis — reads /data/ai-synthesis.json, /data/accuracy-stats.json, /data/accuracy-log.json
  * Powers both the main dashboard strip and ai-analysis.html page.
- * Handles short_term / long_term dual-signal format.
+ * Handles three-timeframe format: intraday / next_day / long_term
  */
 
 const AISynthesis = (() => {
   const REFRESH_MS = 5 * 60 * 1000;
 
-  // ── Helpers ────────────────────────────────────────────────────────────
+  // ── Helpers ─────────────────────────────────────────────────────────
 
   function timeSince(iso) {
     if (!iso) return null;
@@ -59,7 +59,7 @@ const AISynthesis = (() => {
     return res.json();
   }
 
-  // ── Strip (main dashboard) ─────────────────────────────────────────────
+  // ── Strip (main dashboard) ─────────────────────────────────────────
 
   function renderStrip(data, stats) {
     const el = document.getElementById('ai-strip');
@@ -72,30 +72,31 @@ const AISynthesis = (() => {
       return;
     }
 
-    const st    = data.short_term || {};
-    const lt    = data.long_term  || {};
+    const id_ = data.intraday  || data.short_term || {};
+    const nd_ = data.next_day  || {};
+    const lt_ = data.long_term || {};
     const since = timeSince(data.generated_at);
 
     const accBadge = stats && stats.total_predictions > 0
-      ? `<span class="ai-strip-acc">AI Accuracy: ${stats.accuracy_pct}% (${stats.total_predictions} predictions)</span>`
+      ? `<span class="ai-strip-acc">🎯 ${stats.accuracy_pct}% accuracy (${stats.total_predictions} calls)</span>`
       : '';
+
+    const pill = (label, sig) => `
+      <div class="ai-strip-pill" style="border-color:${signalColor(sig.signal)}33;background:${signalColor(sig.signal)}0d">
+        <span class="ai-pill-label">${label}</span>
+        <span class="ai-pill-sig" style="color:${signalColor(sig.signal)}">${signalEmoji(sig.signal)} ${sig.signal||'—'}</span>
+        <span class="ai-pill-conf">${sig.confidence ?? '—'}%</span>
+      </div>`;
 
     el.innerHTML = `
       <div class="ai-strip-signals">
-        <div class="ai-strip-pill" style="border-color:${signalColor(st.signal)}22;background:${signalColor(st.signal)}11">
-          <span class="ai-pill-label">SHORT TERM</span>
-          <span class="ai-pill-sig" style="color:${signalColor(st.signal)}">${signalEmoji(st.signal)} ${st.signal||'—'}</span>
-          <span class="ai-pill-conf">${st.confidence ?? '—'}%</span>
-        </div>
-        <div class="ai-strip-pill" style="border-color:${signalColor(lt.signal)}22;background:${signalColor(lt.signal)}11">
-          <span class="ai-pill-label">LONG TERM</span>
-          <span class="ai-pill-sig" style="color:${signalColor(lt.signal)}">${signalEmoji(lt.signal)} ${lt.signal||'—'}</span>
-          <span class="ai-pill-conf">${lt.confidence ?? '—'}%</span>
-        </div>
+        ${pill('INTRADAY', id_)}
+        ${pill('NEXT DAY', nd_)}
+        ${pill('30-DAY', lt_)}
       </div>
       <div class="ai-strip-drivers">
-        <div class="ai-strip-driver"><span class="ai-driver-label">ST:</span> ${st.key_driver || '—'}</div>
-        <div class="ai-strip-driver"><span class="ai-driver-label">LT:</span> ${lt.key_driver || '—'}</div>
+        <div class="ai-strip-driver"><span class="ai-driver-label">ID:</span> ${id_.key_driver || '—'}</div>
+        <div class="ai-strip-driver"><span class="ai-driver-label">ND:</span> ${nd_.key_driver || '—'}</div>
       </div>
       <div class="ai-strip-meta">
         ${accBadge}
@@ -104,7 +105,7 @@ const AISynthesis = (() => {
       </div>`;
   }
 
-  // ── Full analysis page ─────────────────────────────────────────────────
+  // ── Full analysis page ─────────────────────────────────────────────
 
   function renderPage(data, stats, log) {
     if (!data || !data.generated_at) {
@@ -117,26 +118,23 @@ const AISynthesis = (() => {
       return;
     }
 
-    const st = data.short_term || {};
-    const lt = data.long_term  || {};
+    const id_ = data.intraday  || data.short_term || {};
+    const nd_ = data.next_day  || {};
+    const lt_ = data.long_term || {};
 
-    // ── Header signal cards ──
+    // ── Header: three signal cards ──
     const hdr = document.getElementById('ai-header-cards');
-    if (hdr) hdr.innerHTML = `
-      <div class="ai-signal-card" style="border-color:${signalColor(st.signal)}44">
-        <div class="ai-sc-label">SHORT TERM (2H)</div>
-        <div class="ai-sc-sig" style="color:${signalColor(st.signal)}">${signalEmoji(st.signal)} ${st.signal}</div>
-        <div class="ai-sc-conf" style="color:${signalColor(st.signal)}">${st.confidence}% confidence</div>
-        <div class="ai-sc-summary">${st.summary || ''}</div>
-        <div class="ai-sc-driver"><strong>Key driver:</strong> ${st.key_driver || ''}</div>
-      </div>
-      <div class="ai-signal-card" style="border-color:${signalColor(lt.signal)}44">
-        <div class="ai-sc-label">LONG TERM (30D)</div>
-        <div class="ai-sc-sig" style="color:${signalColor(lt.signal)}">${signalEmoji(lt.signal)} ${lt.signal}</div>
-        <div class="ai-sc-conf" style="color:${signalColor(lt.signal)}">${lt.confidence}% confidence</div>
-        <div class="ai-sc-summary">${lt.summary || ''}</div>
-        <div class="ai-sc-driver"><strong>Key driver:</strong> ${lt.key_driver || ''}</div>
-      </div>`;
+    if (hdr) {
+      const card = (label, sig) => `
+        <div class="ai-signal-card" style="border-color:${signalColor(sig.signal)}44">
+          <div class="ai-sc-label">${label}</div>
+          <div class="ai-sc-sig" style="color:${signalColor(sig.signal)}">${signalEmoji(sig.signal)} ${sig.signal||'—'}</div>
+          <div class="ai-sc-conf" style="color:${signalColor(sig.signal)}">${sig.confidence ?? '—'}% confidence</div>
+          <div class="ai-sc-summary">${sig.summary || ''}</div>
+          <div class="ai-sc-driver"><strong>Key driver:</strong> ${sig.key_driver || ''}</div>
+        </div>`;
+      hdr.innerHTML = card('INTRADAY (2H)', id_) + card('NEXT DAY', nd_) + card('LONG TERM (30D)', lt_);
+    }
 
     const metaEl = document.getElementById('ai-header-meta');
     if (metaEl) metaEl.innerHTML =
@@ -146,10 +144,14 @@ const AISynthesis = (() => {
       if (c) c.textContent = countdown(data.next_update);
     }, 60000);
 
-    // Accuracy badge in header
     const accEl = document.getElementById('ai-header-acc');
     if (accEl && stats && stats.total_predictions > 0) {
-      accEl.innerHTML = `<span class="ai-acc-badge">🎯 AI Accuracy: ${stats.accuracy_pct}% over ${stats.total_predictions} predictions</span>`;
+      const byTf = stats.by_timeframe || {};
+      const fmt = (tf) => {
+        const d = byTf[tf] || {};
+        return d.total ? `${d.accuracy_pct}% (${d.total})` : '—';
+      };
+      accEl.innerHTML = `<span class="ai-acc-badge">🎯 Intraday: ${fmt('intraday')} &nbsp;·&nbsp; Next Day: ${fmt('next_day')} &nbsp;·&nbsp; 30D: ${fmt('long_term')}</span>`;
     }
 
     // ── Section 1: News & Flow impact ──
@@ -164,7 +166,7 @@ const AISynthesis = (() => {
         <div class="ai-impact-text">${data.options_flow_impact || '—'}</div>
       </div>`;
 
-    // ── Section 2: Tickers to Watch ──
+    // ── Section 2: Tickers to Watch (three bias columns) ──
     const tickEl = document.getElementById('ai-tickers-grid');
     if (tickEl) {
       const tickers = data.tickers_to_watch || [];
@@ -172,23 +174,26 @@ const AISynthesis = (() => {
       else {
         tickEl.innerHTML = '';
         tickers.forEach(t => {
-          const stc = signalColor(t.short_term_bias);
+          const idc = signalColor(t.intraday_bias  || t.short_term_bias);
+          const ndc = signalColor(t.next_day_bias);
           const ltc = signalColor(t.long_term_bias);
           const px  = data.prices_at_generation?.[t.ticker];
-          const curPrice = px?.price ?? px;
+          const cur = px?.price ?? px;
           const card = document.createElement('div');
           card.className = 'ai-ticker-card';
           card.innerHTML = `
             <div class="ai-ticker-top">
               <span class="ai-ticker-sym">${t.ticker}</span>
-              <span class="ai-ticker-badge" style="color:${stc};border-color:${stc}55">ST: ${t.short_term_bias||'—'}</span>
+              <span class="ai-ticker-badge" style="color:${idc};border-color:${idc}55">ID: ${t.intraday_bias||t.short_term_bias||'—'}</span>
+              <span class="ai-ticker-badge" style="color:${ndc};border-color:${ndc}55">ND: ${t.next_day_bias||'—'}</span>
               <span class="ai-ticker-badge" style="color:${ltc};border-color:${ltc}55">LT: ${t.long_term_bias||'—'}</span>
             </div>
             <div class="ai-ticker-reason">${t.reason || ''}</div>
             <div class="ai-ticker-prices">
-              <span class="ai-tp-item">Now: <strong>${fmtPrice(curPrice)}</strong></span>
-              <span class="ai-tp-item">2H: <strong style="color:${signalColor(t.short_term_bias)}">${fmtPrice(t.predicted_price_2h)}</strong> <em>${fmtChange(curPrice, t.predicted_price_2h)}</em></span>
-              <span class="ai-tp-item">30D: <strong style="color:${signalColor(t.long_term_bias)}">${fmtPrice(t.predicted_price_30d)}</strong> <em>${fmtChange(curPrice, t.predicted_price_30d)}</em></span>
+              <span class="ai-tp-item">Now: <strong>${fmtPrice(cur)}</strong></span>
+              <span class="ai-tp-item">2H: <strong style="color:${idc}">${fmtPrice(t.predicted_price_2h)}</strong> <em>${fmtChange(cur, t.predicted_price_2h)}</em></span>
+              <span class="ai-tp-item">Next Day: <strong style="color:${ndc}">${fmtPrice(t.predicted_price_nextday)}</strong> <em>${fmtChange(cur, t.predicted_price_nextday)}</em></span>
+              <span class="ai-tp-item">30D: <strong style="color:${ltc}">${fmtPrice(t.predicted_price_30d)}</strong> <em>${fmtChange(cur, t.predicted_price_30d)}</em></span>
             </div>`;
           tickEl.appendChild(card);
         });
@@ -226,54 +231,57 @@ const AISynthesis = (() => {
       const risks = data.risks || [];
       if (!risks.length) { risksEl.innerHTML = '<div class="ai-empty">No risks flagged</div>'; }
       else {
-        risksEl.innerHTML = '';
-        risks.forEach((r, i) => {
-          const li = document.createElement('div');
-          li.className = 'ai-risk-item';
-          li.innerHTML = `<span class="ai-risk-num">${i+1}</span><span>${r}</span>`;
-          risksEl.appendChild(li);
-        });
+        risksEl.innerHTML = risks.map((r, i) =>
+          `<div class="ai-risk-item"><span class="ai-risk-num">${i+1}</span><span>${r}</span></div>`).join('');
       }
     }
 
     // ── Section 5: Accuracy Track Record ──
     const accSection = document.getElementById('ai-accuracy-section');
     if (accSection && stats) {
-      const pct = stats.accuracy_pct || 0;
-      const barColor = pct >= 70 ? '#22c55e' : pct >= 50 ? '#f59e0b' : '#ef4444';
-      const bySignal = stats.by_signal || {};
+      const byTf = stats.by_timeframe || {};
+      const TFS  = [
+        { key: 'intraday',  label: 'Intraday (2H)' },
+        { key: 'next_day',  label: 'Next Day'       },
+        { key: 'long_term', label: 'Long Term (30D)' },
+      ];
 
-      // Last 10 from log
+      const barsHTML = TFS.map(({ key, label }) => {
+        const d = byTf[key] || { total: 0, correct: 0, accuracy_pct: 0 };
+        const c = d.accuracy_pct >= 70 ? '#22c55e' : d.accuracy_pct >= 50 ? '#f59e0b' : '#ef4444';
+        const pct = d.accuracy_pct || 0;
+        return `
+          <div class="ai-tf-bar-row">
+            <div class="ai-tf-bar-label">${label}</div>
+            <div class="ai-tf-bar-track"><div class="ai-tf-bar-fill" style="width:${pct}%;background:${c}"></div></div>
+            <div class="ai-tf-bar-stat" style="color:${c}">${pct}% <span class="ai-tf-n">(${d.correct}/${d.total})</span></div>
+          </div>`;
+      }).join('');
+
+      // Last 10 predictions table
       const last10 = (log || []).slice(-10).reverse();
+      const TF_LABEL = { intraday: 'ID', next_day: 'ND', long_term: 'LT' };
       const tableRows = last10.map(e => {
-        const d = new Date(e.prediction_time);
-        const label = `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
-        const correct = e.short_term_correct;
-        const sig = e.short_term_signal || '—';
+        const dt = new Date(e.prediction_time);
+        const label = `${dt.getMonth()+1}/${dt.getDate()} ${dt.getHours()}:${String(dt.getMinutes()).padStart(2,'0')}`;
+        const sig   = e.signal || e.short_term_signal || '—';
+        const tf    = TF_LABEL[e.timeframe] || e.timeframe || 'ID';
+        const ok    = e.signal_correct ?? e.short_term_correct;
         return `<div class="ai-hist-row">
           <span class="ai-hist-time">${label}</span>
+          <span class="ai-hist-tf">${tf}</span>
           <span class="ai-hist-sig" style="color:${signalColor(sig)}">${sig}</span>
           <span class="ai-hist-conf">${e.confidence_at_prediction ?? '—'}%</span>
-          <span class="ai-hist-result ${correct ? 'ai-correct' : 'ai-incorrect'}">${correct ? '✓' : '✗'}</span>
+          <span class="ai-hist-result ${ok ? 'ai-correct' : 'ai-incorrect'}">${ok ? '✓' : '✗'}</span>
         </div>`;
       }).join('');
 
-      const bySignalHTML = Object.entries(bySignal).map(([sig, d]) => `
-        <div class="ai-bs-row">
-          <span style="color:${signalColor(sig)}">${sig}</span>
-          <div class="ai-bs-bar-wrap"><div class="ai-bs-bar" style="width:${d.accuracy}%;background:${signalColor(sig)}"></div></div>
-          <span>${d.accuracy}% (${d.correct}/${d.total})</span>
-        </div>`).join('');
-
       accSection.innerHTML = `
-        <div class="ai-acc-overall">
-          <div class="ai-acc-pct" style="color:${barColor}">${pct}%</div>
-          <div class="ai-acc-label">Overall Accuracy</div>
-          <div class="ai-acc-bar-wrap"><div class="ai-acc-bar" style="width:${pct}%;background:${barColor}"></div></div>
-          <div class="ai-acc-sub">${stats.correct} correct of ${stats.total_predictions} predictions · Avg price error: ${stats.avg_price_error_pct != null ? stats.avg_price_error_pct + '%' : '—'}</div>
-          ${stats.best_ticker ? `<div class="ai-acc-sub">Best: <strong>${stats.best_ticker}</strong> · Worst: <strong>${stats.worst_ticker||'—'}</strong></div>` : ''}
+        <div class="ai-tf-bars">${barsHTML}</div>
+        <div class="ai-acc-sub" style="margin:8px 0 4px">
+          Avg price error: ${stats.avg_price_error_pct != null ? stats.avg_price_error_pct + '%' : '—'}
+          ${stats.best_ticker ? ` &nbsp;·&nbsp; Best: <strong>${stats.best_ticker}</strong> · Worst: <strong>${stats.worst_ticker||'—'}</strong>` : ''}
         </div>
-        <div class="ai-acc-by-signal">${bySignalHTML}</div>
         <div class="ai-acc-hist-title">Last 10 Predictions</div>
         <div class="ai-acc-hist">${tableRows || '<div class="ai-empty">No predictions yet</div>'}</div>`;
     } else if (accSection) {
@@ -287,7 +295,7 @@ const AISynthesis = (() => {
       const px = data.prices_at_generation || {};
       const pxLines = Object.entries(px).map(([s, v]) => {
         const info = typeof v === 'object' ? v : {price: v};
-        const chg = info.change_pct;
+        const chg  = info.change_pct;
         return `${s}: ${fmtPrice(info.price)} (${chg >= 0 ? '+' : ''}${(chg||0).toFixed(2)}%)`;
       }).join('\n');
       rawEl.innerHTML = `
@@ -303,7 +311,7 @@ const AISynthesis = (() => {
     }
   }
 
-  // ── Load & dispatch ────────────────────────────────────────────────────
+  // ── Load & dispatch ───────────────────────────────────────────────
 
   async function load(mode) {
     try {
