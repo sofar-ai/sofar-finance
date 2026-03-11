@@ -311,6 +311,59 @@ const AISynthesis = (() => {
     }
   }
 
+
+  // ── Schedule display ─────────────────────────────────────────────
+
+  function renderSchedule() {
+    const el = document.getElementById('ai-schedule');
+    if (!el) return;
+
+    const FLOW_HOURS = [9, 11, 13, 15];
+    const SYNTH_HOURS = [9, 11, 13, 15];
+    const BACKCHECK_HOURS = [11, 13, 15, 17];
+
+    // Get current ET time
+    const nowET = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
+    const day   = nowET.getDay(); // 0=Sun, 6=Sat
+    const h     = nowET.getHours();
+    const m     = nowET.getMinutes();
+    const isWeekday = day >= 1 && day <= 5;
+
+    function nextRun(hours, minute) {
+      if (!isWeekday) return 'Mon';
+      for (const hr of hours) {
+        if (h < hr || (h === hr && m < minute)) {
+          return `${hr}:${String(minute).padStart(2,'0')} ET`;
+        }
+      }
+      return 'Tomorrow';
+    }
+
+    function isNext(hours, minute) {
+      if (!isWeekday) return false;
+      for (const hr of hours) {
+        if (h < hr || (h === hr && m < minute)) {
+          const diffMin = (hr - h) * 60 + (minute - m);
+          return diffMin <= 15;
+        }
+      }
+      return false;
+    }
+
+    const rows = [
+      { label: 'Options Flow',  times: '9:30 · 11:30 · 13:30 · 15:30 ET', next: nextRun(FLOW_HOURS, 30),  soon: isNext(FLOW_HOURS, 30)  },
+      { label: 'AI Synthesis',  times: '9:40 · 11:40 · 13:40 · 15:40 ET', next: nextRun(SYNTH_HOURS, 40), soon: isNext(SYNTH_HOURS, 40) },
+      { label: 'Backcheck',     times: '11:35 · 13:35 · 15:35 · 17:35 ET + 9:35 ET (next-day & 30d)', next: nextRun(BACKCHECK_HOURS, 35), soon: isNext(BACKCHECK_HOURS, 35) },
+    ];
+
+    el.innerHTML = rows.map(r => `
+      <div class="ai-sched-row">
+        <span class="ai-sched-label">${r.label}</span>
+        <span class="ai-sched-times">${r.times}</span>
+        <span class="ai-sched-next ${r.soon ? 'ai-sched-soon' : ''}">Next: ${r.next}${r.soon ? ' ⚡' : ''}</span>
+      </div>`).join('');
+  }
+
   // ── Load & dispatch ───────────────────────────────────────────────
 
   async function load(mode) {
@@ -336,6 +389,8 @@ const AISynthesis = (() => {
 
   function initPage() {
     load('page');
+    renderSchedule();
+    setInterval(renderSchedule, 60000);
     setInterval(() => load('page'), REFRESH_MS);
     document.getElementById('ai-raw-toggle')?.addEventListener('click', () => {
       const el  = document.getElementById('ai-raw-data');
