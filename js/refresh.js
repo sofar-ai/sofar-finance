@@ -12,21 +12,25 @@ const Refresh = (() => {
     const modal = document.getElementById(modalId);
     if (!btn) return;
 
-    btn.addEventListener('click', async () => {
-      clearLog();
-      showModal(modal);
+    const handler = async () => {
       btn.disabled = true;
       btn.textContent = '⏳ Running…';
+      btn.style.opacity = '0.7';
+      clearLog();
+      showModal(modal);
 
       await refresh(modal);
 
       btn.disabled = false;
       btn.textContent = '🔄 Rerun Options Flow + AI Synthesis';
-    });
+      btn.style.opacity = '';
+    };
+    btn.addEventListener('click', handler);
+    btn.addEventListener('touchend', (e) => { e.preventDefault(); handler(); });
   }
 
   function showModal(modal) {
-    if (modal) modal.style.display = '';
+    if (modal) modal.style.display = 'flex';
   }
 
   function hideModal(modal) {
