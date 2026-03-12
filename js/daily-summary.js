@@ -47,7 +47,7 @@ const DailySummary = (() => {
           <div class="ds-stat"><span class="ds-stat-label">SPY</span><span class="ds-stat-val" style="color:${retColor(s.spy_return_pct)}">$${(s.spy_close||0).toFixed(2)} ${fmtRet(s.spy_return_pct)}</span></div>
           <div class="ds-stat"><span class="ds-stat-label">QQQ</span><span class="ds-stat-val" style="color:${retColor(s.qqq_return_pct)}">$${(s.qqq_close||0).toFixed(2)} ${fmtRet(s.qqq_return_pct)}</span></div>
           <div class="ds-stat"><span class="ds-stat-label">VIX</span><span class="ds-stat-val">${s.vix_close != null ? s.vix_close.toFixed(2) : '—'}</span></div>
-          <div class="ds-stat"><span class="ds-stat-label">Regime</span><span class="ds-stat-val">${s.regime || '—'}</span></div>
+          <div class="ds-stat"><span class="ds-stat-label">Regime</span><span class="ds-stat-val">${(s.regime||'—').replace(/_/g,' ')}</span></div>
         </div>
         <div class="ds-signals">
           <span class="ds-sig-pill" style="color:${sigColor(idSig)};border-color:${sigColor(idSig)}44;background:${sigColor(idSig)}11">
