@@ -111,7 +111,7 @@ const DailySummary = (() => {
         <div class="ds-sb-stat"><span class="ds-sb-label">SPY</span><span style="color:${retColor(today.spy_return_pct)};font-weight:700;font-family:var(--font-mono);font-size:11px">$${(today.spy_close||0).toFixed(2)} ${fmtRet(today.spy_return_pct)}</span></div>
         <div class="ds-sb-stat"><span class="ds-sb-label">QQQ</span><span style="color:${retColor(today.qqq_return_pct)};font-weight:700;font-family:var(--font-mono);font-size:11px">$${(today.qqq_close||0).toFixed(2)} ${fmtRet(today.qqq_return_pct)}</span></div>
         <div class="ds-sb-stat"><span class="ds-sb-label">VIX</span><span style="font-weight:700;font-family:var(--font-mono);font-size:11px">${today.vix_close != null ? today.vix_close.toFixed(2) : '—'}</span></div>
-        <div class="ds-sb-stat"><span class="ds-sb-label">Regime</span><span style="font-size:10px;color:var(--text-muted)">${today.regime||'—'}</span></div>
+        <div class="ds-sb-stat"><span class="ds-sb-label">Regime</span><span style="font-size:9px;color:var(--text-muted);font-family:var(--font-mono);text-align:right;max-width:130px">${(today.regime||'—').replace(/_/g,' ')}</span></div>
         <div class="ds-sb-stat"><span class="ds-sb-label">Intraday</span><span style="color:${sigColor(today.intraday_signal)};font-family:var(--font-mono);font-size:10px;font-weight:700">${today.intraday_signal||'—'}</span></div>
         <div class="ds-sb-stat"><span class="ds-sb-label">Next Day</span><span style="color:${sigColor(today.nextday_signal)};font-family:var(--font-mono);font-size:10px;font-weight:700">${today.nextday_signal||'—'}</span></div>
       `;
