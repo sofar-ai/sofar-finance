@@ -17,7 +17,7 @@ const TICKER_MAP = {
 const TIMEFRAME_MAP = {
   '1D': { interval: '5m',  range: '1d'  },
   '1W': { interval: '30m', range: '5d'  },
-  '1M': { interval: '1d',  range: '1mo' },
+  '1M': { interval: '1d',  range: '3mo', display_range: '1mo' },
   // 1Y fetches 2y of daily bars so MA200 has full lookback history.
   // display_range tells the frontend to only render the last 1y on the x-axis;
   // the extra year is used silently for TA calculations.
@@ -72,10 +72,9 @@ export default async function handler(req, res) {
     // For timeframes with a display_range (e.g. 1Y fetches 2y for TA but shows 1y),
     // compute the unix timestamp at which the visible window starts.
     let displayFrom = null;
-    if (TIMEFRAME_MAP[timeframe]?.display_range === '1y') {
-      const oneYearAgo = Math.floor(Date.now() / 1000) - 365 * 24 * 3600;
-      displayFrom = oneYearAgo;
-    }
+    const dr = TIMEFRAME_MAP[timeframe]?.display_range;
+    if (dr === '1y')  displayFrom = Math.floor(Date.now() / 1000) - 365 * 24 * 3600;
+    if (dr === '1mo') displayFrom = Math.floor(Date.now() / 1000) -  30 * 24 * 3600;
 
     res.setHeader('Cache-Control', 'public, s-maxage=30, stale-while-revalidate=60');
     res.status(200).json({ ticker, timeframe, candles, displayFrom });
