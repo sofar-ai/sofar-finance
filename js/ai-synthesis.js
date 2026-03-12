@@ -536,7 +536,7 @@ const AISynthesis = (() => {
   function renderDivergences(data) {
     const banner = document.getElementById('ai-divergence-banner');
     if (!banner) return;
-    const divs = data?.notable_divergences;
+    const divs = data?.notable_divergences || [];
     if (!divs || !divs.length) { banner.style.display = 'none'; return; }
 
     // Check localStorage for dismissed items
