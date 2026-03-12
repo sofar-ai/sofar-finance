@@ -166,19 +166,24 @@ const TickerDeepDive = (() => {
       }
 
       if (state === 'done' && type === 'ticker-analysis') {
-        setStatus('');
+        setStatus(`<span class="ai-dd-spinner">⏳</span> Loading ${ticker} results…`, '#60a5fa');
         try {
-          const r2  = await fetch(`/data/ticker-analysis.json?v=${Date.now()}`);
+          const r2 = await fetch(`/data/ticker-analysis.json?v=${Date.now()}`);
+          if (!r2.ok) {
+            // Vercel may still be deploying — keep polling up to timeout
+            continue;
+          }
           const res = await r2.json();
           if (res.ticker === ticker) {
+            setStatus('');
             renderResult(res);
             setButtonState(false, 'Analyze');
             polling = false; return;
           }
-          // Ticker mismatch — data is stale from previous run, keep polling briefly
+          // Ticker mismatch — stale file from previous run, keep polling
         } catch (e) {
-          setStatus(`❌ Could not load results: ${e.message}`, '#ef4444');
-          setButtonState(false); polling = false; return;
+          // JSON parse error or network — keep retrying until timeout
+          continue;
         }
       }
 
