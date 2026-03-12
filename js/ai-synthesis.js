@@ -476,58 +476,76 @@ const AISynthesis = (() => {
 
 
   function renderContrarian(ci) {
-    const el = document.getElementById('ai-contrarian');
-    if (!el) return;
-    const ideas = (ci && ci.ideas) ? ci.ideas : [];
-    if (!ideas.length) { el.style.display = 'none'; return; }
-    el.style.display = '';
+    const ideas   = (ci && ci.ideas) ? ci.ideas : [];
+    const sidebar = document.getElementById('ai-contrarian-sidebar');
+    const compact = document.getElementById('ai-contrarian-compact');
+    if (!sidebar || !compact) return;
 
-    const active  = ideas.filter(x => x.status === 'active');
-    const resolved = ideas.filter(x => x.status === 'resolved').slice(0, 10);
-    const fmtPx   = p => p != null ? `$${(+p).toFixed(2)}` : '—';
-    const fmtRet  = r => r != null ? `${r >= 0 ? '+' : ''}${r.toFixed(1)}%` : 'pending';
-    const retColor = r => r == null ? '#9ca3af' : r >= 0 ? '#22c55e' : '#ef4444';
+    const active   = ideas.find(x => x.status === 'active');
+    const resolved = ideas.filter(x => x.status === 'resolved').slice(0, 5);
 
-    function ideaCard(x, isCurrent) {
+    if (!active && !resolved.length) { sidebar.style.display = 'none'; return; }
+    sidebar.style.display = '';
+
+    const fmtPx  = p  => p  != null ? `$${(+p).toFixed(2)}` : '—';
+    const fmtRet = r  => r  != null ? `${r >= 0 ? '+' : ''}${r.toFixed(1)}%` : 'pending';
+    const retCol = r  => r  == null ? '#9ca3af' : r >= 0 ? '#22c55e' : '#ef4444';
+
+    function miniCard(x, isCurrent) {
       const typeUp  = (x.type || '').toUpperCase();
       const typeCol = typeUp.includes('CALL') ? '#22c55e' : typeUp.includes('PUT') ? '#ef4444' : '#f59e0b';
       const ret     = x.return_pct;
-      const badge   = x.status === 'active'
-        ? `<span class="ai-contra-badge active">ACTIVE</span>`
-        : `<span class="ai-contra-badge resolved" style="color:${retColor(ret)}">${fmtRet(ret)}</span>`;
-      return `
-        <div class="ai-contra-card${isCurrent ? ' ai-contra-current' : ''}">
-          <div class="ai-contra-top">
-            <span class="ai-contra-ticker">${x.ticker || '—'}</span>
-            <span class="ai-contra-type" style="color:${typeCol}">${typeUp}</span>
-            ${badge}
-          </div>
-          <div class="ai-contra-thesis">${x.thesis || '—'}</div>
-          <div class="ai-contra-meta">
-            Entry ${fmtPx(x.entry_price)} → Target ${fmtPx(x.target_price)}
-            ${x.target_pct != null ? ` (+${x.target_pct}%)` : ''}
-            &nbsp;·&nbsp; Regime: ${x.regime_at_issue || '—'}
-            &nbsp;·&nbsp; Issued: ${x.generated_at ? new Date(x.generated_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '—'}
-            ${x.status === 'active' ? `&nbsp;·&nbsp; Expires: ${x.expires_at ? new Date(x.expires_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '—'}` : ''}
-          </div>
-          ${x.risk ? `<div class="ai-contra-risk">⚠️ Risk: ${x.risk}</div>` : ''}
-        </div>`;
+      const issued  = x.generated_at ? new Date(x.generated_at).toLocaleDateString('en-US', {month:'short', day:'numeric'}) : '—';
+      return `<div class="ai-contra-mini${isCurrent ? ' ai-contra-mini-active' : ''}">
+        <div class="ai-contra-mini-top">
+          <span class="ai-contra-mini-ticker">${x.ticker}</span>
+          <span class="ai-contra-mini-type" style="color:${typeCol}">${typeUp}</span>
+          <span class="ai-contra-mini-ret" style="color:${retCol(ret)}">${x.status==='active'?'ACTIVE':fmtRet(ret)}</span>
+        </div>
+        <div class="ai-contra-mini-thesis">${(x.thesis||'').slice(0,90)}${(x.thesis||'').length>90?'…':''}</div>
+        <div class="ai-contra-mini-meta">${fmtPx(x.entry_price)} → ${fmtPx(x.target_price)} · ${issued}</div>
+      </div>`;
     }
 
-    // Performance summary
-    const wins   = resolved.filter(x => x.outcome === 'win').length;
-    const total  = resolved.length;
-    const avgRet = total ? (resolved.reduce((a,x) => a + (x.return_pct||0), 0) / total).toFixed(1) : null;
+    // Win/loss summary
+    const wins = resolved.filter(x => x.outcome === 'win').length;
+    const tot  = resolved.length;
+    const scoreLine = tot ? `<div class="ai-contra-mini-score">${wins}/${tot} resolved</div>` : '';
 
-    el.innerHTML = `
-      <div class="ai-section-title">🔄 Contrarian Watch
-        <span class="ai-contra-summary">${total ? `${wins}/${total} wins · avg ${avgRet >= 0 ? '+' : ''}${avgRet}%` : 'No resolved ideas yet'}</span>
+    compact.innerHTML = (active ? miniCard(active, true) : '')
+      + (resolved.length ? '<div class="ai-contra-history-label">HISTORY</div>' + resolved.map(x => miniCard(x, false)).join('') : '')
+      + scoreLine;
+  }
+
+  function renderDivergences(data) {
+    const banner = document.getElementById('ai-divergence-banner');
+    if (!banner) return;
+    const divs = data?.notable_divergences;
+    if (!divs || !divs.length) { banner.style.display = 'none'; return; }
+
+    // Check localStorage for dismissed items
+    const dismissKey = `divDismissed_${data.generated_at || ''}`;
+    if (localStorage.getItem(dismissKey)) { banner.style.display = 'none'; return; }
+
+    const high = divs.filter(d => (d.significance || '').toLowerCase() !== 'low');
+    if (!high.length) { banner.style.display = 'none'; return; }
+
+    banner.style.display = '';
+    banner.innerHTML = `
+      <div class="ai-div-header">
+        <span class="ai-div-icon">⚡</span>
+        <span class="ai-div-title">Flow Divergence Alert</span>
+        <button class="ai-div-dismiss" onclick="(function(){localStorage.setItem('${dismissKey}','1');document.getElementById('ai-divergence-banner').style.display='none'})()">✕</button>
       </div>
-      <div class="ai-contra-desc">One 30-day contrarian idea issued daily at 11:40 AM — goes against the current market regime.</div>
-      ${active.map((x,i) => ideaCard(x, i===0)).join('')}
-      ${resolved.length ? `<div class="ai-contra-history-label">HISTORY</div>${resolved.map(x => ideaCard(x, false)).join('')}` : ''}
+      ${high.map(d => `
+        <div class="ai-div-item">
+          <span class="ai-div-ticker">${d.ticker}</span>
+          <span class="ai-div-detail">${d.detail}</span>
+          ${d.significance === 'high' ? '<span class="ai-div-sig">HIGH</span>' : ''}
+        </div>`).join('')}
     `;
   }
+
 
   function initStrip() {
     load('strip');
@@ -538,6 +556,7 @@ const AISynthesis = (() => {
     load('page');
     renderSchedule();
     renderContrarian(ci);
+    renderDivergences(data);
     setInterval(renderSchedule, 60000);
     setInterval(() => load('page'), REFRESH_MS);
     document.getElementById('ai-raw-toggle')?.addEventListener('click', () => {
