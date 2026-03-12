@@ -137,7 +137,7 @@ const AISynthesis = (() => {
 
   // ── Full analysis page ─────────────────────────────────────────────
 
-  function renderPage(data, stats, log) {
+  function renderPage(data, stats, log, ci) {
     if (!data || !data.generated_at) {
       const body = document.getElementById('ai-page-body');
       if (body) body.innerHTML = `<div class="ai-pending-box">
@@ -459,18 +459,74 @@ const AISynthesis = (() => {
 
   async function load(mode) {
     try {
-      const [data, stats, log] = await Promise.allSettled([
+      const [data, stats, log, ci] = await Promise.allSettled([
         fetchJSON('/data/ai-synthesis.json'),
         fetchJSON('/data/accuracy-stats.json'),
         fetchJSON('/data/accuracy-log.json'),
+        fetchJSON('/data/contrarian-ideas.json'),
       ]).then(r => r.map(p => p.status === 'fulfilled' ? p.value : null));
 
       if (mode === 'strip') renderStrip(data, stats);
-      if (mode === 'page')  renderPage(data, stats, log);
+      if (mode === 'page')  renderPage(data, stats, log, ci);
     } catch {
       if (mode === 'strip') renderStrip(null, null);
       if (mode === 'page')  renderPage(null, null, null);
     }
+  }
+
+
+  function renderContrarian(ci) {
+    const el = document.getElementById('ai-contrarian');
+    if (!el) return;
+    const ideas = (ci && ci.ideas) ? ci.ideas : [];
+    if (!ideas.length) { el.style.display = 'none'; return; }
+    el.style.display = '';
+
+    const active  = ideas.filter(x => x.status === 'active');
+    const resolved = ideas.filter(x => x.status === 'resolved').slice(0, 10);
+    const fmtPx   = p => p != null ? `$${(+p).toFixed(2)}` : '—';
+    const fmtRet  = r => r != null ? `${r >= 0 ? '+' : ''}${r.toFixed(1)}%` : 'pending';
+    const retColor = r => r == null ? '#9ca3af' : r >= 0 ? '#22c55e' : '#ef4444';
+
+    function ideaCard(x, isCurrent) {
+      const typeUp  = (x.type || '').toUpperCase();
+      const typeCol = typeUp.includes('CALL') ? '#22c55e' : typeUp.includes('PUT') ? '#ef4444' : '#f59e0b';
+      const ret     = x.return_pct;
+      const badge   = x.status === 'active'
+        ? `<span class="ai-contra-badge active">ACTIVE</span>`
+        : `<span class="ai-contra-badge resolved" style="color:${retColor(ret)}">${fmtRet(ret)}</span>`;
+      return `
+        <div class="ai-contra-card${isCurrent ? ' ai-contra-current' : ''}">
+          <div class="ai-contra-top">
+            <span class="ai-contra-ticker">${x.ticker || '—'}</span>
+            <span class="ai-contra-type" style="color:${typeCol}">${typeUp}</span>
+            ${badge}
+          </div>
+          <div class="ai-contra-thesis">${x.thesis || '—'}</div>
+          <div class="ai-contra-meta">
+            Entry ${fmtPx(x.entry_price)} → Target ${fmtPx(x.target_price)}
+            ${x.target_pct != null ? ` (+${x.target_pct}%)` : ''}
+            &nbsp;·&nbsp; Regime: ${x.regime_at_issue || '—'}
+            &nbsp;·&nbsp; Issued: ${x.generated_at ? new Date(x.generated_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '—'}
+            ${x.status === 'active' ? `&nbsp;·&nbsp; Expires: ${x.expires_at ? new Date(x.expires_at).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '—'}` : ''}
+          </div>
+          ${x.risk ? `<div class="ai-contra-risk">⚠️ Risk: ${x.risk}</div>` : ''}
+        </div>`;
+    }
+
+    // Performance summary
+    const wins   = resolved.filter(x => x.outcome === 'win').length;
+    const total  = resolved.length;
+    const avgRet = total ? (resolved.reduce((a,x) => a + (x.return_pct||0), 0) / total).toFixed(1) : null;
+
+    el.innerHTML = `
+      <div class="ai-section-title">🔄 Contrarian Watch
+        <span class="ai-contra-summary">${total ? `${wins}/${total} wins · avg ${avgRet >= 0 ? '+' : ''}${avgRet}%` : 'No resolved ideas yet'}</span>
+      </div>
+      <div class="ai-contra-desc">One 30-day contrarian idea issued daily at 11:40 AM — goes against the current market regime.</div>
+      ${active.map((x,i) => ideaCard(x, i===0)).join('')}
+      ${resolved.length ? `<div class="ai-contra-history-label">HISTORY</div>${resolved.map(x => ideaCard(x, false)).join('')}` : ''}
+    `;
   }
 
   function initStrip() {
@@ -481,6 +537,7 @@ const AISynthesis = (() => {
   function initPage() {
     load('page');
     renderSchedule();
+    renderContrarian(ci);
     setInterval(renderSchedule, 60000);
     setInterval(() => load('page'), REFRESH_MS);
     document.getElementById('ai-raw-toggle')?.addEventListener('click', () => {
