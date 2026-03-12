@@ -75,15 +75,25 @@ const ChartComponent = (() => {
       if (data.error) throw new Error(data.error);
       if (!data.candles?.length) throw new Error('No data');
 
-      inst.candleSeries.setData(data.candles.map(c => ({
+      // Split TA candles (full history) from display candles (visible window).
+      // When displayFrom is set (e.g. 1Y fetches 2y for MA200 lookback),
+      // the chart renders only candles >= displayFrom but indicators use all candles.
+      const allCandles     = data.candles;
+      const displayFrom    = data.displayFrom;
+      const displayCandles = displayFrom
+        ? allCandles.filter(c => c.time >= displayFrom)
+        : allCandles;
+
+      inst.candleSeries.setData(displayCandles.map(c => ({
         time: c.time, open: c.open, high: c.high, low: c.low, close: c.close,
       })));
-      inst.volumeSeries.setData(data.candles.map(c => ({
+      inst.volumeSeries.setData(displayCandles.map(c => ({
         time: c.time, value: c.volume,
         color: c.close >= c.open ? 'rgba(34,197,94,0.35)' : 'rgba(239,68,68,0.35)',
       })));
       inst.chart.timeScale().fitContent();
-      inst.candles = data.candles; // store for indicators
+      inst.candles     = allCandles;     // full history for TA calculations
+      inst.displayFrom = displayFrom;    // frontend may use this for x-axis clamping
       if (typeof Indicators !== 'undefined') Indicators.applyAll(inst);
 
       const last  = data.candles[data.candles.length - 1];

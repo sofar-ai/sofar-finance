@@ -76,8 +76,12 @@ const Indicators = (() => {
         priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
       });
     }
-    inst._ma50.setData(computeMA(inst.candles, 50));
-    inst._ma200.setData(computeMA(inst.candles, 200));
+    // Clip MA output to the display window so lines don't appear on hidden candles
+    const clipMA = (data) => inst.displayFrom
+      ? data.filter(p => p.time >= inst.displayFrom)
+      : data;
+    inst._ma50.setData(clipMA(computeMA(inst.candles, 50)));
+    inst._ma200.setData(clipMA(computeMA(inst.candles, 200)));
   }
 
   function removeMA(inst) {
@@ -118,9 +122,13 @@ const Indicators = (() => {
     }
 
     const t0 = rsiData[0].time, tN = rsiData[rsiData.length - 1].time;
-    inst._rsi.setData(rsiData);
-    inst._rsiOB.setData([{ time: t0, value: 70 }, { time: tN, value: 70 }]);
-    inst._rsiOS.setData([{ time: t0, value: 30 }, { time: tN, value: 30 }]);
+    // Clip RSI to display window
+    const visRSI = inst.displayFrom ? rsiData.filter(p => p.time >= inst.displayFrom) : rsiData;
+    const vt0 = visRSI.length ? visRSI[0].time : t0;
+    const vtN = visRSI.length ? visRSI[visRSI.length - 1].time : tN;
+    inst._rsi.setData(visRSI);
+    inst._rsiOB.setData([{ time: vt0, value: 70 }, { time: vtN, value: 70 }]);
+    inst._rsiOS.setData([{ time: vt0, value: 30 }, { time: vtN, value: 30 }]);
   }
 
   function removeRSI(inst) {
