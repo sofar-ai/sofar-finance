@@ -141,7 +141,7 @@ const TickerDeepDive = (() => {
       await new Promise(r => setTimeout(r, POLL_MS));
 
       if (Date.now() - started > TIMEOUT_MS) {
-        setStatus('❌ Timed out after 3 minutes. Try again.', '#ef4444');
+        setStatus(`Analysis timed out — another request may be in progress. Please try again.`, '#9ca3af');
         setButtonState(false); polling = false; return;
       }
 
@@ -166,6 +166,11 @@ const TickerDeepDive = (() => {
       }
 
       if (state === 'done' && type === 'ticker-analysis') {
+        // Verify the completed result is actually for our ticker before fetching
+        if (data.ticker && data.ticker !== ticker) {
+          // Different ticker completed — keep polling, ours may be queued next
+          continue;
+        }
         setStatus(`<span class="ai-dd-spinner">⏳</span> Loading ${ticker} results…`, '#60a5fa');
         try {
           const r2 = await fetch(`/data/ticker-analysis.json?v=${Date.now()}`);
@@ -180,7 +185,7 @@ const TickerDeepDive = (() => {
             setButtonState(false, 'Analyze');
             polling = false; return;
           }
-          // Ticker mismatch — stale file from previous run, keep polling
+          // JSON ticker mismatch — keep polling
         } catch (e) {
           // JSON parse error or network — keep retrying until timeout
           continue;
