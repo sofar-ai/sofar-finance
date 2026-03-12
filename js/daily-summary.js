@@ -98,6 +98,40 @@ const DailySummary = (() => {
       </div>`;
   }
 
+  function renderSidebar(summaries) {
+    const today   = summaries[0];
+    const history = summaries.slice(1, 8);
+
+    // Stats sidebar
+    const statsEl = document.getElementById('ds-sidebar-stats');
+    const statsBody = document.getElementById('ds-sidebar-stats-body');
+    if (statsEl && statsBody && today) {
+      statsEl.style.display = '';
+      statsBody.innerHTML = `
+        <div class="ds-sb-stat"><span class="ds-sb-label">SPY</span><span style="color:${retColor(today.spy_return_pct)};font-weight:700;font-family:var(--font-mono);font-size:11px">$${(today.spy_close||0).toFixed(2)} ${fmtRet(today.spy_return_pct)}</span></div>
+        <div class="ds-sb-stat"><span class="ds-sb-label">QQQ</span><span style="color:${retColor(today.qqq_return_pct)};font-weight:700;font-family:var(--font-mono);font-size:11px">$${(today.qqq_close||0).toFixed(2)} ${fmtRet(today.qqq_return_pct)}</span></div>
+        <div class="ds-sb-stat"><span class="ds-sb-label">VIX</span><span style="font-weight:700;font-family:var(--font-mono);font-size:11px">${today.vix_close != null ? today.vix_close.toFixed(2) : '—'}</span></div>
+        <div class="ds-sb-stat"><span class="ds-sb-label">Regime</span><span style="font-size:10px;color:var(--text-muted)">${today.regime||'—'}</span></div>
+        <div class="ds-sb-stat"><span class="ds-sb-label">Intraday</span><span style="color:${sigColor(today.intraday_signal)};font-family:var(--font-mono);font-size:10px;font-weight:700">${today.intraday_signal||'—'}</span></div>
+        <div class="ds-sb-stat"><span class="ds-sb-label">Next Day</span><span style="color:${sigColor(today.nextday_signal)};font-family:var(--font-mono);font-size:10px;font-weight:700">${today.nextday_signal||'—'}</span></div>
+      `;
+    }
+
+    // History sidebar
+    const histEl   = document.getElementById('ds-sidebar-history');
+    const histBody = document.getElementById('ds-sidebar-history-body');
+    if (histEl && histBody && history.length) {
+      histEl.style.display = '';
+      histBody.innerHTML = history.map(s => `
+        <div class="ds-sb-hist-row">
+          <span class="ds-sb-hist-date">${fmtDateShort(s.date)}</span>
+          <span class="ds-sb-hist-ret" style="color:${retColor(s.spy_return_pct)}">${fmtRet(s.spy_return_pct)}</span>
+        </div>
+        <div class="ds-sb-hist-hl">${(s.headline||'').slice(0,60)}${(s.headline||'').length>60?'…':''}</div>
+      `).join('<div class="ds-sb-hist-divider"></div>');
+    }
+  }
+
   async function init() {
     const root = document.getElementById('ds-root');
     if (!root) return;
@@ -121,15 +155,8 @@ const DailySummary = (() => {
       return;
     }
 
-    const today   = summaries[0];
-    const history = summaries.slice(1);
-
-    let html = renderMain(today);
-    if (history.length) {
-      html += `<div class="ds-history-label">Previous Sessions</div>`;
-      html += history.map(renderPastCard).join('');
-    }
-    root.innerHTML = html;
+    root.innerHTML = renderMain(summaries[0]);
+    renderSidebar(summaries);
   }
 
   return { init };
