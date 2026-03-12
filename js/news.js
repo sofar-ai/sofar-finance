@@ -1,127 +1,124 @@
 /**
- * News Feed Component — sofar-finance
- * Reads from:
+ * NewsFeed — RSS headlines + separate 𝕏 posts section
  *   - /headlines.json (RSS feeds via cron)
- *   - /headlines-x.json (X.com tweets via Puppeteer + cron)
- * Both updated every 6h and auto-deployed via Vercel
+ *   - /headlines-x.json (X.com curated accounts via Puppeteer + cron)
  */
 
 const NewsFeed = (() => {
-  const REFRESH_INTERVAL_MS = 6 * 60 * 60 * 1000; // 6 hours
+  const REFRESH_INTERVAL_MS = 6 * 60 * 1000;
   let refreshTimer = null;
 
   function formatRelativeTime(dateStr) {
     if (!dateStr) return '';
-    const date = new Date(dateStr);
-    if (isNaN(date)) {
-      try {
-        const d = new Date(Date.parse(dateStr));
-        if (!isNaN(d)) return formatRelativeTime(d.toISOString());
-      } catch {}
-      return '';
-    }
-    const diff = Math.floor((Date.now() - date.getTime()) / 1000);
-    if (diff < 60) return `${diff}s ago`;
-    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-    return `${Math.floor(diff / 86400)}d ago`;
+    try {
+      const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 60000);
+      if (diff < 1)   return 'just now';
+      if (diff < 60)  return `${diff}m ago`;
+      const h = Math.floor(diff / 60);
+      if (h < 24)     return `${h}h ago`;
+      return `${Math.floor(h / 24)}d ago`;
+    } catch { return ''; }
   }
 
   function escapeHtml(str) {
-    return String(str || '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
+    if (!str) return '';
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+              .replace(/"/g,'&quot;').replace(/'/g,'&#039;');
   }
 
-  function renderCard(item) {
+  function renderCard(item, isX) {
     const card = document.createElement('a');
-    card.className = 'news-card';
+    card.className = 'news-card' + (isX ? ' news-card-x' : '');
     card.href = item.link || '#';
     card.target = '_blank';
     card.rel = 'noopener noreferrer';
-    
-    const sourceLabel = item.source === 'X' ? item.author : item.source;
-    
+    const sourceLabel = isX ? '𝕏' : item.source;
     card.innerHTML = `
       <div class="news-card-top">
-        <span class="news-source">${escapeHtml(sourceLabel)}</span>
+        <span class="news-source${isX ? ' news-source-x' : ''}">${escapeHtml(sourceLabel)}</span>
         <span class="news-timestamp">${formatRelativeTime(item.timestamp)}</span>
       </div>
-      <div class="news-headline">${escapeHtml(item.headline)}</div>
-    `;
+      <div class="news-headline">${escapeHtml(item.headline)}</div>`;
     return card;
   }
 
   function setRefreshedTime(el, fetchedAt) {
     if (!el) return;
     const t = fetchedAt ? new Date(fetchedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—';
-    el.textContent = `Last refreshed: ${t}`;
+    el.textContent = `Updated ${t}`;
   }
 
   async function loadBoth(containerId, timestampId) {
     const container = document.getElementById(containerId);
-    const tsEl = document.getElementById(timestampId);
+    const tsEl      = document.getElementById(timestampId);
     if (!container) return;
 
     container.innerHTML = '<div class="news-loading">[ FETCHING HEADLINES... ]</div>';
 
     try {
-      // Fetch both sources in parallel
       const [rssRes, xRes] = await Promise.all([
-        fetch(`/headlines.json?v=${Date.now()}`).catch(() => ({ok: false})),
-        fetch(`/headlines-x.json?v=${Date.now()}`).catch(() => ({ok: false}))
+        fetch(`/headlines.json?v=${Date.now()}`).catch(() => ({ ok: false })),
+        fetch(`/headlines-x.json?v=${Date.now()}`).catch(() => ({ ok: false })),
       ]);
 
-      let allItems = [];
+      let rssItems = [];
+      let xItems   = [];
       let latestFetch = null;
 
       if (rssRes.ok) {
         const rssData = await rssRes.json();
-        allItems.push(...(rssData.items || []));
-        if (!latestFetch) latestFetch = rssData.fetched_at;
+        rssItems = rssData.items || [];
+        latestFetch = rssData.fetched_at;
       }
 
       if (xRes.ok) {
         const xData = await xRes.json();
-        allItems.push(...(xData.items || []));
+        xItems = xData.items || [];
         if (!latestFetch) latestFetch = xData.fetched_at;
       }
 
-      // Sort by timestamp (newest first)
-      allItems.sort((a, b) => {
-        const ta = new Date(a.timestamp).getTime() || 0;
-        const tb = new Date(b.timestamp).getTime() || 0;
-        return tb - ta;
-      });
+      setRefreshedTime(tsEl, latestFetch);
 
-      // Deduplicate
+      // Sort RSS by timestamp
+      rssItems.sort((a, b) => {
+        try { return new Date(b.timestamp) - new Date(a.timestamp); }
+        catch { return 0; }
+      });
+      // Deduplicate RSS by headline prefix
       const seen = new Set();
-      allItems = allItems.filter(item => {
-        const key = item.headline.slice(0, 60).toLowerCase();
+      rssItems = rssItems.filter(item => {
+        const key = (item.headline || '').slice(0, 60).toLowerCase();
         if (seen.has(key)) return false;
         seen.add(key);
         return true;
       });
 
       container.innerHTML = '';
-      if (allItems.length === 0) {
-        container.innerHTML = '<div class="news-error">⚠ No headlines available. Check back soon.</div>';
+
+      // ── RSS headlines section ──────────────────────────────────────────────
+      if (rssItems.length === 0) {
+        container.innerHTML = '<div class="news-error">⚠ No headlines available.</div>';
       } else {
-        allItems.slice(0, 50).forEach(item => container.appendChild(renderCard(item)));
+        rssItems.slice(0, 40).forEach(item => container.appendChild(renderCard(item, false)));
       }
-      
-      setRefreshedTime(tsEl, latestFetch);
+
+      // ── 𝕏 Posts section ───────────────────────────────────────────────────
+      if (xItems.length > 0) {
+        const xSection = document.createElement('div');
+        xSection.className = 'news-x-section';
+        xSection.innerHTML = `<div class="news-x-header"><span class="news-x-icon">𝕏</span> Posts</div>`;
+        xItems.slice(0, 15).forEach(item => xSection.appendChild(renderCard(item, true)));
+        container.appendChild(xSection);
+      }
+
     } catch (e) {
       container.innerHTML = `<div class="news-error">⚠ Could not load headlines — ${e.message}</div>`;
-      console.error('[NewsFeed]', e);
     }
   }
 
   function init(containerId, timestampId) {
     loadBoth(containerId, timestampId);
-    if (refreshTimer) clearInterval(refreshTimer);
+    clearInterval(refreshTimer);
     refreshTimer = setInterval(() => loadBoth(containerId, timestampId), REFRESH_INTERVAL_MS);
     const btn = document.getElementById('btn-refresh-news');
     if (btn) btn.addEventListener('click', () => loadBoth(containerId, timestampId));
