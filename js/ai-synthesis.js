@@ -443,7 +443,7 @@ const AISynthesis = (() => {
           return `${hr}:${String(minute).padStart(2,'0')} ET`;
         }
       }
-      return 'Tomorrow';
+      return day === 5 ? 'Mon' : 'Tomorrow';  // Friday → Mon, else Tomorrow
     }
 
     function isNext(hours, minute) {
