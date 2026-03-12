@@ -69,6 +69,22 @@ const AISynthesis = (() => {
     return '#f59e0b';
   }
 
+  function nextTradingDayLabel() {
+    // Returns "Tomorrow" Mon-Thu, "Mon" on Friday, skips weekends
+    const now = new Date();
+    const etOff = (() => {
+      const jan = new Date(now.getFullYear(), 0, 1).getTimezoneOffset();
+      const jul = new Date(now.getFullYear(), 6, 1).getTimezoneOffset();
+      return now.getTimezoneOffset() < Math.max(jan, jul) ? -4 : -5;
+    })();
+    const etNow = new Date(now.getTime() + (etOff + now.getTimezoneOffset()/60) * 3600000);
+    const dayET = etNow.getDay(); // 0=Sun 6=Sat
+    if (dayET === 5) return 'Mon';   // Friday → Monday
+    if (dayET === 6) return 'Mon';   // Saturday (shouldn't show but safe)
+    if (dayET === 0) return 'Mon';   // Sunday (same)
+    return 'Tomorrow';
+  }
+
   function fmtPrice(p) {
     if (p == null) return '—';
     return p > 1000
@@ -332,7 +348,7 @@ const AISynthesis = (() => {
       const byTf = stats.by_timeframe || {};
       const TFS  = [
         { key: 'intraday',  label: 'Intraday (2H)' },
-        { key: 'next_day',  label: 'Next Day'       },
+        { key: 'next_day',  label: nextTradingDayLabel()       },
         { key: 'long_term', label: 'Long Term (30D)' },
       ];
 
