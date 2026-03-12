@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Configuration — SOFAR Finance</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    .cfg-section { margin-bottom: 28px; }
+    .cfg-section-title {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #6b7280;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 6px;
+      margin-bottom: 14px;
+    }
+    .cfg-desc {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 14px;
+      line-height: 1.6;
+    }
+    .cfg-chips-wrap { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+    .cfg-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      padding: 4px 10px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      background: #0a0f16;
+      color: var(--text-primary);
+    }
+    .cfg-chip-locked {
+      border-color: #1e3a5f;
+      color: #60a5fa;
+      background: rgba(96,165,250,0.06);
+    }
+    .cfg-chip-remove {
+      background: none;
+      border: none;
+      color: #6b7280;
+      cursor: pointer;
+      font-size: 10px;
+      padding: 0 0 0 2px;
+      line-height: 1;
+    }
+    .cfg-chip-remove:hover { color: #ef4444; }
+    .cfg-add-row { display: flex; gap: 8px; margin-bottom: 10px; }
+    .cfg-add-input {
+      width: 140px;
+      background: #0a0f16;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      padding: 7px 10px;
+      outline: none;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .cfg-add-input:focus { border-color: #60a5fa; }
+    .cfg-add-input::placeholder { text-transform: none; letter-spacing: 0; color: var(--text-muted); }
+    .cfg-add-btn {
+      background: #0a0f16;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-secondary);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 7px 14px;
+      cursor: pointer;
+    }
+    .cfg-add-btn:hover { border-color: #60a5fa; color: #60a5fa; }
+    .cfg-footer-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-top: 16px;
+    }
+    .cfg-save-btn {
+      background: #1e3a5f;
+      border: 1px solid #3b82f6;
+      border-radius: 4px;
+      color: #e0f2fe;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      padding: 8px 20px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .cfg-save-btn:hover:not(:disabled) { background: #1d4ed8; }
+    .cfg-save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .cfg-ticker-count { font-size: 10px; color: #4b5563; font-family: var(--font-mono); }
+    .cfg-status { font-size: 11px; transition: opacity 1s; }
+    .cfg-note {
+      font-size: 10px;
+      color: #374151;
+      margin-top: 10px;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-left">
+      <span class="logo">SOFAR</span>
+      <span class="header-subtitle">FINANCE</span>
+    </div>
+    <nav class="app-nav">
+      <a href="index.html"        class="nav-tab">Market Dashboard</a>
+      <a href="options-flow.html" class="nav-tab">Options Flow</a>
+      <a href="ai-analysis.html"  class="nav-tab">AI Analysis</a>
+      <a href="performance.html"  class="nav-tab">Performance</a>
+      <a href="config.html"       class="nav-tab active">Config</a>
+    </nav>
+    <div class="header-meta">
+      <div><span class="live-dot"></span>LIVE</div>
+    </div>
+  </header>
+
+  <main class="main-content" style="max-width:720px">
+
+    <div class="page-title-row" style="margin-bottom:20px">
+      <h1 class="page-title">⚙️ Configuration</h1>
+    </div>
+
+    <!-- Watchlist -->
+    <div class="ai-section cfg-section">
+      <div class="cfg-section-title">📋 Options Flow Watchlist</div>
+      <div class="cfg-desc">
+        Tickers on this list will always have options flow data scraped every 2 hours during market hours.
+        The AI synthesis and Ticker Deep Dive use this data for analysis.
+        SPY and QQQ are always included and cannot be removed.
+      </div>
+
+      <div class="cfg-chips-wrap" id="cfg-ticker-chips">
+        <span style="color:#4b5563;font-size:11px">Loading…</span>
+      </div>
+
+      <div class="cfg-add-row">
+        <input type="text" id="cfg-add-input" class="cfg-add-input"
+          placeholder="Ticker (e.g. AVGO)"
+          maxlength="6" autocomplete="off" spellcheck="false" />
+        <button class="cfg-add-btn" onclick="Config.addTicker()">+ Add</button>
+      </div>
+
+      <div class="cfg-footer-row">
+        <button class="cfg-save-btn" id="cfg-save-btn" onclick="Config.save()" disabled>
+          Save Watchlist
+        </button>
+        <span class="cfg-ticker-count" id="cfg-ticker-count"></span>
+        <span class="cfg-status" id="cfg-status"></span>
+      </div>
+
+      <div class="cfg-note">
+        ℹ️ Changes take effect on the next options flow scrape (runs every 2 hours at :30 past 9, 11, 1, 3 PM ET on weekdays).
+        Up to 30 tickers. More tickers = longer scrape time.
+      </div>
+    </div>
+
+  </main>
+
+  <script src="js/config.js"></script>
+  <script>Config.init();</script>
+
+  <nav class="mobile-bottom-nav">
+    <a href="index.html"        class="mbn-item"><span class="mbn-icon">📈</span><span class="mbn-label">Market</span></a>
+    <a href="options-flow.html" class="mbn-item"><span class="mbn-icon">🌊</span><span class="mbn-label">Flow</span></a>
+    <a href="ai-analysis.html"  class="mbn-item"><span class="mbn-icon">🤖</span><span class="mbn-label">AI</span></a>
+    <a href="performance.html"  class="mbn-item"><span class="mbn-icon">🎯</span><span class="mbn-label">Perf</span></a>
+    <a href="config.html"       class="mbn-item active"><span class="mbn-icon">⚙️</span><span class="mbn-label">Config</span></a>
+  </nav>
+</body>
+</html>

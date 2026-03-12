@@ -98,7 +98,9 @@ const TickerDeepDive = (() => {
       <!-- Data Freshness -->
       <div class="ai-dd-freshness">
         Data as of ${fmtDT(data.data_freshness)}
-      </div>`);
+      </div>
+      ${data.not_on_watchlist_note ? `<div class="ai-dd-watchlist-note">⚠️ ${data.not_on_watchlist_note} <a href="config.html" class="ai-dd-watchlist-link">Open Config →</a></div>` : ''}
+      `);
   }
 
   async function submit() {
