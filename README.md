@@ -491,3 +491,376 @@ Claude Opus is given an elite analyst persona that:
       "predicted_price_30d": 650.00
     },
     "QQ
+---
+
+## 9. Options Flow Pipeline
+
+### Architecture Overview
+
+```
+ThetaData FPSS (market data feed)
+    └─► ThetaData Terminal (Java, ports 25503 REST / 25520 WS)
+            └─► WebSocket ws://localhost:25520/v1/events
+                    └─► flow-daemon.py  (STREAM_BULK subscription)
+                            └─► rolling-flow.json  (in-memory accumulation, $50k+ filter)
+                                    └─► fetch-options-flow.sh  (every 30 min at :30)
+                                            └─► options-flow.json / top-flow.json / flow-sentiment.json
+                                                    └─► Vercel (static serve) → Frontend
+```
+
+### flow-daemon.py
+
+Runs as a persistent user-level systemd service (`thetadata-flow-daemon.service`).
+
+**Subscription:**
+```json
+{"msg_type": "STREAM_BULK", "sec_type": "OPTION", "req_type": "TRADE", "add": true, "id": 0}
+```
+Each reconnect increments `id` — required for the ThetaData terminal to resubscribe streams automatically.
+
+**Trade filtering:**
+- Only trades where `price × size × 100 ≥ $50,000` (configurable via `MIN_PREMIUM`)
+- Market hours only: 9:30 AM–4:00 PM ET, Mon–Fri
+- Strike raw value divided by 1000 → dollar value (ThetaData internal format)
+
+**Rolling file (`data/rolling-flow.json`):**
+- Accumulates qualifying trades per trading day
+- Rotates at midnight ET — previous day archived to `data/flow-archive/flow-YYYY-MM-DD.json`
+- On mid-day restart: appends to existing file (doesn't reset intraday count)
+
+**Health monitoring (`~/daemon-health.json`):**
+```json
+{
+  "status": "streaming",          // streaming | reconnecting | stale | stopped
+  "last_trade_ts": "2026-03-13T11:42:17-04:00",
+  "trades_today": 347,
+  "subscribed_at": "2026-03-13T09:30:05-04:00",
+  "reconnects_today": 0
+}
+```
+
+**Reliability features:**
+- Reconnection with exponential backoff: 5s → 10s → 30s → 60s cap; resets after successful connection
+- Staleness detection: if subscribed but no qualifying trade in 5 minutes during market hours → logs warning, sets `status: "stale"` (does not close socket)
+- `INVALID_PERMS` or `MAX_STREAMS_REACHED` response → logs error and exits (requires manual restart)
+
+### fetch-options-flow.sh
+
+Runs at `30 9,11,13,15 * * 1-5` — 30 minutes before each synthesis run.
+
+**Health check (bash, no Python deps):**
+1. Reads `~/daemon-health.json`, extracts `status` and `last_trade_ts`
+2. Uses `date -d "$last_trade_ts" +%s` (GNU coreutils) to compute age in minutes
+3. If age ≤ 15 minutes → `DAEMON_USE=true` → loads trades from `rolling-flow.json`
+4. If stale/missing → falls back to ThetaData REST snapshot queries per-symbol
+
+**Output files:**
+- `data/options-flow.json` — all qualifying trades (up to 200), with `fetched_at` and `market_open`
+- `data/flow-sentiment.json` — call/put premium totals, P/C ratio, BULLISH/BEARISH/NEUTRAL
+- `data/top-flow.json` — top 5 trades ranked by Claude Sonnet (or fallback top-5 by premium)
+
+### Cron Schedule (ET, Mon–Fri)
+
+| Time | Job |
+|------|-----|
+| 9:30 AM | `fetch-options-flow.sh` |
+| 9:35 AM | `backcheck-predictions.sh nextday` (checks previous day's next-day predictions) |
+| 9:40 AM | `ai-synthesis.sh` |
+| 11:30 AM | `fetch-options-flow.sh` |
+| 11:35 AM | `backcheck-predictions.sh intraday` |
+| 11:40 AM | `ai-synthesis.sh` ← **Contrarian Watch** runs here only |
+| 1:30 PM  | `fetch-options-flow.sh` |
+| 1:35 PM  | `backcheck-predictions.sh intraday` |
+| 1:40 PM  | `ai-synthesis.sh` |
+| 3:30 PM  | `fetch-options-flow.sh` |
+| 3:35 PM  | `backcheck-predictions.sh intraday` |
+| 3:40 PM  | `ai-synthesis.sh` |
+| 4:01 PM  | `backcheck-predictions.sh intraday` (market close) |
+| 4:05 PM  | `generate-daily-summary.sh` |
+| Every 6h | `scrape-headlines.sh` + `scrape-x-headlines.js` |
+
+### Contrarian Module
+
+- Generated at the 11:40 AM ET synthesis run only (`GENERATE_CONTRARIAN = hour in (11,12) and not has_today`)
+- Only if no contrarian idea already exists for today (`_has_today_ci` check, re-verified before persist)
+- Claude identifies a single 30-day contrarian setup using the technicals block (RSI + MA50/200)
+- Stored in `data/contrarian-ideas.json` with `status: "active"` until resolved or expired (30 days)
+- Committed to GitHub by `ai-synthesis.sh` git add (separate from main synthesis JSON)
+
+### Manual Refresh Path
+
+```
+Browser button click
+    └─► POST /api/trigger-refresh (Vercel serverless, writes data/refresh-trigger.json to GitHub)
+            └─► refresh-poller.py (cron every minute, reads trigger file from GitHub)
+                    ├─► Step 1: fetch-options-flow.sh (daemon health check → fresh flow data)
+                    ├─► Step 2: ai-synthesis.sh (synthesis with latest flow)
+                    └─► Step 3: Schedule backcheck entry
+```
+
+Note: If `GITHUB_TOKEN` is not set in Vercel environment variables, the trigger write fails silently. Verify at Vercel Dashboard → Settings → Environment Variables.
+
+### API Error Handling
+
+- Claude API failures (including HTTP 529 Overloaded) trigger a 60-second wait and one retry
+- If both attempts fail and valid same-day synthesis exists (`intraday.confidence > 0`) → exit without overwriting
+- If no valid same-day data: writes `{"status": "api_error", "error_message": "..."}` — frontend renders clean error state (no fake NEUTRAL/0% signals)
+
+---
+
+## 10. Setup Guide — Rebuild From Scratch
+
+### Step 1: GitHub Repository
+
+```bash
+git clone https://github.com/sofar-ai/sofar-finance.git ~/sofar-finance
+cd ~/sofar-finance
+```
+
+### Step 2: Vercel Setup
+
+1. Go to [vercel.com](https://vercel.com), import `sofar-ai/sofar-finance` from GitHub
+2. Framework preset: **Other** (static site), build command and output dir: leave empty
+3. Add environment variables in Vercel dashboard:
+   - `GITHUB_TOKEN` — a GitHub PAT with `repo` scope (used by trigger API functions to write `data/refresh-trigger.json`)
+   - `GITHUB_REPO` — `sofar-ai/sofar-finance`
+   - `FINNHUB_API_KEY` — optional; scripts fall back to Yahoo Finance
+
+### Step 3: Java (required for ThetaData)
+
+```bash
+sudo apt update && sudo apt install openjdk-21-jdk
+java -version  # should show OpenJDK 21
+```
+
+### Step 4: ThetaData Terminal
+
+```bash
+# Download ThetaTerminalv3.jar from thetadata.us
+# Create start script at ~/start-theta.sh then run as a background service
+# Verify:
+curl -s "http://localhost:25503/v3/option/list/expirations?symbol=SPY" | head -3
+```
+
+### Step 5: Credential Files
+
+```bash
+# Anthropic key
+echo "ANTHROPIC_API_KEY=sk-ant-YOUR-KEY" | sudo tee /etc/anthropic.env
+sudo chmod 644 /etc/anthropic.env
+
+# Finnhub key (optional)
+echo "FINNHUB_API_KEY=YOUR-KEY" | sudo tee /etc/finnhub.env
+sudo chmod 644 /etc/finnhub.env
+
+# ThetaData credentials (root-only)
+echo "THETADATA_USERNAME=your@email.com" | sudo tee /etc/thetadata.env
+echo "THETADATA_PASSWORD=yourpassword" | sudo tee -a /etc/thetadata.env
+sudo chmod 600 /etc/thetadata.env
+```
+
+### Step 6: Script Dependencies
+
+```bash
+# Python 3.9+ required (for zoneinfo)
+python3 --version
+
+# pip
+curl https://bootstrap.pypa.io/get-pip.py | python3 --user
+
+# WebSocket client (for flow daemon)
+pip install websocket-client
+
+# GitHub CLI (for authenticated git pushes — no hardcoded tokens)
+# Install: https://cli.github.com
+gh auth login --scopes repo,workflow
+
+# Configure git identity in the repo
+cd ~/sofar-finance
+git config user.email "bot@sofar.finance"
+git config user.name "Sofar Bot"
+```
+
+**Token management:** Scripts call `gh auth token` at runtime — no tokens are hardcoded in scripts or config files. To rotate: `gh auth login` to update the gh CLI store; update `GITHUB_TOKEN` in Vercel dashboard and redeploy.
+
+### Step 7: Create Directories and Copy Scripts
+
+```bash
+mkdir -p ~/scripts ~/logs ~/sofar-finance/data/flow-archive
+
+# Scripts live outside the git repo (not committed):
+# ~/scripts/ai-synthesis.py       — main Claude synthesis (Opus 4)
+# ~/scripts/ai-synthesis.sh       — bash wrapper + git commit
+# ~/scripts/fetch-options-flow.sh — flow fetch with daemon health check
+# ~/scripts/backcheck-predictions.sh
+# ~/scripts/flow-daemon.py        — ThetaData WebSocket accumulator
+# ~/scripts/refresh-poller.py     — manual trigger handler
+# ~/scripts/scrape-headlines.sh
+# ~/scripts/generate-trends.py
+# ~/scripts/analyze-ticker.py
+# ~/scripts/generate-daily-summary.sh
+
+chmod +x ~/scripts/*.sh
+```
+
+### Step 8: Flow Daemon Service
+
+```bash
+# Install as user-level systemd service
+mkdir -p ~/.config/systemd/user/
+# Create thetadata-flow-daemon.service (see ~/scripts/thetadata-flow-daemon.service)
+systemctl --user daemon-reload
+systemctl --user enable thetadata-flow-daemon
+systemctl --user start thetadata-flow-daemon
+loginctl enable-linger $USER  # keep service running after logout
+
+# Verify
+systemctl --user status thetadata-flow-daemon
+tail -f ~/logs/flow-daemon.log
+```
+
+### Step 9: Initialize Data Files
+
+```bash
+mkdir -p ~/sofar-finance/data
+echo '{"fetched_at":null,"market_open":false,"total_trades":0,"trades":[]}' > ~/sofar-finance/data/options-flow.json
+echo '{"fetched_at":null,"market_open":false,"pc_ratio":null,"call_premium":0,"put_premium":0,"sentiment":"NEUTRAL","total_trades":0}' > ~/sofar-finance/data/flow-sentiment.json
+echo '{"fetched_at":null,"top_trades":[]}' > ~/sofar-finance/data/top-flow.json
+echo '{"date":null,"count":0,"trades":[]}' > ~/sofar-finance/data/rolling-flow.json
+echo '{"ideas":[]}' > ~/sofar-finance/data/contrarian-ideas.json
+echo '[]' > ~/sofar-finance/data/daily-summaries.json
+echo '{}' > ~/sofar-finance/data/watchlist.json
+
+cd ~/sofar-finance && git add -A && git commit -m "init: data placeholders" && git push
+```
+
+### Step 10: Set Up Crontab
+
+```bash
+crontab -e
+# Add (note: /bin/sh is dash on Ubuntu — use . not source):
+. /etc/anthropic.env && export ANTHROPIC_API_KEY && 0 */6 * * * /bin/bash /home/bot1/scripts/scrape-headlines.sh
+0 */6 * * * . /etc/anthropic.env && export ANTHROPIC_API_KEY && /bin/bash /home/bot1/scripts/scrape-headlines.sh >> /home/bot1/logs/scrape-headlines.log 2>&1
+30 9,11,13,15 * * 1-5 REPO_PATH=/home/bot1/sofar-finance /bin/bash /home/bot1/scripts/fetch-options-flow.sh >> /home/bot1/logs/flow-fetch.log 2>&1
+40 9,11,13,15 * * 1-5 REPO_PATH=/home/bot1/sofar-finance /bin/bash /home/bot1/scripts/ai-synthesis.sh >> /home/bot1/logs/ai-synthesis.log 2>&1
+35 11,13,15 * * 1-5 REPO_PATH=/home/bot1/sofar-finance /bin/bash /home/bot1/scripts/backcheck-predictions.sh intraday >> /home/bot1/logs/backcheck.log 2>&1
+1 16 * * 1-5 REPO_PATH=/home/bot1/sofar-finance /bin/bash /home/bot1/scripts/backcheck-predictions.sh intraday >> /home/bot1/logs/backcheck.log 2>&1
+35 9 * * 1-5 REPO_PATH=/home/bot1/sofar-finance /bin/bash /home/bot1/scripts/backcheck-predictions.sh nextday >> /home/bot1/logs/backcheck.log 2>&1
+5 16 * * 1-5 . /etc/anthropic.env && export ANTHROPIC_API_KEY && REPO_PATH=/home/bot1/sofar-finance /bin/bash /home/bot1/scripts/generate-daily-summary.sh >> /home/bot1/logs/daily-summary.log 2>&1
+* * * * * /bin/bash /home/bot1/scripts/refresh-poller.sh >> /home/bot1/logs/refresh-poller.log 2>&1
+```
+
+### Step 11: Smoke Test
+
+```bash
+# Flow daemon running?
+systemctl --user status thetadata-flow-daemon
+cat ~/daemon-health.json
+
+# Test options flow (during market hours for daemon path; anytime for REST fallback)
+REPO_PATH=~/sofar-finance bash ~/scripts/fetch-options-flow.sh
+
+# Test AI synthesis (any time)
+REPO_PATH=~/sofar-finance bash ~/scripts/ai-synthesis.sh
+
+# Check token usage
+cat ~/logs/token-usage.log | tail -5
+
+# Check all logs
+tail -20 ~/logs/ai-synthesis.log
+tail -20 ~/logs/flow-fetch.log
+tail -20 ~/logs/flow-daemon.log
+```
+
+---
+
+## 11. Troubleshooting
+
+### Flow daemon not receiving trades
+
+```bash
+# Check service status
+systemctl --user status thetadata-flow-daemon
+tail -50 ~/logs/flow-daemon.log
+
+# Confirm WebSocket connection
+ss -tnp | grep 25520
+
+# Check health file
+cat ~/daemon-health.json
+```
+
+**Common causes:**
+- `status: "stale"` in health file → FPSS upstream disconnect; restart ThetaData terminal
+- `MAX_STREAMS_REACHED` in log → another process connected to port 25520; kill it first
+- `INVALID_PERMS` → Options Pro subscription required for Full Trade Stream
+- Daemon was started before ThetaData terminal → restart: `systemctl --user restart thetadata-flow-daemon`
+
+### ThetaData Terminal not responding
+
+```bash
+# Check REST port
+curl -s "http://localhost:25503/v3/option/list/expirations?symbol=SPY" | head -3
+
+# Check processes
+ps aux | grep java
+
+# Restart
+bash ~/start-theta.sh
+```
+
+### fetch-options-flow.sh using stale REST fallback
+
+```bash
+cat ~/daemon-health.json
+# If last_trade_ts is >15 minutes ago → health check fails, falls back to REST
+# Fix: check if daemon is running and ThetaData has FPSS connection
+systemctl --user restart thetadata-flow-daemon
+tail -20 ~/logs/flow-daemon.log  # look for "Stream SUBSCRIBED"
+```
+
+### Claude API failures (HTTP 529 Overloaded)
+
+- Script retries once after 60 seconds automatically
+- If both attempts fail and valid same-day data exists → no overwrite (existing data preserved)
+- If no same-day data → `{"status":"api_error"}` written; frontend shows clean error state
+- Manual retry: `REPO_PATH=~/sofar-finance bash ~/scripts/ai-synthesis.sh`
+
+### Vercel trigger button not responding (no step progress)
+
+1. Check `GITHUB_TOKEN` is set in Vercel environment variables (Dashboard → Settings → Environment Variables)
+2. Check that the token has `repo` scope: `gh auth status`
+3. Token rotation: update in Vercel dashboard, trigger a redeploy, and run `gh auth login` on server
+4. Verify trigger file: `cat ~/sofar-finance/data/refresh-trigger.json`
+
+### Git push failing
+
+```bash
+cd ~/sofar-finance
+git stash && git pull --rebase && git push && git stash pop
+# All scripts include this pattern automatically
+```
+
+### AI strip showing "pending" or error state
+
+```bash
+# Check what's in the synthesis file
+python3 -c "import json; d=json.load(open('~/sofar-finance/data/ai-synthesis.json')); print(d.get('status'), d.get('generated_at'), d.get('intraday',{}).get('signal'))"
+
+# Manually trigger synthesis
+REPO_PATH=~/sofar-finance bash ~/scripts/ai-synthesis.sh
+
+# Check last synthesis log
+tail -30 ~/logs/ai-synthesis.log
+```
+
+### Contrarian Watch not populating
+
+- Only generates at the 11:40 AM ET run (`hour in (11, 12)`)
+- Check: `grep "GENERATE_CONTRARIAN" ~/logs/ai-synthesis.log | tail -5`
+- If `GENERATE_CONTRARIAN=False`: check ET hour and whether today's idea already exists
+- Manual test: `python3 -c "import json; print(json.load(open('~/sofar-finance/data/contrarian-ideas.json')))"`
+
+---
+
+*Last updated: March 2026*
