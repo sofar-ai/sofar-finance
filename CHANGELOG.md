@@ -81,3 +81,26 @@
 - **Finnhub API key**: Not yet configured at `/etc/finnhub.env`; system uses Yahoo Finance fallback
 - **Regime-filtered history injection**: Planned for week 2+ (need ≥5 same-regime entries to filter)
 
+
+---
+
+## 2026-03-13
+
+### Fixed
+- **Next-update countdown wrong** (`e56ab69`): `nextScheduledRun()` was using `.setDate()` / `.setHours()` on a manually ET-shifted Date object — those methods operate in browser local time, causing wrong results for non-ET browsers. Rewrote to use `Date.UTC()` throughout. "Next update in Xm" now calculates correctly.
+- **1Y chart MA50/MA200/RSI wrong** (`0fc6f17`): 1Y timeframe was fetching weekly bars (`interval=1wk, range=1y` = 54 bars). MA200 never rendered (need 200 bars), MA50 only covered 9% of the view. RSI was 47.67 instead of correct 35.73. Fixed: now fetches `interval=1d, range=2y` (501 daily bars). Frontend splits into display window (last 251 bars = 1Y) and TA lookback (all 501). RSI verified at 35.70.
+- **1M chart MA50 wrong** (`8eebcc3`): 1M was fetching only 22 daily bars — insufficient for MA50. Now fetches `range=3mo` (60 bars), displays last 30 days on x-axis, uses all 60 for MA50 lookback.
+- **Indicator lines bleeding into hidden lookback** (`0fc6f17`): `indicators.js` MA and RSI lines now clipped to `displayFrom` timestamp so hidden lookback bars (2nd year) never appear on the chart x-axis.
+
+### Added
+- **Technical indicators in AI synthesis** (`ai-synthesis.py`): New `fetch_technicals()` function fetches `interval=1d&range=2y` daily bars for all synthesis tickers (SPY, QQQ, IWM, AAPL, NVDA, TSLA, META, MSFT, AMD, AMZN). Computes RSI-14 (Wilder's smoothing), MA50, MA200, and price position vs each MA (direction + % distance). Injected as `technicals` block in Claude's user prompt.
+- **System prompt rule #9 — technicals**: Claude instructed to cite specific RSI/MA values. RSI<35 = notable oversold, RSI<30 = strong oversold / mean reversion setup, RSI>65 = approaching overbought, RSI>70 = strong overbought. Price below MA200 = bearish context. Price below both MAs with RSI<35 = high-conviction oversold.
+- **Contrarian Watch technicals integration** (`ai-synthesis.py`): Contrarian schema now includes technicals instruction — RSI<30 below MA200 or RSI>70 above MA200 explicitly flagged as contrarian setup candidates.
+
+### Fixed (latent bugs in ai-synthesis.py)
+- **`contrarian_idea` missing from prompt schema**: The JSON schema returned to Claude did not include the `contrarian_idea` field — Claude was never asked to generate it. Field restored with technicals-aware instructions.
+- **Contrarian setup variables undefined**: `GENERATE_CONTRARIAN`, `_today_str`, `regime_tag`, `_ci_data`, `_ci_path` were referenced but never defined in `ai-synthesis.py` (orphaned when script was extracted from .sh heredoc). Setup block restored before the persist section.
+
+### Known Issues
+- **1M timeframe MA200**: Still won't render on 1M view (only 60 bars available, need 200). Intentional — MA200 is not meaningful on a 1-month view.
+- **Contrarian Watch**: First run since bug fix will be next 11:40 AM ET weekday run.
