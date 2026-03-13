@@ -154,21 +154,31 @@ function declineNode(nid) {
 }
 
 function showAddBranch(parentId) {
+  // Check for an OPEN form (has data-form="1"), not just any element with that ID
   const existing = document.getElementById(`me-add-${parentId}`);
-  if (existing) { existing.remove(); return; }
+  if (existing && existing.dataset.form === '1') { existing.remove(); return; }
+
   const form = document.createElement('div');
   form.id = `me-add-${parentId}`;
   form.className = 'me-add-branch';
+  form.dataset.form = '1';  // marks this as an open form, not a placeholder
   form.innerHTML = `
     <div class="me-add-row">
-      <input class="me-add-input" id="me-add-label-${parentId}" placeholder="Branch label (e.g. Helium impact on semiconductor fabs)" maxlength="80">
+      <input class="me-add-input" id="me-add-label-${parentId}" placeholder="Branch label (e.g. Oil shipping route impact)" maxlength="80">
       <input class="me-add-input" id="me-add-tickers-${parentId}" placeholder="Tickers (optional, comma-sep)" maxlength="60" style="max-width:160px">
       <button class="me-btn me-btn-primary me-btn-sm" onclick="addBranch('${parentId}')">Add</button>
       <button class="me-btn me-btn-ghost me-btn-sm" onclick="document.getElementById('me-add-${parentId}').remove()">Cancel</button>
     </div>`;
-  // Append after the node row
-  const nodeEl = document.getElementById(`me-noderow-${parentId}`);
-  if (nodeEl && nodeEl.parentNode) nodeEl.parentNode.insertBefore(form, nodeEl.nextSibling);
+
+  // For root: insert into the me-add-root placeholder container
+  // For child nodes: insert after the node row
+  if (parentId === 'root') {
+    const container = document.getElementById('me-add-root');
+    if (container) container.appendChild(form);
+  } else {
+    const nodeEl = document.getElementById(`me-noderow-${parentId}`);
+    if (nodeEl && nodeEl.parentNode) nodeEl.parentNode.insertBefore(form, nodeEl.nextSibling);
+  }
 }
 
 function addBranch(parentId) {
@@ -242,6 +252,8 @@ function renderNodeTree(nodes, parentId, depth) {
     const magTag = `<span class="me-tag ${magClass(mag)}">${mag}</span>`;
     const secTag = node.sector ? `<span class="me-tag me-tag-sector">${node.sector}</span>` : '';
     const tickerTags = tickers.map(t=>`<span class="me-tag me-tag-ticker">${t}</span>`).join('');
+    const typeLabels = {direct_impact:'Direct Impact',second_order:'2nd Order',third_order:'3rd Order',policy:'Policy',policy_response:'Policy',market_mechanics:'Market Mech'};
+    const typeTag = node.node_type ? `<span class="me-tag" style="background:rgba(148,163,184,.08);color:#64748b;border:1px solid rgba(148,163,184,.2)">${typeLabels[node.node_type]||node.node_type}</span>` : '';
     const hlBadge = hlCount ? `<span class="me-headline-count">📰 ${hlCount}</span>` : '';
     const nsDot = `<span class="${statusClass(nsStatus)}" title="${nsStatus}">${statusDot(nsStatus)}</span>`;
 
@@ -260,7 +272,7 @@ function renderNodeTree(nodes, parentId, depth) {
           <div class="me-node-body">
             <div class="me-node-label">${nsDot} ${node.label} ${hlBadge}</div>
             ${node.description && node.description !== '(enriching…)' ? `<div class="me-node-desc">${node.description}</div>` : ''}
-            <div class="me-node-meta">${dirTag}${magTag}${secTag}${tickerTags}</div>
+            <div class="me-node-meta">${typeTag}${dirTag}${magTag}${secTag}${tickerTags}</div>
             ${node.confidence_note ? `<div class="me-node-desc" style="color:#60a5fa;margin-top:3px">💡 ${node.confidence_note}</div>` : ''}
           </div>
           <div class="me-node-btns">${acceptBtn}${declineBtn}${addBtn}</div>
