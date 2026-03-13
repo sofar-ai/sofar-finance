@@ -5,7 +5,7 @@
 const TickerDeepDive = (() => {
   const API       = '/api/trigger-ticker';
   const POLL_MS   = 3000;
-  const TIMEOUT_MS = 5 * 60 * 1000; // 5 min — flow refresh + analysis can take 3-4 min
+  const TIMEOUT_MS = 8 * 60 * 1000; // 8 min — flow refresh + analysis can take 4-6 min
 
   let polling = false;
 
