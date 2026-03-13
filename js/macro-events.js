@@ -215,6 +215,30 @@ function updateSubmitBtn() {
 }
 
 // ── Render ────────────────────────────────────────────────────────────────────
+// ── Render active event hero ─────────────────────────────────────────────────
+function renderHero(event) {
+  const el = $('me-event-hero');
+  if (!el) return;
+  if (!event) { el.innerHTML = ''; return; }
+  const statusColor = {active:'#22c55e', draft:'#f59e0b', archived:'#64748b'}[event.status] || '#94a3b8';
+  const activeSince = event.activated_at
+    ? new Date(event.activated_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})
+    : null;
+  const accepted = (event.nodes||[]).filter(n=>n.review_status==='accepted').length;
+  el.innerHTML = `
+    <div style="margin-bottom:20px;padding:16px 20px;background:var(--bg-secondary);border:1px solid var(--border);border-left:3px solid ${statusColor};border-radius:4px">
+      <div style="font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:${statusColor};margin-bottom:6px">
+        ${event.status === 'active' ? '● Live' : event.status === 'draft' ? '◌ Draft' : '○ Archived'}
+      </div>
+      <div style="font-size:24px;font-weight:700;color:var(--text-primary);line-height:1.2;margin-bottom:8px">${event.root_label}</div>
+      <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-secondary);display:flex;gap:16px;flex-wrap:wrap">
+        <span>${(event.nodes||[]).length} nodes · ${accepted} accepted</span>
+        ${activeSince ? `<span>Active since ${activeSince}</span>` : ''}
+        <span>v${event.version}</span>
+      </div>
+    </div>`;
+}
+
 function renderEventList() {
   const el = $('me-event-list');
   if (!el) return;
@@ -399,7 +423,18 @@ function renderTree(event) {
       </div>
     </div>`;
 
-  panel.innerHTML = analysisHtml + scenariosHtml + treeHtml;
+  // ── Create New Event input (always visible, between scenarios and tree) ──
+  const createHtml = `
+    <div style="margin-bottom:8px">
+      <div style="font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:8px">Track a New Macro Event</div>
+      <div class="me-toolbar" style="margin-bottom:0;border-bottom:none;padding-bottom:0">
+        <input id="me-new-input" class="me-input" placeholder="e.g. Fed Rate Cut, Taiwan Conflict…" maxlength="60"
+          onkeydown="if(event.key==='Enter') generateTree()">
+        <button id="me-generate-btn" class="me-btn me-btn-primary" onclick="generateTree()">Generate Tree</button>
+      </div>
+    </div>`;
+
+  panel.innerHTML = analysisHtml + scenariosHtml + createHtml + treeHtml;
   updateSubmitBtn();
 }
 
@@ -418,7 +453,7 @@ function renderAll() {
   const events = trees.events || [];
   const panel = $('me-tree-panel');
   if (!events.length) {
-    if (panel) panel.innerHTML = `<div class="me-empty">No event trees yet.<br>Enter a macro event above and click Generate Tree.</div>`;
+    if (panel) panel.innerHTML = `<div class="me-empty">No event trees yet.<br>Enter a macro event name below and click Generate Tree.</div>`;
     setStatus('No events — create one above');
     return;
   }
@@ -429,6 +464,7 @@ function renderAll() {
   }
   renderEventList();
   const event = events.find(e=>e.event_id===activeEventId);
+  renderHero(event || null);
   if (event) renderTree(event);
   setStatus(`Last loaded: ${new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',timeZone:'America/New_York'})} ET`);
 }
@@ -437,8 +473,7 @@ function renderAll() {
 async function init() {
   await Promise.all([loadTrees(), loadAnalysis()]);
   renderAll();
-  $('me-generate-btn')?.addEventListener('click', generateTree);
-  $('me-new-input')?.addEventListener('keydown', e => { if (e.key==='Enter') generateTree(); });
+  // generate btn and input use onclick/onkeydown (rendered dynamically into tree panel)
   // Refresh data every 30s
   setInterval(async () => {
     await Promise.all([loadTrees(), loadAnalysis()]);
