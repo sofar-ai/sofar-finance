@@ -226,7 +226,7 @@ function renderHero(event) {
     : null;
   const accepted = (event.nodes||[]).filter(n=>n.review_status==='accepted').length;
   el.innerHTML = `
-    <div style="margin-bottom:20px;padding:16px 20px;background:var(--bg-secondary);border:1px solid var(--border);border-left:3px solid ${statusColor};border-radius:4px">
+    <div style="margin-bottom:4px;padding:16px 20px;background:var(--bg-secondary);border:1px solid var(--border);border-left:3px solid ${statusColor};border-radius:4px">
       <div style="font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:${statusColor};margin-bottom:6px">
         ${event.status === 'active' ? '● Live' : event.status === 'draft' ? '◌ Draft' : '○ Archived'}
       </div>
@@ -247,7 +247,8 @@ function renderEventList() {
   if (!el) return;
   const events = trees.events || [];
   // Hide entirely when 0 or 1 event — hero box handles the display
-  if (events.length <= 1) { el.innerHTML = ''; return; }
+  if (events.length <= 1) { el.innerHTML = ''; el.style.display = 'none'; return; }
+  el.style.display = '';
   // Multiple events: show compact switcher row
   el.innerHTML = `<div style="font-family:var(--font-mono);font-size:9px;color:var(--text-secondary);margin-bottom:6px;letter-spacing:.08em;text-transform:uppercase">Switch Event</div>` +
     events.map(e => {
@@ -354,18 +355,26 @@ function renderTree(event) {
               </div>`).join('')}
           </div>` : ''}
         </div>
-        ${hasSector ? `
+        ${hasSector ? (() => {
+          const sectorEntries = Object.entries(evAnalysis.sector_exposure).sort((a,b)=>Math.abs(b[1])-Math.abs(a[1]));
+          const maxAbs = Math.max(...sectorEntries.map(([,v])=>Math.abs(v)), 0.1);
+          const BAR_MAX = 52; // px — safe max that fits within 200px sidebar card
+          return `
         <div class="me-analysis-card">
           <div class="me-analysis-label">Sector Exposure</div>
           <div class="me-sector-grid" style="flex-direction:column">
-            ${Object.entries(evAnalysis.sector_exposure).sort((a,b)=>Math.abs(b[1])-Math.abs(a[1])).map(([sec,score])=>`
+            ${sectorEntries.map(([sec,score])=>{
+              const bw = Math.max(3, Math.round((Math.abs(score)/maxAbs)*BAR_MAX));
+              return `
               <div class="me-sector-bar">
-                <span style="color:var(--text-secondary);font-family:var(--font-mono);font-size:9px;width:72px;flex-shrink:0">${sec}</span>
-                <div class="me-bar" style="width:${Math.min(Math.abs(score)*50,90)}px;background:${score>0?'#22c55e':'#ef4444'}"></div>
+                <span style="color:var(--text-secondary);font-family:var(--font-mono);font-size:9px;width:72px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${sec}</span>
+                <div class="me-bar" style="width:${bw}px;flex-shrink:0;background:${score>0?'#22c55e':'#ef4444'}"></div>
                 <span style="font-size:9px;color:${score>0?'#22c55e':'#ef4444'}">${score>0?'+':''}${score.toFixed(1)}</span>
-              </div>`).join('')}
+              </div>`;
+            }).join('')}
           </div>
-        </div>` : ''}
+        </div>`;
+        })() : ''}
       </div>
     </div>` : (isActive ? `
     <div class="me-analysis-card" style="color:var(--text-secondary);font-size:11px;text-align:center;padding:20px;margin-bottom:16px">
