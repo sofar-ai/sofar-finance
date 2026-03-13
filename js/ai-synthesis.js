@@ -75,10 +75,10 @@ const AISynthesis = (() => {
     })();
     const etNow = new Date(now.getTime() + (etOff + now.getTimezoneOffset()/60) * 3600000);
     const dayET = etNow.getDay(); // 0=Sun 6=Sat
-    if (dayET === 5) return 'Mon';   // Friday → Monday
-    if (dayET === 6) return 'Mon';   // Saturday (shouldn't show but safe)
-    if (dayET === 0) return 'Mon';   // Sunday (same)
-    return 'Tomorrow';
+    if (dayET === 5) return 'Next Day (Mon)';   // Friday → Monday
+    if (dayET === 6) return 'Next Day (Mon)';   // Saturday (shouldn't show but safe)
+    if (dayET === 0) return 'Next Day (Mon)';   // Sunday (same)
+    return 'Next Day (Tomorrow)';
   }
 
   function fmtPrice(p) {
