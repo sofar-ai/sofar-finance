@@ -298,45 +298,54 @@ function renderTree(event) {
   // Get analysis for this event
   const evAnalysis = (analysis.active_events || []).find(a => a.event_id === event.event_id);
 
-  panel.innerHTML = `
-    <div class="me-tree">
-      <div class="me-tree-header">
+  // ── Section 1: Live Analysis (top — this is the daily view) ──────────────
+  const hasSector = Object.keys(evAnalysis?.sector_exposure || {}).length > 0;
+  const analysisHtml = evAnalysis ? `
+    <div class="me-analysis">
+      <div class="me-section-title">📡 Live Event Analysis
+        <span style="font-size:9px;color:var(--text-secondary);font-weight:400;margin-left:8px">
+          Updated ${evAnalysis.last_updated ? new Date(evAnalysis.last_updated).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',timeZone:'America/New_York'}) + ' ET' : '—'} · ${evAnalysis.new_matches_this_cycle||0} new matches last cycle
+        </span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr ${hasSector ? '200px' : ''};gap:12px;align-items:start">
         <div>
-          <div style="font-family:var(--font-mono);font-size:14px;font-weight:700;color:var(--text-primary)">${event.root_label}</div>
-          <div style="font-size:10px;color:var(--text-secondary);margin-top:2px">
-            v${event.version} · ${nodes.length} nodes · ${pending} pending · ${accepted} accepted · ${declined} declined
-            ${event.activated_at ? ` · Activated ${new Date(event.activated_at).toLocaleDateString('en-US',{month:'short',day:'numeric'})}` : ''}
+          <div class="me-analysis-card">
+            <div class="me-analysis-label">Dominant Narrative</div>
+            <div class="me-narrative">${evAnalysis.dominant_narrative||'Monitoring active — no narrative generated yet.'}</div>
+            ${evAnalysis.scenario_update?.probability_shift ? `<div style="font-size:10px;color:#60a5fa;margin-top:6px">↻ ${evAnalysis.scenario_update.probability_shift}</div>` : ''}
           </div>
+          ${(evAnalysis.recent_developments||[]).length ? `
+          <div class="me-analysis-card">
+            <div class="me-analysis-label">Recent Headline Matches</div>
+            ${evAnalysis.recent_developments.slice(0,6).map(d=>`
+              <div class="me-dev-item">
+                <span class="me-dev-node">[${d.matched_node||'?'}]</span>
+                <span>${d.headline}</span>
+              </div>`).join('')}
+          </div>` : ''}
         </div>
-        <div class="me-tree-actions">
-          ${pending > 0 || accepted > 0 ? `
-            <button id="me-submit-btn" class="me-btn me-btn-primary" onclick="submitChanges()" disabled>No Changes</button>` : ''}
-          ${isDraft ? `<button class="me-btn me-btn-success" onclick="activateEvent('${event.event_id}')">▶ Activate</button>` : ''}
-          ${isActive ? `<button class="me-btn me-btn-ghost" onclick="archiveEvent('${event.event_id}')">Archive</button>` : ''}
-        </div>
-      </div>
-
-      <div style="margin-bottom:16px">
-        <div class="me-node-row" style="background:rgba(59,130,246,.08);border-color:rgba(59,130,246,.3)">
-          <div class="me-node-body">
-            <div class="me-node-label" style="color:var(--accent)">🌐 ${event.root_label} <span style="font-size:9px;color:var(--accent)">ROOT</span></div>
-            <div class="me-node-desc">Macro event root — all branches below are impact pathways</div>
+        ${hasSector ? `
+        <div class="me-analysis-card">
+          <div class="me-analysis-label">Sector Exposure</div>
+          <div class="me-sector-grid" style="flex-direction:column">
+            ${Object.entries(evAnalysis.sector_exposure).sort((a,b)=>Math.abs(b[1])-Math.abs(a[1])).map(([sec,score])=>`
+              <div class="me-sector-bar">
+                <span style="color:var(--text-secondary);font-family:var(--font-mono);font-size:9px;width:72px;flex-shrink:0">${sec}</span>
+                <div class="me-bar" style="width:${Math.min(Math.abs(score)*50,90)}px;background:${score>0?'#22c55e':'#ef4444'}"></div>
+                <span style="font-size:9px;color:${score>0?'#22c55e':'#ef4444'}">${score>0?'+':''}${score.toFixed(1)}</span>
+              </div>`).join('')}
           </div>
-          <div class="me-node-btns">
-            <button class="me-btn me-btn-ghost me-btn-sm" onclick="showAddBranch('root')">+ Direct Impact</button>
-          </div>
-        </div>
-        <div id="me-add-root"></div>
+        </div>` : ''}
       </div>
+    </div>` : (isActive ? `
+    <div class="me-analysis-card" style="color:var(--text-secondary);font-size:11px;text-align:center;padding:20px;margin-bottom:16px">
+      📡 Monitoring active — analysis will appear after next event-monitor cycle (runs every 2h market hours)
+    </div>` : '');
 
-      <div id="me-tree-nodes">
-        ${renderNodeTree(nodes, 'root', 0)}
-      </div>
-    </div>
-
-    ${scenarios.length ? `
+  // ── Section 2: Scenarios ──────────────────────────────────────────────────
+  const scenariosHtml = scenarios.length ? `
     <div class="me-scenarios">
-      <div class="me-section-title">Scenarios</div>
+      <div class="me-section-title">⚖️ Scenarios</div>
       <div class="me-scenario-grid">
         ${scenarios.map(sc => `
           <div class="me-scenario-card">
@@ -349,44 +358,60 @@ function renderTree(event) {
             </div>
           </div>`).join('')}
       </div>
-    </div>` : ''}
+    </div>` : '';
 
-    ${evAnalysis ? `
-    <div class="me-analysis">
-      <div class="me-section-title">Live Event Analysis</div>
-      <div class="me-analysis-card">
-        <div class="me-analysis-label">Dominant Narrative</div>
-        <div class="me-narrative">${evAnalysis.dominant_narrative||'No narrative yet.'}</div>
-        <div style="font-size:9px;color:var(--text-secondary);margin-top:6px">Updated ${evAnalysis.last_updated||''} · ${evAnalysis.new_matches_this_cycle||0} new matches last cycle</div>
-      </div>
-      ${(evAnalysis.recent_developments||[]).length ? `
-      <div class="me-analysis-card">
-        <div class="me-analysis-label">Recent Headline Matches</div>
-        ${evAnalysis.recent_developments.slice(0,6).map(d=>`
-          <div class="me-dev-item">
-            <span class="me-dev-node">[${d.matched_node||'?'}]</span>
-            <span>${d.headline}</span>
-          </div>`).join('')}
-      </div>` : ''}
-      ${Object.keys(evAnalysis.sector_exposure||{}).length ? `
-      <div class="me-analysis-card">
-        <div class="me-analysis-label">Sector Exposure</div>
-        <div class="me-sector-grid">
-          ${Object.entries(evAnalysis.sector_exposure).sort((a,b)=>Math.abs(b[1])-Math.abs(a[1])).map(([sec,score])=>`
-            <div class="me-sector-bar">
-              <span style="color:var(--text-secondary);font-family:var(--font-mono);font-size:9px;width:70px">${sec}</span>
-              <div class="me-bar" style="width:${Math.abs(score)*60}px;background:${score>0?'#22c55e':'#ef4444'}"></div>
-              <span style="font-size:9px;color:${score>0?'#22c55e':'#ef4444'}">${score>0?'+':''}${score.toFixed(1)}</span>
-            </div>`).join('')}
+  // ── Section 3: Collapsible Event Tree (collapsed by default) ─────────────
+  const treeSummary = `${nodes.length} nodes · ${accepted} accepted · ${pending} pending${declined ? ` · ${declined} declined` : ''}${event.activated_at ? ` · Active since ${new Date(event.activated_at).toLocaleDateString('en-US',{month:'short',day:'numeric'})}` : ''}`;
+  const treeHtml = `
+    <div class="me-tree">
+      <div class="me-tree-header" style="cursor:pointer;user-select:none" onclick="toggleTree('${event.event_id}')">
+        <div>
+          <div style="font-family:var(--font-mono);font-size:12px;font-weight:700;color:var(--text-primary)">
+            <span id="me-tree-toggle-icon-${event.event_id}" style="color:var(--accent);margin-right:6px">▶</span>
+            Impact Tree
+          </div>
+          <div style="font-size:10px;color:var(--text-secondary);margin-top:2px">${treeSummary}</div>
         </div>
-      </div>` : ''}
-    </div>` : (isActive ? `<div class="me-analysis-card" style="color:var(--text-secondary);font-size:11px;text-align:center;padding:20px">
-      📡 Monitoring active — analysis will appear after next event-monitor cycle (runs every 2h market hours)
-    </div>` : '')}
-  `;
+        <div class="me-tree-actions" onclick="event.stopPropagation()">
+          ${pending > 0 || accepted > 0 ? `
+            <button id="me-submit-btn" class="me-btn me-btn-primary" onclick="submitChanges()" disabled>No Changes</button>` : ''}
+          ${isDraft ? `<button class="me-btn me-btn-success" onclick="activateEvent('${event.event_id}')">▶ Activate</button>` : ''}
+          ${isActive ? `<button class="me-btn me-btn-ghost" onclick="archiveEvent('${event.event_id}')">Archive</button>` : ''}
+        </div>
+      </div>
 
+      <div id="me-tree-body-${event.event_id}" style="display:none">
+        <div style="margin:12px 0 16px">
+          <div class="me-node-row" style="background:rgba(59,130,246,.08);border-color:rgba(59,130,246,.3)">
+            <div class="me-node-body">
+              <div class="me-node-label" style="color:var(--accent)">🌐 ${event.root_label} <span style="font-size:9px;color:var(--accent)">ROOT</span></div>
+              <div class="me-node-desc">Macro event root — all branches below are impact pathways</div>
+            </div>
+            <div class="me-node-btns">
+              <button class="me-btn me-btn-ghost me-btn-sm" onclick="showAddBranch('root')">+ Direct Impact</button>
+            </div>
+          </div>
+          <div id="me-add-root"></div>
+        </div>
+        <div id="me-tree-nodes">
+          ${renderNodeTree(nodes, 'root', 0)}
+        </div>
+      </div>
+    </div>`;
+
+  panel.innerHTML = analysisHtml + scenariosHtml + treeHtml;
   updateSubmitBtn();
 }
+
+function toggleTree(eventId) {
+  const body = document.getElementById(`me-tree-body-${eventId}`);
+  const icon = document.getElementById(`me-tree-toggle-icon-${eventId}`);
+  if (!body) return;
+  const open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'block';
+  if (icon) icon.textContent = open ? '▶' : '▼';
+}
+
 
 function renderAll() {
   renderEventList();
