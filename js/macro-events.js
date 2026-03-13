@@ -16,7 +16,10 @@ let pollTimer = null;
 const $ = id => document.getElementById(id);
 function setStatus(msg, color) {
   const el = $('me-status');
-  if (el) { el.textContent = msg; el.style.color = color || 'var(--text-secondary)'; }
+  if (!el) return;
+  el.textContent = msg;
+  el.style.color = color || 'var(--text-secondary)';
+  el.style.display = msg ? '' : 'none';
 }
 
 function dirColor(d)  { return d==='bullish'?'#22c55e':d==='bearish'?'#ef4444':'#f59e0b'; }
