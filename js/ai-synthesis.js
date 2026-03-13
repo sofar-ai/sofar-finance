@@ -555,11 +555,16 @@ const AISynthesis = (() => {
     const high = divs.filter(d => (d.significance || '').toLowerCase() !== 'low');
     if (!high.length) { banner.style.display = 'none'; return; }
 
+    const _detectedAt = data.generated_at
+      ? new Date(data.generated_at).toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit', timeZone:'America/New_York'}) + ' ET'
+      : null;
+
     banner.style.display = '';
     banner.innerHTML = `
       <div class="ai-div-header">
         <span class="ai-div-icon">⚡</span>
         <span class="ai-div-title">Flow Divergence Alert</span>
+        ${_detectedAt ? `<span class="ai-div-ts">Detected ${_detectedAt}</span>` : ''}
         <button class="ai-div-dismiss" onclick="(function(){localStorage.setItem('${dismissKey}','1');document.getElementById('ai-divergence-banner').style.display='none'})()">✕</button>
       </div>
       ${high.map(d => `
