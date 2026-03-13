@@ -238,6 +238,7 @@ function renderHero(event) {
         <span>${(event.nodes||[]).length} nodes · ${accepted} accepted</span>
         ${activeSince ? `<span>Active since ${activeSince}</span>` : ''}
         <span>v${event.version}</span>
+        <span id="me-hero-ts" style="margin-left:auto;opacity:.6"></span>
       </div>
     </div>`;
 }
@@ -481,7 +482,10 @@ function renderAll() {
   const event = events.find(e=>e.event_id===activeEventId);
   renderHero(event || null);
   if (event) renderTree(event);
-  setStatus(`Last loaded: ${new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',timeZone:'America/New_York'})} ET`);
+  const tsStr = new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',timeZone:'America/New_York'}) + ' ET';
+  const heroTs = $('me-hero-ts');
+  if (heroTs) heroTs.textContent = 'Updated ' + tsStr;
+  setStatus(''); // clear status bar — timestamp lives in hero
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
