@@ -150,6 +150,17 @@ const AISynthesis = (() => {
   // ── Full analysis page ─────────────────────────────────────────────
 
   function renderPage(data, stats, log, ci) {
+    // api_error state — show clean unavailable message, never fake signals
+    if (data?.status === 'api_error') {
+      const body = document.getElementById('ai-page-body');
+      if (body) body.innerHTML = `<div class="ai-pending-box">
+        <div class="ai-pending-icon">⚠️</div>
+        <div class="ai-pending-title">Analysis Temporarily Unavailable</div>
+        <div class="ai-pending-sub">${data.error_message || 'AI synthesis encountered an API error.'}</div>
+        <div class="ai-pending-sub" style="color:#6b7280;margin-top:4px">Failed at ${data.failed_at ? new Date(data.failed_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) + ' ET' : '—'} · Next run at ${data.next_update ? new Date(data.next_update).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) + ' ET' : '—'}</div>
+      </div>`;
+      return;
+    }
     if (!data || !data.generated_at) {
       const body = document.getElementById('ai-page-body');
       if (body) body.innerHTML = `<div class="ai-pending-box">
