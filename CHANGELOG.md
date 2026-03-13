@@ -1,5 +1,64 @@
 # Changelog
 
+## 2026-03-13
+
+### Features
+
+- **Expiration dates in divergence alert banner** (`js/ai-synthesis.js`, `css/style.css`, `scripts/ai-synthesis.py`)
+  — `notable_divergences[]` schema now includes `"expirations": ["YYYY-MM-DD"]` derived from the relevant flow trades
+  — Frontend renders each expiration as a pill badge (e.g. "Apr 17") inline with the ticker and detail text
+  — Backward compatible: badge hidden if field absent
+
+- **Detection timestamp in divergence alert banner** (`js/ai-synthesis.js`)
+  — Banner header now shows "Detected HH:MM AM/PM ET" so users know which synthesis run flagged the alert
+  — Uses `data.generated_at` formatted in ET timezone
+
+- **API error state for failed synthesis** (`scripts/ai-synthesis.py`, `js/ai-synthesis.js`)
+  — When both Claude API attempts fail and no valid same-day data exists, writes `{"status":"api_error","error_message":"...","failed_at":"..."}` instead of fake NEUTRAL/0% signals
+  — Frontend detects `status === "api_error"` in `renderPage()` and shows a clean ⚠️ unavailable message with failed-at time and next scheduled run time
+  — Never shows empty tickers or zero-confidence data to users
+
+- **README sections 9–11 restored** (`README.md`)
+  — Section 9 (Options Flow Pipeline): fully rewritten for daemon architecture — STREAM_BULK subscription, rolling-flow.json, daemon-health.json, bash health check, cron schedule table, contrarian gating, manual refresh path, retry/guard logic
+  — Sections 10–11: updated for current paths, token management via `gh` CLI (no hardcoded tokens), flow daemon systemd setup, new troubleshooting entries
+
+### Fixes
+
+- **renderContrarian + renderDivergences scope fix** (`js/ai-synthesis.js`)
+  — Both functions were called from `initPage()` where `ci` and `data` are out of scope (local to `load()`)
+  — Fixed: moved both calls to end of `renderPage(data, stats, log, ci)` where parameters are in scope
+
+- **Countdown UTC arithmetic fix** (`js/ai-synthesis.js`)
+  — `nextScheduledRun()` was using `.setHours()` which applies local timezone offsets
+  — Rewrote using `Date.UTC()` pure UTC arithmetic; countdown is now correct regardless of viewer's local timezone
+
+- **Options flow tape TypeError fix** (`js/options-flow.js`)
+  — ThetaData daemon emits integer `condition` codes (e.g. `131`, `132`); `.toUpperCase()` crashed on non-string
+  — Fixed: `String(trade.side ?? trade.condition ?? '').toUpperCase()` + `COND_MAP` for integer → label mapping
+  — `detectSweep()` updated to match condition codes 131 (SWEEP) and 133 (SWEEP)
+
+- **Accuracy track record label fix** (`js/ai-synthesis.js`)
+  — Middle column was showing bare "Mon" on Fridays — misleadingly implied the 72% figure was Monday-specific
+  — Fixed to "Next Trading Day" (constant across all days)
+
+### Reliability
+
+- **Claude API retry with same-day data guard** (`scripts/ai-synthesis.py`)
+  — On HTTP 529 (Overloaded) or any API exception: wait 60s, retry once before giving up
+  — If both attempts fail and valid same-day synthesis exists (`confidence > 0`): skip save, log "Keeping good data", exit 0
+  — Only writes api_error placeholder if no valid same-day data at all
+  — Contrarian double-fire guard: re-reads `contrarian-ideas.json` from disk before persisting (prevents retry-cycle duplicate)
+
+- **Trigger SHA staleness fix** (`scripts/refresh-poller.py`)
+  — All writes to `data/refresh-trigger.json` now go through `gh_put_safe()`: on 409 Conflict, re-fetches current SHA and retries once
+  — Persistent failures are logged explicitly (no silent swallow)
+  — Fixes button stuck at "running" after concurrent git pushes changed the file's SHA
+
+- **Analyze-ticker race condition fix** (`scripts/analyze-ticker.py`)
+  — Added second `git pull --rebase --autostash` immediately before the final push
+  — Picks up any concurrent GitHub API commits (trigger state writes) that landed during analysis
+  — Prevents divergent fork on the main branch
+
 ## 2026-03-12
 
 ### Features
