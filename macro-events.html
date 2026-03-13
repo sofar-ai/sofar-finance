@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Macro Events — SOFAR Finance</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .me-toolbar { display:flex; align-items:center; gap:10px; margin-bottom:18px; flex-wrap:wrap; padding:14px 0 12px; border-bottom:1px solid var(--border); }
+    .me-title { font-family:var(--font-mono); font-size:13px; font-weight:700; color:var(--text-primary); letter-spacing:.05em; flex:1; }
+    .me-input { background:var(--bg-secondary); border:1px solid var(--border); color:var(--text-primary); font-family:var(--font-mono); font-size:11px; padding:7px 10px; border-radius:4px; outline:none; width:220px; }
+    .me-input:focus { border-color:var(--accent); }
+    .me-btn { font-family:var(--font-mono); font-size:10px; font-weight:700; padding:7px 14px; border-radius:4px; border:none; cursor:pointer; letter-spacing:.05em; transition:opacity .15s; }
+    .me-btn:hover { opacity:.85; }
+    .me-btn-primary { background:var(--accent); color:#fff; }
+    .me-btn-success { background:#22c55e; color:#000; }
+    .me-btn-danger  { background:#ef4444; color:#fff; }
+    .me-btn-ghost   { background:transparent; border:1px solid var(--border); color:var(--text-secondary); }
+    .me-btn-sm { font-size:9px; padding:3px 8px; }
+    .me-btn:disabled { opacity:.4; cursor:not-allowed; }
+    .me-status-bar { font-family:var(--font-mono); font-size:10px; color:var(--text-secondary); margin-bottom:16px; min-height:16px; }
+
+    /* Event selector */
+    .me-event-list { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
+    .me-event-chip { font-family:var(--font-mono); font-size:10px; padding:4px 10px; border-radius:12px; border:1px solid var(--border); cursor:pointer; color:var(--text-secondary); transition:.15s; }
+    .me-event-chip.active { border-color:var(--accent); color:var(--accent); background:rgba(59,130,246,.1); }
+    .me-event-chip .me-chip-status { display:inline-block; width:6px; height:6px; border-radius:50%; margin-right:4px; }
+
+    /* Tree */
+    .me-tree { margin-bottom:24px; }
+    .me-tree-header { display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+    .me-tree-actions { margin-left:auto; display:flex; gap:8px; }
+    .me-node { padding:4px 0; }
+    .me-node-row { display:flex; align-items:flex-start; gap:8px; padding:8px 10px; border-radius:5px; border:1px solid transparent; transition:.15s; }
+    .me-node-row:hover { background:rgba(255,255,255,.03); }
+    .me-node-row.status-accepted { border-color:rgba(34,197,94,.2); }
+    .me-node-row.status-declined { opacity:.4; }
+    .me-node-row.status-pending  { border-color:rgba(245,158,11,.25); }
+    .me-node-indent { display:flex; align-items:flex-start; }
+    .me-node-line { width:1px; background:var(--border); margin:12px 8px 0 8px; align-self:stretch; flex-shrink:0; }
+    .me-node-connector { width:12px; height:12px; border-left:1px solid var(--border); border-bottom:1px solid var(--border); margin-right:4px; margin-top:8px; flex-shrink:0; border-radius:0 0 0 3px; }
+    .me-node-body { flex:1; }
+    .me-node-label { font-family:var(--font-mono); font-size:12px; font-weight:700; color:var(--text-primary); }
+    .me-node-desc  { font-size:11px; color:var(--text-secondary); margin-top:2px; line-height:1.4; }
+    .me-node-meta  { display:flex; gap:6px; flex-wrap:wrap; margin-top:5px; align-items:center; }
+    .me-tag { display:inline-block; font-family:var(--font-mono); font-size:9px; padding:1px 6px; border-radius:3px; }
+    .me-tag-bull  { background:rgba(34,197,94,.15);  color:#22c55e; }
+    .me-tag-bear  { background:rgba(239,68,68,.15);  color:#ef4444; }
+    .me-tag-mixed { background:rgba(245,158,11,.15); color:#f59e0b; }
+    .me-tag-sector{ background:rgba(148,163,184,.1); color:#94a3b8; }
+    .me-tag-ticker{ background:rgba(59,130,246,.1);  color:#60a5fa; font-family:var(--font-mono); }
+    .me-tag-mag-h { background:rgba(239,68,68,.15);  color:#ef4444; }
+    .me-tag-mag-m { background:rgba(245,158,11,.12); color:#f59e0b; }
+    .me-tag-mag-l { background:rgba(100,116,139,.12);color:#64748b; }
+    .me-status-dot-s { color:#94a3b8; }
+    .me-status-dot-d { color:#f59e0b; }
+    .me-status-dot-e { color:#ef4444; }
+    .me-status-dot-de{ color:#22c55e; }
+    .me-node-btns { display:flex; gap:4px; flex-shrink:0; margin-top:2px; }
+    .me-headline-count { font-size:9px; color:#60a5fa; margin-left:4px; }
+
+    /* Add branch form */
+    .me-add-branch { margin-top:6px; padding:8px 10px; background:rgba(0,0,0,.2); border-radius:4px; border:1px dashed var(--border); }
+    .me-add-row { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+    .me-add-input { flex:1; min-width:140px; background:var(--bg-secondary); border:1px solid var(--border); color:var(--text-primary); font-family:var(--font-mono); font-size:10px; padding:5px 8px; border-radius:3px; outline:none; }
+    .me-add-input:focus { border-color:var(--accent); }
+
+    /* Scenarios */
+    .me-scenarios { margin-bottom:24px; }
+    .me-section-title { font-family:var(--font-mono); font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--text-secondary); margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid var(--border); }
+    .me-scenario-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:10px; }
+    .me-scenario-card { background:var(--bg-secondary); border:1px solid var(--border); border-radius:6px; padding:12px; }
+    .me-sc-label { font-family:var(--font-mono); font-size:11px; font-weight:700; color:var(--text-primary); margin-bottom:4px; }
+    .me-sc-prob { font-family:var(--font-mono); font-size:20px; font-weight:700; color:var(--accent); margin:4px 0; }
+    .me-sc-impact { font-size:11px; color:var(--text-secondary); line-height:1.4; margin-bottom:6px; }
+    .me-sc-tags { display:flex; gap:4px; flex-wrap:wrap; }
+
+    /* Analysis output */
+    .me-analysis { margin-bottom:24px; }
+    .me-analysis-card { background:var(--bg-secondary); border:1px solid var(--border); border-radius:6px; padding:14px; margin-bottom:10px; }
+    .me-analysis-label { font-family:var(--font-mono); font-size:9px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--text-secondary); margin-bottom:6px; }
+    .me-narrative { font-size:12px; color:var(--text-primary); line-height:1.6; }
+    .me-dev-item { font-size:11px; color:var(--text-secondary); padding:4px 0; border-bottom:1px solid rgba(255,255,255,.04); display:flex; gap:8px; }
+    .me-dev-node { color:#60a5fa; font-family:var(--font-mono); font-size:9px; flex-shrink:0; }
+    .me-sector-grid { display:flex; flex-wrap:wrap; gap:6px; }
+    .me-sector-bar { font-family:var(--font-mono); font-size:10px; display:flex; align-items:center; gap:6px; }
+    .me-bar { height:6px; border-radius:3px; min-width:4px; }
+
+    .me-empty { text-align:center; padding:40px 0; color:var(--text-secondary); font-family:var(--font-mono); font-size:11px; }
+
+    @media(max-width:640px){ .me-toolbar{flex-direction:column;align-items:flex-start;} .me-input{width:100%;} }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <a href="index.html"         class="nav-brand">SOFAR Finance</a>
+    <a href="index.html"         class="nav-tab">Dashboard</a>
+    <a href="options-flow.html"  class="nav-tab">Options Flow</a>
+    <a href="ai-analysis.html"   class="nav-tab">AI Analysis</a>
+    <a href="macro-events.html"  class="nav-tab nav-active">Events</a>
+    <a href="ticker-dives.html"  class="nav-tab">Deep Dives</a>
+    <a href="daily-summary.html" class="nav-tab">Daily Summary</a>
+    <a href="performance.html"   class="nav-tab">Performance</a>
+    <a href="config.html"        class="nav-tab">Config</a>
+  </nav>
+
+  <div class="container">
+    <div class="me-toolbar">
+      <span class="me-title">📡 Macro Event Catalyst Tracker</span>
+      <input id="me-new-input" class="me-input" placeholder="e.g. Iran Conflict" maxlength="60">
+      <button id="me-generate-btn" class="me-btn me-btn-primary">Generate Tree</button>
+    </div>
+    <div id="me-status" class="me-status-bar">Loading event trees…</div>
+    <div id="me-event-list" class="me-event-list"></div>
+    <div id="me-tree-panel"></div>
+  </div>
+
+  <script src="js/macro-events.js"></script>
+</body>
+</html>
