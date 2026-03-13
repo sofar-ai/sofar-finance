@@ -185,6 +185,8 @@ const AISynthesis = (() => {
           <div class="ai-sc-conf" style="color:${signalColor(sig.signal)}">${sig.confidence ?? '—'}% confidence</div>
           <div class="ai-sc-summary">${sig.summary || ''}</div>
           <div class="ai-sc-driver"><strong>Key driver:</strong> ${sig.key_driver || ''}</div>
+          ${sig.primary_driver ? `<div class="ai-sc-pdriver"><span class="ai-driver-badge">${sig.primary_driver}</span></div>` : ''}
+          ${(sig.predicted_range && sig.predicted_range.length === 2) ? `<div class="ai-sc-range">Range: $${sig.predicted_range[0].toFixed(2)} – $${sig.predicted_range[1].toFixed(2)}</div>` : ''}
         </div>`;
       hdr.innerHTML = card('INTRADAY (2H)', id_) + card('NEXT DAY', nd_) + card('LONG TERM (30D)', lt_);
     }
@@ -332,10 +334,40 @@ const AISynthesis = (() => {
               <span class="ai-idea-tf">${idea.timeframe||''}</span>
             </div>
             <div class="ai-idea-thesis"><strong>Thesis:</strong> ${idea.thesis||idea.idea||''}</div>
-            <div class="ai-idea-risk"><strong>Risk:</strong> ${idea.risk||'—'}</div>`;
+            ${idea.instrument ? `<div class="ai-idea-detail"><strong>Instrument:</strong> ${idea.instrument}</div>` : ''}
+            ${idea.entry_zone ? `<div class="ai-idea-detail"><strong>Entry:</strong> ${idea.entry_zone}</div>` : ''}
+            ${idea.stop_invalidation ? `<div class="ai-idea-detail"><strong>Stop:</strong> ${idea.stop_invalidation}</div>` : ''}
+            ${idea.target ? `<div class="ai-idea-detail"><strong>Target:</strong> ${idea.target}</div>` : ''}
+            <div class="ai-idea-risk"><strong>Risk:</strong> ${idea.risk||'—'}</div>
+            ${idea.risk_reward ? `<div class="ai-idea-rr">R/R: ${idea.risk_reward}</div>` : ''}\`;
           ideasEl.appendChild(card);
         });
       }
+    }
+
+    // Ensure magnitude-flags container exists
+    if (!document.getElementById('ai-magnitude-flags')) {
+      const magDiv = document.createElement('div');
+      magDiv.id = 'ai-magnitude-flags';
+      magDiv.className = 'ai-magnitude-flags';
+      const ideasSection = document.getElementById('ai-ideas-list');
+      if (ideasSection && ideasSection.parentNode) {
+        ideasSection.parentNode.insertBefore(magDiv, ideasSection.nextSibling);
+      }
+    }
+    // ── Section 3b: Magnitude Flags ──
+    const magEl = document.getElementById('ai-magnitude-flags');
+    if (magEl) {
+      const flags = data.magnitude_flags || [];
+      if (flags.length) {
+        magEl.innerHTML = flags.map(f => `
+          <div class="ai-mag-flag">
+            <span class="ai-mag-ticker">${f.ticker||''}</span>
+            <span class="ai-mag-label">⚡ OUTSIZED MOVE EXPECTED</span>
+            <span class="ai-mag-basis">${f.basis||''}</span>
+          </div>`).join('');
+        magEl.style.display = '';
+      } else { magEl.style.display = 'none'; }
     }
 
     // ── Section 4: Risks ──
@@ -576,7 +608,8 @@ const AISynthesis = (() => {
         return `
         <div class="ai-div-item">
           <span class="ai-div-ticker">${d.ticker}</span>
-          <span class="ai-div-detail">${d.detail}</span>
+          <span class="ai-div-detail">${d.description || d.detail || ""}</span>
+          ${d.inputs_conflicting ? `<span class="ai-div-conflict">${d.inputs_conflicting}</span>` : ""}
           ${exps.length ? `<span class="ai-div-exp">${exps.join(', ')}</span>` : ''}
           ${d.significance === 'high' ? '<span class="ai-div-sig">HIGH</span>' : ''}
         </div>`;
