@@ -55,6 +55,7 @@ const OptionsFlowPage = (() => {
 
   function detectSweep(trade) {
     if (trade.sweep) return true;
+    if (trade.condition === 133 || trade.condition === 131) return true;  // ThetaData sweep codes
     const key = `${trade.symbol}_${trade.expiration}_${trade.strike}_${trade.right}`;
     if (!contractHits[key]) contractHits[key] = { count: 1, firstTime: Date.now() };
     else if (Date.now() - contractHits[key].firstTime > 60000) {
@@ -89,11 +90,14 @@ const OptionsFlowPage = (() => {
     const right   = (trade.right || '?').toUpperCase();
     const isCall  = right === 'C' || right === 'CALL';
     // Derive side from ask_size vs bid_size if not explicitly set
-    const rawSide = (trade.side || trade.condition || '').toUpperCase();
+    const rawSide = String(trade.side ?? trade.condition ?? '').toUpperCase();
     let sideLabel;
-    if (rawSide === 'A' || rawSide === 'BUY')       sideLabel = 'BUY';
-    else if (rawSide === 'B' || rawSide === 'SELL')  sideLabel = 'SELL';
-    else if (rawSide)                                sideLabel = rawSide;
+    // ThetaData numeric condition codes → readable labels (131/133=sweep, 130=cross, 132=block, 137=open, 138=close)
+    const COND_MAP = {130:'CROSS',131:'SWEEP',132:'BLOCK',133:'SWEEP',137:'OPEN',138:'CLOSE'};
+    if (rawSide === 'A' || rawSide === 'BUY')                          sideLabel = 'BUY';
+    else if (rawSide === 'B' || rawSide === 'SELL')                    sideLabel = 'SELL';
+    else if (trade.condition != null && COND_MAP[trade.condition])     sideLabel = COND_MAP[trade.condition];
+    else if (rawSide && isNaN(rawSide))                               sideLabel = rawSide;
     else if (trade.ask_size != null && trade.bid_size != null)
       sideLabel = trade.ask_size >= trade.bid_size ? 'ASK' : 'BID';
     else sideLabel = '—';
