@@ -451,6 +451,7 @@ function renderTree(event) {
           onkeydown="if(event.key==='Enter') generateTree()">
         <button id="me-generate-btn" class="me-btn me-btn-primary" onclick="generateTree()">Generate Tree</button>
       </div>
+      <div id="me-status" class="me-status-bar" style="display:none"></div>
     </div>`;
 
   panel.innerHTML = analysisHtml + scenariosHtml + createHtml + treeHtml;
@@ -472,7 +473,7 @@ function renderAll() {
   const events = trees.events || [];
   const panel = $('me-tree-panel');
   if (!events.length) {
-    if (panel) panel.innerHTML = `<div class="me-empty">No event trees yet.<br>Enter a macro event name below and click Generate Tree.</div>`;
+    if (panel) panel.innerHTML = `<div class="me-empty">No event trees yet.<br>Enter a macro event name below and click Generate Tree.</div><div id="me-status" class="me-status-bar" style="display:none"></div>`;
     setStatus('No events — create one above');
     return;
   }
