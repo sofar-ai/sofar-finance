@@ -567,12 +567,20 @@ const AISynthesis = (() => {
         ${_detectedAt ? `<span class="ai-div-ts">Detected ${_detectedAt}</span>` : ''}
         <button class="ai-div-dismiss" onclick="(function(){localStorage.setItem('${dismissKey}','1');document.getElementById('ai-divergence-banner').style.display='none'})()">✕</button>
       </div>
-      ${high.map(d => `
+      ${high.map(d => {
+        const exps = (d.expirations || []).map(e => {
+          // Format YYYY-MM-DD → e.g. "Apr 17"
+          const dt = new Date(e + 'T12:00:00Z');
+          return dt.toLocaleDateString('en-US', {month:'short', day:'numeric', timeZone:'UTC'});
+        });
+        return `
         <div class="ai-div-item">
           <span class="ai-div-ticker">${d.ticker}</span>
           <span class="ai-div-detail">${d.detail}</span>
+          ${exps.length ? `<span class="ai-div-exp">${exps.join(', ')}</span>` : ''}
           ${d.significance === 'high' ? '<span class="ai-div-sig">HIGH</span>' : ''}
-        </div>`).join('')}
+        </div>`;
+      }).join('')}
     `;
   }
 
