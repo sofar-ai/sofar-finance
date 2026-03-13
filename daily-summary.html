@@ -5,6 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Daily Summary — SOFAR Finance</title>
   <link rel="stylesheet" href="css/style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <meta name="theme-color" content="#0d1117">
   <style>
     .ds-header { margin-bottom: 20px; }
     .ds-date {
@@ -116,7 +122,7 @@
     .ds-generating { color: #6b7280; font-size: 12px; }
   </style>
 </head>
-<body>
+<body class="page-scrollable">
   <header class="app-header">
     <div class="app-logo">SOFAR <span>// Finance</span></div>
     <nav class="app-nav">
@@ -135,24 +141,31 @@
     </div>
   </header>
 
-  <div class="ai-page-layout">
-    <div class="ai-page-body">
-      <div id="ds-root"><div class="ds-empty">Loading…</div></div>
+  <div class="perf-wrap">
+    <div class="perf-section-title">📋 Daily Market Summary</div>
+    <div id="ds-root"><div class="ds-empty">Loading…</div></div>
+    <div id="ds-sidebar-stats" style="display:none">
+      <div class="perf-section-title">📊 Today's Close</div>
+      <div id="ds-sidebar-stats-body"></div>
     </div>
-    <aside class="ai-sidebar">
-      <div class="ai-sidebar-section" id="ds-sidebar-stats" style="display:none">
-        <div class="ai-sidebar-title">📊 Today's Close</div>
-        <div id="ds-sidebar-stats-body" class="ai-sidebar-content"></div>
-      </div>
-      <div class="ai-sidebar-section" id="ds-sidebar-history" style="display:none">
-        <div class="ai-sidebar-title">📅 Recent Sessions</div>
-        <div id="ds-sidebar-history-body" class="ai-sidebar-content"></div>
-      </div>
-    </aside>
+    <div id="ds-sidebar-history" style="display:none">
+      <div class="perf-section-title">📅 Recent Sessions</div>
+      <div id="ds-sidebar-history-body"></div>
+    </div>
   </div>
 
+  <script src="js/mobile.js"></script>
   <script src="js/daily-summary.js"></script>
-  <script>DailySummary.init();</script>
+  <script>
+    function updateClock() {
+      var el = document.getElementById('clock');
+      if (el) el.textContent = new Date().toLocaleTimeString([], {
+        hour: '2-digit', minute: '2-digit', second: '2-digit'
+      }) + ' ET';
+    }
+    updateClock(); setInterval(updateClock, 1000);
+    DailySummary.init();
+  </script>
 
   <nav class="mobile-bottom-nav">
     <a href="index.html"        class="mbn-item"><span class="mbn-icon">📈</span><span class="mbn-label">Market</span></a>
