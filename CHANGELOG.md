@@ -59,6 +59,54 @@
   — Picks up any concurrent GitHub API commits (trigger state writes) that landed during analysis
   — Prevents divergent fork on the main branch
 
+### Features (continued — afternoon)
+
+- **Ticker Deep Dives page** (`ticker-dives.html`, `js/ticker-dives.js`, `data/ticker-analyses.json`)
+  — Dedicated page listing all ticker analyses from the last 30 days, newest first
+  — Compact table: time (ET), ticker, bias (color-coded), signal summary, flow premium
+  — Click any row → inline accordion expand: trade idea box, options flow, news sentiment, market context, key drivers, confidence bar, data freshness
+  — Ticker search/filter at top; result count displayed
+  — Mobile responsive: expanded view stacks to 1-col on <640px
+  — `analyze-ticker.py` now appends each completed analysis to `ticker-analyses.json`; prunes entries older than 30 days
+  — Nav updated on all pages: "Deep Dives" tab between Performance and Config
+
+- **X/Twitter posts now feed into trends ranking** (`scripts/generate-trends.py`)
+  — `generate-trends.py` was ignoring `headlines-x.json` entirely — X posts now loaded and sent to Haiku
+  — Separate labeled block with explicit weighting instruction for Haiku
+  — 24h staleness filter for X (tighter than RSS 48h); sources tracked per trend
+
+### Fixes (continued — afternoon)
+
+- **CORS `Access-Control-Allow-Headers` missing** (`api/trigger-ticker.js`, `api/trigger-refresh.js`)
+  — Ticker deep dive POST sends `Content-Type: application/json` → triggers CORS preflight
+  — Missing `Access-Control-Allow-Headers: Content-Type` caused "Load failed" browser error
+  — Added to both trigger functions
+
+- **Accuracy track record label** (`js/ai-synthesis.js`)
+  — Middle column showed bare "Mon" on Fridays — implied accuracy figure was Monday-specific
+  — Fixed to "Next Trading Day" across all days
+
+- **`ticker-analyses.json` `_dt` import bug** (`scripts/analyze-ticker.py`)
+  — Patch used `_dt.datetime` (alias only valid inside `_log_tokens`) instead of `datetime.datetime`
+  — Fixed; META analysis manually backfilled
+
+- **Ticker deep dive frontend timeout extended** (`js/ticker-deep-dive.js`)
+  — Flow refresh + analysis takes 4–6 min; 5 min timeout caused false "timed out" on META
+  — Extended to 8 minutes
+
+### Reliability (continued — afternoon)
+
+- **WSJ RSS permanently stale — replaced with CNBC** (`scripts/scrape-headlines.sh`)
+  — `feeds.a.dj.com` stuck at January 27, 2025; all URL variants return same stale data
+  — Replaced with CNBC Markets + CNBC Finance (both live and current)
+  — 48h staleness filter added at ingest: skipped 36 stale articles on first run
+
+- **48h headline validation at prompt-build time** (`scripts/ai-synthesis.py`, `scripts/analyze-ticker.py`, `scripts/generate-trends.py`)
+  — Second filter layer at synthesis/trends generation — stale articles cannot reach Claude even if scraper misses them
+  — Warns if fewer than 5 fresh headlines remain; X posts use tighter 24h filter in trends
+
+
+
 ## 2026-03-12
 
 ### Features
