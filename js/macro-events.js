@@ -230,7 +230,10 @@ function renderHero(event) {
       <div style="font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:${statusColor};margin-bottom:6px">
         ${event.status === 'active' ? '● Live' : event.status === 'draft' ? '◌ Draft' : '○ Archived'}
       </div>
-      <div style="font-size:24px;font-weight:700;color:var(--text-primary);line-height:1.2;margin-bottom:8px">${event.root_label}</div>
+      <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;line-height:1.2;margin-bottom:8px">
+        <span style="font-size:24px;font-weight:700;color:var(--text-primary)">${event.root_label}</span>
+        <span style="font-family:var(--font-mono);font-size:10px;font-weight:700;color:${statusColor};background:${statusColor}18;border:1px solid ${statusColor}44;border-radius:3px;padding:2px 7px;vertical-align:middle">[${event.status}]</span>
+      </div>
       <div style="font-family:var(--font-mono);font-size:10px;color:var(--text-secondary);display:flex;gap:16px;flex-wrap:wrap">
         <span>${(event.nodes||[]).length} nodes · ${accepted} accepted</span>
         ${activeSince ? `<span>Active since ${activeSince}</span>` : ''}
@@ -243,14 +246,17 @@ function renderEventList() {
   const el = $('me-event-list');
   if (!el) return;
   const events = trees.events || [];
-  if (!events.length) { el.innerHTML = ''; return; }
-  el.innerHTML = events.map(e => {
-    const active = e.event_id === activeEventId;
-    return `<span class="me-event-chip ${active?'active':''}" onclick="selectEvent('${e.event_id}')">
-      <span class="me-chip-status" style="background:${chipColor(e.status)}"></span>
-      ${e.root_label} <span style="color:${chipColor(e.status)};font-size:9px">[${e.status}]</span>
-    </span>`;
-  }).join('');
+  // Hide entirely when 0 or 1 event — hero box handles the display
+  if (events.length <= 1) { el.innerHTML = ''; return; }
+  // Multiple events: show compact switcher row
+  el.innerHTML = `<div style="font-family:var(--font-mono);font-size:9px;color:var(--text-secondary);margin-bottom:6px;letter-spacing:.08em;text-transform:uppercase">Switch Event</div>` +
+    events.map(e => {
+      const active = e.event_id === activeEventId;
+      return `<span class="me-event-chip ${active?'active':''}" onclick="selectEvent('${e.event_id}')">
+        <span class="me-chip-status" style="background:${chipColor(e.status)}"></span>
+        ${e.root_label} <span style="color:${chipColor(e.status)};font-size:9px">[${e.status}]</span>
+      </span>`;
+    }).join('');
 }
 
 function selectEvent(event_id) {
