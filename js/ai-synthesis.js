@@ -411,6 +411,8 @@ const AISynthesis = (() => {
         </div>
         <pre class="ai-raw-prices">${pxLines}</pre>`;
     }
+    renderDivergences(data);
+    renderContrarian(ci);
   }
 
 
@@ -567,8 +569,7 @@ const AISynthesis = (() => {
   function initPage() {
     load('page');
     renderSchedule();
-    renderContrarian(ci);
-    renderDivergences(data);
+    // renderContrarian + renderDivergences called inside renderPage() where ci/data are in scope
     setInterval(renderSchedule, 60000);
     setInterval(() => load('page'), REFRESH_MS);
     document.getElementById('ai-raw-toggle')?.addEventListener('click', () => {
