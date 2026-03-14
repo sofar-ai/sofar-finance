@@ -386,11 +386,21 @@ function renderTree(event) {
           ${(evAnalysis.recent_developments||[]).length ? `
           <div class="me-analysis-card">
             <div class="me-analysis-label">Recent Headline Matches</div>
-            ${evAnalysis.recent_developments.slice(0,6).map(d=>`
-              <div class="me-dev-item">
-                <span class="me-dev-node">[${d.matched_node||'?'}]</span>
-                <span>${d.headline}</span>
-              </div>`).join('')}
+            ${evAnalysis.recent_developments.slice(0,8).map(d=>{
+              const fmtTs = d.timestamp ? (() => {
+                try {
+                  const dt = new Date(d.timestamp);
+                  return dt.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit',hour12:true,timeZone:'America/New_York'}).replace(/,/g,'') + ' ET';
+                } catch(e) { return ''; }
+              })() : '';
+              const hlText = d.link
+                ? `<a href="${d.link}" target="_blank" rel="noopener" class="me-dev-link">${d.headline}</a>`
+                : d.headline;
+              return `<div class="me-dev-item">
+                <div class="me-dev-meta"><span class="me-dev-node">[${d.matched_node||'?'}]</span>${d.source ? ` <span class="me-dev-source">${d.source}</span>` : ''}${fmtTs ? ` <span class="me-dev-ts">${fmtTs}</span>` : ''}</div>
+                <div class="me-dev-headline">${hlText}</div>
+              </div>`;
+            }).join('')}
           </div>` : ''}
         </div>
         ${hasSector ? (() => {
