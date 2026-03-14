@@ -11,6 +11,7 @@ let analysis = { active_events: [] };
 let activeEventId = null;
 let pendingChanges = [];   // [{node_id, review_status, label, parent_id, tickers}]
 let pollTimer = null;
+const expandedTrees = new Set(); // persists expand/collapse state across re-renders
 
 // ── Utility ──────────────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
@@ -455,6 +456,13 @@ function renderTree(event) {
     </div>`;
 
   panel.innerHTML = analysisHtml + scenariosHtml + createHtml + treeHtml;
+  // Restore expand/collapse state — don't reset while user is reading the tree
+  if (expandedTrees.has(event.event_id)) {
+    const body = document.getElementById(`me-tree-body-${event.event_id}`);
+    const icon = document.getElementById(`me-tree-toggle-icon-${event.event_id}`);
+    if (body) body.style.display = 'block';
+    if (icon) icon.textContent = '▼';
+  }
   updateSubmitBtn();
 }
 
@@ -465,6 +473,9 @@ function toggleTree(eventId) {
   const open = body.style.display !== 'none';
   body.style.display = open ? 'none' : 'block';
   if (icon) icon.textContent = open ? '▶' : '▼';
+  // Persist state so re-renders don't collapse it
+  if (open) expandedTrees.delete(eventId);
+  else expandedTrees.add(eventId);
 }
 
 
