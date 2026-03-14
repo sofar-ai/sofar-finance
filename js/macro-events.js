@@ -13,6 +13,39 @@ let pendingChanges = [];   // [{node_id, review_status, label, parent_id, ticker
 let pollTimer = null;
 const expandedTrees = new Set(); // persists expand/collapse state across re-renders
 
+// ── State preservation across re-renders ─────────────────────────────────────
+function captureInteractiveState() {
+  const state = {
+    newInput: $('me-new-input')?.value || '',
+    openForms: [],
+  };
+  // Capture all open add-branch forms and their typed content
+  document.querySelectorAll('[data-form="1"]').forEach(form => {
+    const parentId = form.id.replace('me-add-', '');
+    state.openForms.push({
+      parentId,
+      label:   document.getElementById(`me-add-label-${parentId}`)?.value   || '',
+      tickers: document.getElementById(`me-add-tickers-${parentId}`)?.value || '',
+    });
+  });
+  return state;
+}
+
+function restoreInteractiveState(state) {
+  if (!state) return;
+  // Restore the "new event" input text
+  const ni = $('me-new-input');
+  if (ni && state.newInput) ni.value = state.newInput;
+  // Re-open any branch forms and restore typed text
+  for (const { parentId, label, tickers } of state.openForms) {
+    showAddBranch(parentId); // recreates the form DOM
+    const li = document.getElementById(`me-add-label-${parentId}`);
+    const ti = document.getElementById(`me-add-tickers-${parentId}`);
+    if (li && label)   li.value = label;
+    if (ti && tickers) ti.value = tickers;
+  }
+}
+
 // ── Utility ──────────────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
 function setStatus(msg, color) {
@@ -455,14 +488,22 @@ function renderTree(event) {
       <div id="me-status" class="me-status-bar" style="display:none"></div>
     </div>`;
 
+  // Capture full interactive state before wiping the DOM
+  const _savedState = captureInteractiveState();
+
   panel.innerHTML = analysisHtml + scenariosHtml + createHtml + treeHtml;
-  // Restore expand/collapse state — don't reset while user is reading the tree
+
+  // Restore tree expand/collapse
   if (expandedTrees.has(event.event_id)) {
     const body = document.getElementById(`me-tree-body-${event.event_id}`);
     const icon = document.getElementById(`me-tree-toggle-icon-${event.event_id}`);
     if (body) body.style.display = 'block';
     if (icon) icon.textContent = '▼';
   }
+
+  // Restore open forms + any text the user had typed
+  restoreInteractiveState(_savedState);
+
   updateSubmitBtn();
 }
 
@@ -511,7 +552,15 @@ async function init() {
   // Refresh data every 30s
   setInterval(async () => {
     await Promise.all([loadTrees(), loadAnalysis()]);
-    if (!pollTimer) renderAll();
+    // Skip re-render if user is actively typing in any input on the page
+    const focused = document.activeElement;
+    const userTyping = focused && (focused.tagName === 'INPUT' || focused.tagName === 'TEXTAREA');
+    if (!pollTimer && !userTyping) renderAll();
+    else if (!pollTimer && userTyping) {
+      // Data updated but user is typing — silently update background state,
+      // render will happen on next cycle or when they blur
+      console.debug('[macro-events] refresh deferred — user is typing');
+    }
   }, 30000);
 }
 
