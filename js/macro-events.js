@@ -60,6 +60,20 @@ function dirColor(d)  { return d==='bullish'?'#22c55e':d==='bearish'?'#ef4444':'
 function magClass(m)  { return m==='high'?'me-tag-mag-h':m==='medium'?'me-tag-mag-m':'me-tag-mag-l'; }
 function statusDot(s) { const m={stable:'●',developing:'◉',escalating:'⚡',de_escalating:'↘'}; return m[s]||'●'; }
 function statusClass(s){const m={stable:'me-status-dot-s',developing:'me-status-dot-d',escalating:'me-status-dot-e',de_escalating:'me-status-dot-de'}; return m[s]||'me-status-dot-s'; }
+function nodeCategory(nodeId) {
+  const id = (nodeId || '').toLowerCase();
+  if (/oil|energy|gas|petroleum|lng|hormuz|crude|opec|fuel|pipeline/.test(id))    return 'energy';
+  if (/defense|military|weapon|nato|war|strike|conflict|security|army|navy/.test(id)) return 'defense';
+  if (/inflation|fed|dollar|rate|macro|economic|gdp|currency|yield|treasury|debt|fiscal/.test(id)) return 'macro';
+  if (/cyber|hack|tech|semi|chip|digital|silicon|compute|software|ai|data/.test(id))  return 'cyber';
+  if (/ship|freight|logistic|supply.chain|port|container|cargo|transport/.test(id))   return 'shipping';
+  if (/vix|volatil|flight|safe|hedge|crash|panic|selloff|risk|equity/.test(id))      return 'volatility';
+  return 'default';
+}
+function nodeBadge(nodeId) {
+  const cat = nodeCategory(nodeId);
+  return `<span class="me-node-badge me-badge-${cat}">${nodeId||'?'}</span>`;
+}
 function chipColor(status){ return {active:'#22c55e',draft:'#f59e0b',archived:'#64748b'}[status]||'#94a3b8'; }
 
 // ── Data fetching ─────────────────────────────────────────────────────────────
@@ -397,7 +411,7 @@ function renderTree(event) {
                 ? `<a href="${d.link}" target="_blank" rel="noopener" class="me-dev-link">${d.headline}</a>`
                 : d.headline;
               return `<div class="me-dev-item">
-                <div class="me-dev-meta"><span class="me-dev-node">[${d.matched_node||'?'}]</span>${d.source ? ` <span class="me-dev-source">${d.source}</span>` : ''}${fmtTs ? ` <span class="me-dev-ts">${fmtTs}</span>` : ''}</div>
+                <div class="me-dev-meta">${nodeBadge(d.matched_node)}${d.source ? ` <span class="me-dev-source">${d.source}</span>` : ''}${fmtTs ? ` <span class="me-dev-ts">${fmtTs}</span>` : ''}</div>
                 <div class="me-dev-headline">${hlText}</div>
               </div>`;
             }).join('')}
