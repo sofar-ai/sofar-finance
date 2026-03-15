@@ -12,7 +12,7 @@
   <link rel="stylesheet" href="css/style.css">
   <style>
     .au-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; padding:16px; max-width:1400px; margin:0 auto; }
-    .au-card { background:#111827; border:1px solid #1e2433; border-radius:8px; padding:16px; }
+    .au-card { background:#111827; border:1px solid #1e2433; border-radius:8px; padding:16px; min-width:0; overflow:hidden; }
     .au-card-full { grid-column:1/-1; }
     .au-title { font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:#64748b; margin-bottom:14px; display:flex; align-items:center; gap:8px; }
     .au-ts { margin-left:auto; font-weight:400; font-size:9px; color:#374151; }
@@ -77,7 +77,7 @@
     @media(max-width:900px){ .au-grid{ grid-template-columns:1fr; } }
 
     /* ── Panel 5: Prediction History ── */
-    .au-hist-wrap { max-height:460px; overflow-y:auto; }
+    .au-hist-wrap { max-height:460px; overflow-y:auto; overflow-x:auto; }
     .au-hist-table { width:100%; border-collapse:collapse; }
     .au-hist-table th { font-family:'IBM Plex Mono',monospace; font-size:9px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:#374151; padding:5px 8px; text-align:left; border-bottom:1px solid #1a1f28; position:sticky; top:0; background:#111827; z-index:1; }
     .au-hist-row { cursor:pointer; transition:background .1s; }
@@ -527,7 +527,7 @@
       <div class="au-loading">No prediction history yet</div>
     </div>`;
 
-    const cols = ['Timestamp','Timeframe','Direction','Confidence','Coverage','Primary Driver','Status','Score','Dir','Conv','Target'];
+    const cols = ['Timestamp','Timeframe','Direction','Confidence','Coverage','Primary Driver','Status','Score'];
     const thead = `<thead><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead>`;
 
     const tbodyRows = rows.slice(0,30).map(row => {
@@ -549,12 +549,9 @@
         <td class="au-hist-drv">${row.primaryDriver}</td>
         <td><span class="${row.status === 'pending' ? 'au-hist-status-pend' : 'au-hist-status-res'}">${row.status === 'pending' ? 'PENDING' : 'RESOLVED'}</span></td>
         <td><span class="au-hist-score ${scoreCls}">${row.composite ?? '—'}</span></td>
-        <td class="au-hist-sub">${row.dirScore ?? '—'}</td>
-        <td class="au-hist-sub">${row.convScore ?? '—'}</td>
-        <td class="au-hist-sub">${row.tgtScore ?? '—'}</td>
       </tr>
       <tr class="au-expand-row" id="au-exp-${row.rowId}">
-        <td class="au-expand-cell" colspan="11">${expandContent}</td>
+        <td class="au-expand-cell" colspan="8">${expandContent}</td>
       </tr>`;
     }).join('');
 
