@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vol Regime — SOFAR FINANCE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <meta name="theme-color" content="#0d1117">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* ── Layout ─────────────────────────────────────── */
+    .vr-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; padding:16px; max-width:1400px; margin:0 auto; }
+    .vr-card { background:var(--bg-secondary,#111827); border:1px solid var(--border,#1e2433); border-radius:8px; padding:16px; }
+    .vr-card-full { grid-column:1/-1; }
+    .vr-card-title { font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:600; letter-spacing:.1em; text-transform:uppercase; color:var(--text-secondary,#64748b); margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+    .vr-refresh-ts { margin-left:auto; font-weight:400; font-size:9px; }
+
+    /* ── Regime badge ───────────────────────────────── */
+    .vr-regime-hero { display:flex; align-items:center; gap:20px; flex-wrap:wrap; margin-bottom:20px; }
+    .vr-regime-badge { font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:22px; letter-spacing:.04em; padding:10px 22px; border-radius:6px; }
+    .vr-badge-pinned       { background:rgba(34,197,94,.15);  color:#22c55e; border:1px solid rgba(34,197,94,.3); }
+    .vr-badge-tension      { background:rgba(245,158,11,.15); color:#f59e0b; border:1px solid rgba(245,158,11,.3); }
+    .vr-badge-transitioning{ background:rgba(251,146,60,.15); color:#fb923c; border:1px solid rgba(251,146,60,.3); }
+    .vr-badge-explosive    { background:rgba(239,68,68,.15);  color:#ef4444; border:1px solid rgba(239,68,68,.3); }
+    .vr-badge-unknown      { background:rgba(100,116,139,.15);color:#94a3b8; border:1px solid rgba(100,116,139,.3); }
+
+    /* ── Confidence meter ───────────────────────────── */
+    .vr-conf-wrap { display:flex; flex-direction:column; gap:4px; min-width:160px; }
+    .vr-conf-label { font-family:'IBM Plex Mono',monospace; font-size:9px; color:var(--text-secondary,#64748b); text-transform:uppercase; letter-spacing:.06em; }
+    .vr-conf-pct { font-family:'IBM Plex Mono',monospace; font-size:28px; font-weight:700; color:var(--text-primary,#e2e8f0); line-height:1; }
+    .vr-conf-bar-track { height:6px; background:#1e2433; border-radius:3px; width:160px; }
+    .vr-conf-bar-fill  { height:6px; border-radius:3px; transition:width .4s; }
+
+    /* ── Key levels ─────────────────────────────────── */
+    .vr-levels { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px; }
+    .vr-level-card { background:#0d1117; border:1px solid #1e2433; border-radius:6px; padding:10px 12px; }
+    .vr-level-label { font-family:'IBM Plex Mono',monospace; font-size:9px; color:#64748b; text-transform:uppercase; letter-spacing:.06em; margin-bottom:4px; }
+    .vr-level-val   { font-family:'IBM Plex Mono',monospace; font-size:18px; font-weight:700; color:#e2e8f0; }
+    .vr-level-dist  { font-family:'IBM Plex Mono',monospace; font-size:10px; margin-top:2px; }
+    .dist-above { color:#22c55e; }
+    .dist-below { color:#ef4444; }
+
+    /* ── Charts ─────────────────────────────────────── */
+    .vr-chart-wrap { height:280px; width:100%; position:relative; }
+    .vr-chart-inner { height:100%; width:100%; }
+
+    /* VIX curve: pure SVG */
+    .vr-vix-svg { width:100%; height:240px; display:block; }
+
+    /* ── Regime inputs row ──────────────────────────── */
+    .vr-inputs { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
+    .vr-input-pill { font-family:'IBM Plex Mono',monospace; font-size:10px; padding:3px 10px; border-radius:10px; background:#0d1117; border:1px solid #1e2433; color:#94a3b8; display:flex; gap:6px; align-items:center; }
+    .vr-input-val  { color:#e2e8f0; font-weight:600; }
+    .vr-ts-contango    { color:#22c55e; }
+    .vr-ts-backwarda   { color:#ef4444; }
+
+    /* ── Implication text ───────────────────────────── */
+    .vr-implication { font-size:12px; line-height:1.7; color:#94a3b8; background:#0d1117; border:1px solid #1e2433; border-radius:6px; padding:14px 16px; }
+    .vr-impl-highlight { color:#e2e8f0; }
+
+    /* ── Synthesis effect ───────────────────────────── */
+    .vr-synth-row { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px; }
+    .vr-synth-badge { font-family:'IBM Plex Mono',monospace; font-size:10px; padding:4px 10px; border-radius:4px; font-weight:600; }
+    .vr-sb-amplify  { background:rgba(239,68,68,.15); color:#ef4444; }
+    .vr-sb-suppress { background:rgba(34,197,94,.15); color:#22c55e; }
+    .vr-sb-expand   { background:rgba(245,158,11,.15); color:#f59e0b; }
+    .vr-sb-unstable { background:rgba(168,85,247,.15); color:#c084fc; }
+    .vr-sb-mult     { background:rgba(59,130,246,.15); color:#60a5fa; }
+    .vr-synth-ts    { font-family:'IBM Plex Mono',monospace; font-size:10px; color:#475569; }
+    .vr-synth-next  { color:#60a5fa; }
+    .vr-synth-info  { font-size:11px; color:#64748b; padding:8px 10px; background:#0d1117; border-radius:4px; border:1px solid #1e2433; }
+
+    /* ── GEX bar — rendered as SVG ──────────────────── */
+    .vr-gex-svg { width:100%; height:260px; display:block; overflow:visible; }
+    .gex-axis-label { fill:#64748b; font-size:9px; font-family:'IBM Plex Mono',monospace; }
+    .gex-bar-call { fill:rgba(34,197,94,.7); }
+    .gex-bar-put  { fill:rgba(239,68,68,.7); }
+    .gex-line-spot { stroke:#f59e0b; stroke-width:1.5; stroke-dasharray:4,3; }
+    .gex-line-flip { stroke:#c084fc; stroke-width:1; stroke-dasharray:3,3; }
+    .gex-line-cwall{ stroke:#22c55e; stroke-width:1; stroke-dasharray:3,3; }
+    .gex-line-pwall{ stroke:#ef4444; stroke-width:1; stroke-dasharray:3,3; }
+    .gex-legend { font-family:'IBM Plex Mono',monospace; font-size:9px; }
+
+    /* ── Loading / error ────────────────────────────── */
+    .vr-loading { text-align:center; padding:40px; color:#475569; font-family:'IBM Plex Mono',monospace; font-size:11px; }
+
+    @media(max-width:900px){ .vr-grid{ grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-logo">SOFAR <span>// Finance</span></div>
+    <nav class="app-nav">
+      <a href="index.html"         class="nav-tab">Market Dashboard</a>
+      <a href="options-flow.html"  class="nav-tab">Options Flow</a>
+      <a href="ai-analysis.html"   class="nav-tab">AI Analysis</a>
+      <a href="vol-regime.html"    class="nav-tab active">Vol Regime</a>
+      <a href="daily-summary.html" class="nav-tab">Daily Summary</a>
+      <a href="performance.html"   class="nav-tab">Performance</a>
+      <a href="macro-events.html"  class="nav-tab">Events</a>
+      <a href="ticker-dives.html"  class="nav-tab">Deep Dives</a>
+      <a href="config.html"        class="nav-tab">Config</a>
+    </nav>
+    <div class="header-meta">
+      <div><span class="live-dot"></span><span id="vr-status">Loading…</span></div>
+      <div id="vr-clock"></div>
+    </div>
+  </header>
+
+  <div class="vr-grid" id="vr-main">
+    <div class="vr-loading vr-card-full">Loading volatility regime data…</div>
+  </div>
+
+  <script>
+  'use strict';
+
+  // ── Clock ──────────────────────────────────────────────────────────────────
+  function tickClock() {
+    const el = document.getElementById('vr-clock');
+    if (el) el.textContent = new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false,timeZone:'America/New_York'})+' ET';
+  }
+  setInterval(tickClock, 1000); tickClock();
+
+  // ── Formatting helpers ─────────────────────────────────────────────────────
+  const fmt  = (v, d=2) => v == null ? 'N/A' : Number(v).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
+  const fmtB = v => v == null ? 'N/A' : Math.abs(v) >= 1e9 ? `$${(v/1e9).toFixed(2)}B` : `$${(v/1e6).toFixed(0)}M`;
+  const fmtTs = iso => { try { return new Date(iso).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit',hour12:true,timeZone:'America/New_York'}).replace(',','')+' ET'; } catch(e){ return iso||''; } };
+  function nextSynthTime(lastIso) {
+    // Synthesis runs at :40 past 9,11,13,15 ET weekdays
+    const slots = [9,11,13,15].map(h => { const d = new Date(); d.setHours(h,40,0,0); return d; });
+    const now   = new Date();
+    const slot  = slots.find(s => s > now);
+    if (!slot) return 'Next market day 9:40 AM ET';
+    const mins  = Math.round((slot - now) / 60000);
+    return mins > 60 ? slot.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',hour12:true}) + ' ET' : `~${mins}min`;
+  }
+
+  const REGIME_CLASS = { pinned:'pinned', tension:'tension', transitioning:'transitioning', explosive:'explosive' };
+  const REGIME_COLOR = { pinned:'#22c55e', tension:'#f59e0b', transitioning:'#fb923c', explosive:'#ef4444' };
+
+  function confColor(c) {
+    if (c >= 0.7) return '#ef4444';
+    if (c >= 0.4) return '#f59e0b';
+    return '#22c55e';
+  }
+
+  function distLabel(val, spot) {
+    if (val == null || spot == null) return '';
+    const diff = val - spot;
+    const pct  = (diff / spot * 100).toFixed(1);
+    const cls  = diff >= 0 ? 'dist-above' : 'dist-below';
+    const sign = diff >= 0 ? '+' : '';
+    return `<span class="${cls}">${sign}${diff.toFixed(1)} pts (${sign}${pct}%)</span>`;
+  }
+
+  // ── GEX SVG chart ──────────────────────────────────────────────────────────
+  function buildGexSvg(gex) {
+    const byStrike = gex.gex_by_strike || [];
+    const spot     = gex.spot_price;
+    const flip     = gex.gex_flip_point;
+    const callWall = gex.call_wall;
+    const putWall  = gex.put_wall;
+    if (!byStrike.length) return '<div class="vr-loading">No GEX strike data</div>';
+
+    // Limit to ±12% of spot for readability
+    const lo = spot * 0.88, hi = spot * 1.12;
+    const bars = byStrike.filter(d => d.strike >= lo && d.strike <= hi);
+    if (!bars.length) return '<div class="vr-loading">No strikes in display range</div>';
+
+    const W = 600, H = 240, PL = 52, PR = 10, PT = 10, PB = 30;
+    const plotW = W - PL - PR, plotH = H - PT - PB;
+
+    const strikes = bars.map(d => d.strike);
+    const sMin = Math.min(...strikes), sMax = Math.max(...strikes);
+    const allGex = bars.flatMap(d => [d.call_gex, d.put_gex]);
+    const gMax = Math.max(...allGex.map(Math.abs), 1);
+
+    const sx = s => PL + (s - sMin) / (sMax - sMin) * plotW;
+    const gy = v => PT + plotH / 2 - (v / gMax) * (plotH / 2 - 4);
+
+    const barW = Math.max(plotW / bars.length * 0.8, 2);
+    const midY = PT + plotH / 2;
+
+    // Y-axis ticks
+    const yticks = [-gMax, -gMax/2, 0, gMax/2, gMax].map(v => ({v, y: gy(v)}));
+
+    let svgParts = [
+      `<svg class="vr-gex-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">`,
+      `<line x1="${PL}" y1="${PT}" x2="${PL}" y2="${H-PB}" stroke="#1e2433"/>`,
+      `<line x1="${PL}" y1="${H-PB}" x2="${W-PR}" y2="${H-PB}" stroke="#1e2433"/>`,
+      `<line x1="${PL}" y1="${midY}" x2="${W-PR}" y2="${midY}" stroke="#1e2433" stroke-dasharray="3,3"/>`,
+    ];
+
+    // Y-axis labels
+    yticks.forEach(t => {
+      const lbl = Math.abs(t.v) >= 1e9 ? `${(t.v/1e9).toFixed(1)}B` : `${(t.v/1e6).toFixed(0)}M`;
+      svgParts.push(`<text x="${PL-4}" y="${t.y+3}" text-anchor="end" class="gex-axis-label">${lbl}</text>`);
+      if (t.v !== 0) svgParts.push(`<line x1="${PL}" y1="${t.y}" x2="${W-PR}" y2="${t.y}" stroke="#1e2433" stroke-opacity=".4"/>`);
+    });
+
+    // Bars
+    bars.forEach(d => {
+      const cx = sx(d.strike);
+      if (d.call_gex > 0) {
+        const bh = Math.abs(gy(d.call_gex) - midY);
+        svgParts.push(`<rect x="${cx - barW/2}" y="${midY - bh}" width="${barW}" height="${bh}" class="gex-bar-call"/>`);
+      }
+      if (d.put_gex < 0) {
+        const bh = Math.abs(gy(d.put_gex) - midY);
+        svgParts.push(`<rect x="${cx - barW/2}" y="${midY}" width="${barW}" height="${bh}" class="gex-bar-put"/>`);
+      }
+    });
+
+    // X-axis labels (every ~5 strikes)
+    const step = Math.max(1, Math.floor(bars.length / 8));
+    bars.filter((_, i) => i % step === 0).forEach(d => {
+      svgParts.push(`<text x="${sx(d.strike)}" y="${H-PB+14}" text-anchor="middle" class="gex-axis-label">${d.strike}</text>`);
+    });
+
+    // Vertical lines: spot, flip, walls
+    const vlines = [
+      {x: spot,     cls: 'gex-line-spot',  lbl: 'SPOT',  ly: PT+8},
+      {x: flip,     cls: 'gex-line-flip',  lbl: 'FLIP',  ly: PT+18},
+      {x: callWall, cls: 'gex-line-cwall', lbl: 'CALL↑', ly: PT+28},
+      {x: putWall,  cls: 'gex-line-pwall', lbl: 'PUT↓',  ly: PT+38},
+    ];
+    vlines.forEach(({x, cls, lbl, ly}) => {
+      if (x == null || x < sMin || x > sMax) return;
+      const px = sx(x);
+      svgParts.push(`<line x1="${px}" y1="${PT}" x2="${px}" y2="${H-PB}" class="${cls}"/>`);
+      svgParts.push(`<text x="${px+3}" y="${ly}" class="gex-axis-label" style="font-size:8px">${lbl}</text>`);
+    });
+
+    // Legend
+    svgParts.push(`<rect x="${PL+8}" y="${H-PB-18}" width="8" height="8" class="gex-bar-call"/>`);
+    svgParts.push(`<text x="${PL+19}" y="${H-PB-11}" class="gex-legend" fill="#22c55e">Call GEX</text>`);
+    svgParts.push(`<rect x="${PL+80}" y="${H-PB-18}" width="8" height="8" class="gex-bar-put"/>`);
+    svgParts.push(`<text x="${PL+91}" y="${H-PB-11}" class="gex-legend" fill="#ef4444">Put GEX</text>`);
+
+    svgParts.push('</svg>');
+    return svgParts.join('');
+  }
+
+  // ── VIX curve SVG ──────────────────────────────────────────────────────────
+  function buildVixSvg(vix) {
+    const curve = vix.curve || [];
+    const spot  = vix.vix_spot;
+    const ts    = vix.term_structure;
+    const cr    = vix.contango_ratio;
+    if (!curve.length) return '<div class="vr-loading">No VIX curve data</div>';
+
+    const pts = [{label:'SPOT', price: spot, expiration:'', dte:-1}, ...curve];
+    const W = 500, H = 220, PL = 42, PR = 20, PT = 20, PB = 35;
+    const plotW = W-PL-PR, plotH = H-PT-PB;
+
+    const prices = pts.map(p => p.price);
+    const pMin = Math.min(...prices) * 0.95, pMax = Math.max(...prices) * 1.05;
+    const py = v => PT + plotH - (v - pMin)/(pMax - pMin)*plotH;
+    const px = i => PL + i/(pts.length-1)*plotW;
+
+    const lineColor = ts === 'contango' ? '#22c55e' : '#ef4444';
+    const crPct     = cr != null ? `${((cr-1)*100).toFixed(1)}%` : '';
+    const crColor   = ts === 'contango' ? '#22c55e' : '#ef4444';
+
+    // Y-axis ticks
+    const yrange = pMax - pMin;
+    const yStep  = yrange > 15 ? 5 : yrange > 8 ? 2 : 1;
+    const yStart = Math.ceil(pMin / yStep) * yStep;
+    const yticks  = [];
+    for (let v = yStart; v <= pMax; v += yStep) yticks.push(v);
+
+    let svg = [`<svg class="vr-vix-svg" viewBox="0 0 ${W} ${H}">`];
+
+    svg.push(`<line x1="${PL}" y1="${PT}" x2="${PL}" y2="${H-PB}" stroke="#1e2433"/>`);
+    svg.push(`<line x1="${PL}" y1="${H-PB}" x2="${W-PR}" y2="${H-PB}" stroke="#1e2433"/>`);
+    yticks.forEach(v => {
+      const y = py(v);
+      svg.push(`<line x1="${PL}" y1="${y}" x2="${W-PR}" y2="${y}" stroke="#1e2433" stroke-opacity=".5"/>`);
+      svg.push(`<text x="${PL-4}" y="${y+3}" text-anchor="end" fill="#64748b" font-size="9" font-family="'IBM Plex Mono',monospace">${v.toFixed(0)}</text>`);
+    });
+
+    // Line path (skip SPOT to VX1 dashed, VX1+ solid)
+    const solidPts = pts.slice(1).map((p,i) => `${i===0?'M':'L'}${px(i+1).toFixed(1)},${py(p.price).toFixed(1)}`).join(' ');
+    svg.push(`<path d="${solidPts}" fill="none" stroke="${lineColor}" stroke-width="2"/>`);
+    // Dashed connector spot → VX1
+    svg.push(`<line x1="${px(0)}" y1="${py(pts[0].price)}" x2="${px(1)}" y2="${py(pts[1].price)}" stroke="${lineColor}" stroke-width="1.5" stroke-dasharray="4,3" stroke-opacity=".5"/>`);
+
+    // Dots
+    pts.forEach((p, i) => {
+      const cx = px(i), cy = py(p.price);
+      const isSpot = i === 0;
+      svg.push(`<circle cx="${cx}" cy="${cy}" r="${isSpot?5:4}" fill="${isSpot?'#f59e0b':lineColor}" stroke="#0d1117" stroke-width="1.5"/>`);
+      svg.push(`<text x="${cx}" y="${cy-9}" text-anchor="middle" fill="${isSpot?'#f59e0b':'#94a3b8'}" font-size="9" font-family="'IBM Plex Mono',monospace">${p.price != null ? p.price.toFixed(1) : ''}</text>`);
+    });
+
+    // X-axis labels
+    pts.forEach((p, i) => {
+      const lbl = i === 0 ? 'SPOT' : p.label;
+      svg.push(`<text x="${px(i)}" y="${H-PB+14}" text-anchor="middle" fill="#64748b" font-size="9" font-family="'IBM Plex Mono',monospace">${lbl}</text>`);
+      if (i > 0 && p.expiration) {
+        const dt = p.expiration.slice(5,10).replace('-','/');
+        svg.push(`<text x="${px(i)}" y="${H-PB+24}" text-anchor="middle" fill="#475569" font-size="8" font-family="'IBM Plex Mono',monospace">${dt}</text>`);
+      }
+    });
+
+    // Contango ratio badge
+    if (crPct) {
+      svg.push(`<rect x="${W-PR-70}" y="${PT}" width="68" height="18" rx="4" fill="rgba(0,0,0,.4)" stroke="${crColor}" stroke-width="1"/>`);
+      svg.push(`<text x="${W-PR-36}" y="${PT+12}" text-anchor="middle" fill="${crColor}" font-size="9" font-weight="700" font-family="'IBM Plex Mono',monospace">VX2/VX1 ${crPct}</text>`);
+    }
+
+    svg.push('</svg>');
+    return svg.join('');
+  }
+
+  // ── Main render ────────────────────────────────────────────────────────────
+  async function loadAndRender() {
+    let gex, vix, regime, synthesis;
+    try {
+      const [gR,vR,rR,sR] = await Promise.all([
+        fetch(`data/gex-data.json?t=${Date.now()}`),
+        fetch(`data/vix-structure.json?t=${Date.now()}`),
+        fetch(`data/vol-regime.json?t=${Date.now()}`),
+        fetch(`data/ai-synthesis.json?t=${Date.now()}`),
+      ]);
+      gex      = gR.ok      ? await gR.json()  : null;
+      vix      = vR.ok      ? await vR.json()  : null;
+      regime   = rR.ok      ? await rR.json()  : null;
+      synthesis= sR.ok      ? await sR.json()  : null;
+    } catch(e) {
+      document.getElementById('vr-main').innerHTML = `<div class="vr-loading vr-card-full">Error loading data: ${e.message}</div>`;
+      return;
+    }
+
+    const spot = regime?.key_levels?.spot ?? gex?.spot_price;
+    const regimeName = regime?.regime ?? 'unknown';
+    const regClass   = REGIME_CLASS[regimeName] ?? 'unknown';
+    const regColor   = REGIME_COLOR[regimeName] ?? '#94a3b8';
+    const conf       = regime?.regime_confidence ?? 0;
+    const hints      = regime?.synthesis_hints ?? {};
+    const inputs     = regime?.inputs ?? {};
+    const kl         = regime?.key_levels ?? {};
+    const ts         = vix?.term_structure ?? '?';
+    const genAt      = regime?.generated_at ?? gex?.generated_at ?? null;
+
+    document.getElementById('vr-status').textContent = genAt ? `Updated ${fmtTs(genAt)}` : 'Live';
+
+    const levels = [
+      { label:'Spot',      val: spot,       note: '' },
+      { label:'GEX Flip',  val: kl.gex_flip,  note: distLabel(kl.gex_flip, spot) },
+      { label:'Put Wall',  val: kl.put_wall,  note: distLabel(kl.put_wall, spot) },
+      { label:'Call Wall', val: kl.call_wall, note: distLabel(kl.call_wall, spot) },
+    ];
+
+    const lastSynth  = synthesis?.generated_at ?? synthesis?.timestamp ?? null;
+    const nextSynth  = nextSynthTime(lastSynth);
+    const synthHints = [];
+    if (hints.amplify_moves)        synthHints.push(`<span class="vr-synth-badge vr-sb-amplify">↑ AMPLIFY MOVES</span>`);
+    if (hints.suppress_moves)       synthHints.push(`<span class="vr-synth-badge vr-sb-suppress">↓ SUPPRESS MOVES</span>`);
+    if (hints.expect_vol_expansion) synthHints.push(`<span class="vr-synth-badge vr-sb-expand">⚡ VOL EXPANSION</span>`);
+    if (hints.regime_unstable)      synthHints.push(`<span class="vr-synth-badge vr-sb-unstable">⚠ UNSTABLE</span>`);
+    if (hints.range_multiplier && hints.range_multiplier !== 1)
+      synthHints.push(`<span class="vr-synth-badge vr-sb-mult">${hints.range_multiplier}× RANGE</span>`);
+
+    const vixTs    = inputs.vix_spot != null ? `VIX ${inputs.vix_spot.toFixed(1)}` : '';
+    const netGexFmt = inputs.net_gex != null ? fmtB(inputs.net_gex) : '';
+    const crFmt     = inputs.contango_ratio != null ? `CR ${((inputs.contango_ratio-1)*100).toFixed(1)}%` : '';
+    const tsColor   = ts === 'contango' ? 'vr-ts-contango' : 'vr-ts-backwarda';
+
+    const html = `
+      <!-- Panel 1: GEX Profile -->
+      <div class="vr-card">
+        <div class="vr-card-title">
+          GEX Profile — SPY
+          <span class="vr-refresh-ts">${gex ? fmtTs(gex.generated_at) : ''}</span>
+        </div>
+        ${gex ? buildGexSvg(gex) : '<div class="vr-loading">No GEX data</div>'}
+        <div style="display:flex;gap:12px;margin-top:8px;flex-wrap:wrap;font-family:\'IBM Plex Mono\',monospace;font-size:9px;color:#64748b">
+          <span>Net GEX: <b style="color:${inputs.net_gex<0?'#ef4444':'#22c55e'}">${netGexFmt}</b></span>
+          <span>Regime: <b style="color:${regColor}">${inputs.gex_regime?.toUpperCase()??'?'}</b></span>
+          <span style="color:#c084fc">▋ Flip: ${kl.gex_flip ?? 'N/A'}</span>
+          <span style="color:#22c55e">▋ Call Wall: ${kl.call_wall ?? 'N/A'}</span>
+          <span style="color:#ef4444">▋ Put Wall: ${kl.put_wall ?? 'N/A'}</span>
+          <span style="color:#f59e0b">▋ Spot: ${spot ?? 'N/A'}</span>
+        </div>
+      </div>
+
+      <!-- Panel 2: VIX Term Structure -->
+      <div class="vr-card">
+        <div class="vr-card-title">
+          VIX Term Structure
+          <span class="vr-refresh-ts">${vix ? fmtTs(vix.generated_at) : ''}</span>
+        </div>
+        <div class="vr-inputs">
+          <span class="vr-input-pill">VIX Spot <span class="vr-input-val">${vix?.vix_spot?.toFixed(1) ?? 'N/A'}</span></span>
+          <span class="vr-input-pill">Curve <span class="vr-input-val ${tsColor}">${ts.toUpperCase()}</span></span>
+          ${crFmt ? `<span class="vr-input-pill">VX2/VX1 <span class="vr-input-val ${tsColor}">${crFmt.replace('CR ','')}</span></span>` : ''}
+          <span class="vr-input-pill">Slope <span class="vr-input-val">${inputs.slope?.toFixed(2) ?? 'N/A'} pts/mo</span></span>
+          <span class="vr-input-pill">Signal <span class="vr-input-val">${vix?.regime_signal?.toUpperCase() ?? '?'}</span></span>
+        </div>
+        ${vix ? buildVixSvg(vix) : '<div class="vr-loading">No VIX data</div>'}
+      </div>
+
+      <!-- Panel 3: Regime Dashboard -->
+      <div class="vr-card">
+        <div class="vr-card-title">Volatility Regime</div>
+        <div class="vr-regime-hero">
+          <span class="vr-regime-badge vr-badge-${regClass}">${regimeName.toUpperCase()}</span>
+          <div class="vr-conf-wrap">
+            <span class="vr-conf-label">Confidence</span>
+            <span class="vr-conf-pct">${Math.round(conf*100)}%</span>
+            <div class="vr-conf-bar-track"><div class="vr-conf-bar-fill" style="width:${conf*100}%;background:${confColor(conf)}"></div></div>
+          </div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#64748b;max-width:180px;line-height:1.5">
+            ${regime?.regime_label ?? ''}
+          </div>
+        </div>
+        <div class="vr-levels">
+          ${levels.map(l => `
+            <div class="vr-level-card">
+              <div class="vr-level-label">${l.label}</div>
+              <div class="vr-level-val">${l.val != null ? l.val.toFixed(2) : 'N/A'}</div>
+              ${l.note ? `<div class="vr-level-dist">${l.note}</div>` : ''}
+            </div>`).join('')}
+        </div>
+      </div>
+
+      <!-- Panel 4: Synthesis Signal -->
+      <div class="vr-card">
+        <div class="vr-card-title">Regime Signal → Synthesis</div>
+        <div class="vr-synth-row">${synthHints.join('') || '<span style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:#475569">No active modifiers</span>'}</div>
+        <div class="vr-implication">${regime?.implication ?? 'No implication data available.'}</div>
+        <div style="margin-top:12px;display:flex;flex-direction:column;gap:6px">
+          <div class="vr-synth-ts">Last synthesis: <span class="vr-synth-next">${lastSynth ? fmtTs(lastSynth) : '—'}</span></div>
+          <div class="vr-synth-ts">Next expected: <span class="vr-synth-next">${nextSynth}</span></div>
+          ${synthesis?.intraday?.signal ? `<div class="vr-synth-info">
+            Current call — Intraday: <b style="color:${synthesis.intraday.signal==='BULLISH'?'#22c55e':synthesis.intraday.signal==='BEARISH'?'#ef4444':'#94a3b8'}">${synthesis.intraday.signal}</b>
+            (${synthesis.intraday.confidence ?? '?'}%) |
+            Next day: <b style="color:${synthesis.next_day?.signal==='BULLISH'?'#22c55e':synthesis.next_day?.signal==='BEARISH'?'#ef4444':'#94a3b8'}">${synthesis.next_day?.signal ?? '?'}</b>
+            (${synthesis.next_day?.confidence ?? '?'}%)
+          </div>` : ''}
+        </div>
+      </div>
+    `;
+
+    document.getElementById('vr-main').innerHTML = html;
+  }
+
+  loadAndRender();
+  setInterval(loadAndRender, 60000);
+  </script>
+</body>
+</html>
