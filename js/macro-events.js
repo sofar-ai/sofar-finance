@@ -511,7 +511,10 @@ function renderTree(event) {
             <button id="me-submit-btn" class="me-btn me-btn-primary" onclick="submitChanges()" disabled>No Changes</button>` : ''}
           ${isDraft ? `<button class="me-btn me-btn-success" onclick="activateEvent('${event.event_id}')">▶ Activate</button>` : ''}
           ${isActive ? `<button class="me-btn me-btn-ghost" onclick="archiveEvent('${event.event_id}')">Archive</button>` : ''}
-          ${event.status === 'archived' ? `<button class="me-btn me-btn-danger me-btn-sm" onclick="deleteEvent('${event.event_id}', '${event.root_label.replace(/'/g,'\\&apos;')}')">🗑 Delete</button>` : ''}
+          ${event.status === 'archived' ? `
+            <span style="font-family:var(--font-mono);font-size:9px;color:#64748b;margin-right:4px">READ-ONLY</span>
+            <button class="me-btn me-btn-danger" onclick="deleteEvent('${event.event_id}', '${event.root_label.replace(/'/g,"'")}')">🗑 Delete Tree</button>
+          ` : ''}
         </div>
       </div>
 
@@ -587,9 +590,8 @@ function renderAll() {
     setStatus('No events — create one above');
     return;
   }
-  // Never auto-select an archived event
-  const isSelectable = id => { const e = events.find(x=>x.event_id===id); return e && e.status !== 'archived'; };
-  if (!activeEventId || !isSelectable(activeEventId)) {
+  // Default-select: prefer active → draft → anything. Never force archived as default.
+  if (!activeEventId || !events.find(e=>e.event_id===activeEventId)) {
     const first = events.find(e=>e.status==='active') || events.find(e=>e.status==='draft') || null;
     activeEventId = first?.event_id ?? null;
   }
