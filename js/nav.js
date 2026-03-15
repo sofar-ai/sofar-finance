@@ -110,62 +110,88 @@
   // ── CSS ─────────────────────────────────────────────────────────────────────
   const CSS = `
     .snav-header {
-      display: flex; align-items: center; height: 46px; padding: 0 16px;
+      display: flex; align-items: center; height: 54px; padding: 0 20px;
       background: #080b10; border-bottom: 1px solid #1a1f28;
       position: sticky; top: 0; z-index: 1000; gap: 0;
       font-family: 'IBM Plex Mono', 'Courier New', monospace;
     }
+
+    /* ── Logo ── */
     .snav-logo {
-      font-size: 13px; font-weight: 700; color: #e2e8f0; text-decoration: none;
-      letter-spacing: .06em; white-space: nowrap; margin-right: 16px;
+      font-size: 1.45em; font-weight: 800; color: #f59e0b; text-decoration: none;
+      letter-spacing: .04em; white-space: nowrap; margin-right: 28px; line-height: 1;
+      text-shadow: 0 0 24px rgba(245,158,11,.25);
     }
-    .snav-logo span { color: #f59e0b; font-weight: 400; }
+    .snav-logo span { color: #475569; font-weight: 400; font-size: .8em; letter-spacing: .02em; }
+
+    /* ── Nav group row ── */
     .snav-nav {
-      display: flex; align-items: center; gap: 2px; flex: 1;
+      display: flex; align-items: stretch; gap: 0; flex: 1; height: 54px;
     }
 
     /* ── Group wrapper ── */
-    .snav-group-wrap { position: relative; display: inline-flex; }
+    .snav-group-wrap {
+      position: relative; display: inline-flex;
+      border-right: 1px solid #1a1f28;
+    }
+    .snav-group-wrap:first-child { border-left: 1px solid #1a1f28; }
+
     .snav-group {
-      display: inline-flex; align-items: center; gap: 3px;
-      font-size: 10px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
-      color: #64748b; text-decoration: none; padding: 0 12px; height: 46px;
-      border-bottom: 2px solid transparent; white-space: nowrap;
-      transition: color .15s, border-color .15s; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase;
+      color: #4b5563; text-decoration: none; padding: 0 18px; height: 54px;
+      border-bottom: 3px solid transparent; white-space: nowrap;
+      transition: color .15s, border-color .15s, background .15s; cursor: pointer;
       box-sizing: border-box;
     }
-    .snav-group:hover  { color: #94a3b8; }
-    .snav-active       { color: #f59e0b !important; border-bottom-color: #f59e0b !important; }
-    .snav-chevron      { font-size: 8px; opacity: .6; margin-left: 1px; }
+    .snav-group:hover  { color: #94a3b8; background: rgba(255,255,255,.025); }
+    .snav-active {
+      color: #f59e0b !important;
+      border-bottom-color: #f59e0b !important;
+      background: rgba(245,158,11,.06) !important;
+    }
+    .snav-chevron { font-size: 10px; opacity: .5; margin-left: 2px; transition: opacity .15s; }
+    .snav-group:hover .snav-chevron { opacity: .9; }
+    .snav-active .snav-chevron { opacity: .8; color: #f59e0b; }
 
     /* ── Dropdown ── */
     .snav-dropdown {
-      display: none; position: absolute; top: 100%; left: 0;
-      background: #0d1117; border: 1px solid #1e2433; border-radius: 4px;
-      min-width: 148px; padding: 4px 0; box-shadow: 0 8px 24px rgba(0,0,0,.5);
+      display: none; position: absolute; top: calc(100% + 1px); left: -1px;
+      background: #0b0e14; border: 1px solid #252c38; border-radius: 0 0 6px 6px;
+      min-width: 168px; padding: 6px 0;
+      box-shadow: 0 12px 32px rgba(0,0,0,.6), 0 2px 8px rgba(0,0,0,.4);
       z-index: 2000;
     }
     .snav-group-wrap:hover .snav-dropdown { display: block; }
     .snav-drop-item {
-      display: block; padding: 8px 14px;
-      font-size: 10px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+      display: block; padding: 10px 18px;
+      font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase;
       color: #64748b; text-decoration: none; white-space: nowrap;
-      transition: color .1s, background .1s;
+      border-left: 3px solid transparent;
+      transition: color .1s, background .1s, border-color .1s;
     }
-    .snav-drop-item:hover    { color: #e2e8f0; background: rgba(255,255,255,.04); }
-    .snav-drop-active        { color: #f59e0b !important; background: rgba(245,158,11,.08); }
+    .snav-drop-item:hover {
+      color: #cbd5e1; background: rgba(255,255,255,.05);
+      border-left-color: #334155;
+    }
+    .snav-drop-active {
+      color: #f59e0b !important;
+      background: rgba(245,158,11,.08) !important;
+      border-left-color: #f59e0b !important;
+    }
 
     /* ── Meta slot (clock, status) ── */
     .snav-meta {
-      display: flex; align-items: center; gap: 12px; margin-left: auto;
-      font-size: 10px; color: #475569; white-space: nowrap;
+      display: flex; align-items: center; gap: 12px; margin-left: auto; padding-left: 20px;
+      font-size: 10px; color: #374151; white-space: nowrap;
     }
 
     /* ── Hamburger (mobile only) ── */
     .snav-hamburger {
-      display: none; background: none; border: none; color: #94a3b8;
-      font-size: 18px; cursor: pointer; padding: 4px 8px; margin-left: auto;
+      display: none; background: none; border: 1px solid #1e2433; border-radius: 4px;
+      color: #94a3b8; font-size: 16px; cursor: pointer; padding: 4px 10px; margin-left: auto;
     }
+    .snav-hamburger:hover { border-color: #374151; color: #e2e8f0; }
 
     /* ── Mobile panel ── */
     .snav-mobile-panel {
@@ -177,26 +203,30 @@
     .snav-mob-group { border-bottom: 1px solid #1a1f28; }
     .snav-mob-label {
       display: flex; justify-content: space-between; align-items: center;
-      padding: 10px 16px; font-size: 10px; font-weight: 700; letter-spacing: .08em;
-      text-transform: uppercase; color: #64748b; cursor: pointer; user-select: none;
+      padding: 12px 20px; font-size: 11px; font-weight: 700; letter-spacing: .09em;
+      text-transform: uppercase; color: #4b5563; cursor: pointer; user-select: none;
+      transition: color .15s;
     }
+    .snav-mob-label:hover    { color: #94a3b8; }
     .snav-mob-label.snav-mob-open { color: #f59e0b; }
-    .snav-mob-chevron { font-size: 9px; }
-    .snav-mob-hidden { display: none; }
-    .snav-mob-children { background: #080b10; }
+    .snav-mob-chevron { font-size: 10px; }
+    .snav-mob-hidden  { display: none; }
+    .snav-mob-children { background: #06080d; }
     .snav-mob-item {
-      display: block; padding: 9px 24px;
-      font-size: 10px; letter-spacing: .06em; text-transform: uppercase;
-      color: #475569; text-decoration: none;
+      display: block; padding: 10px 32px;
+      font-size: 11px; letter-spacing: .07em; text-transform: uppercase;
+      color: #374151; text-decoration: none; border-left: 3px solid transparent;
+      transition: color .1s, border-color .1s;
     }
-    .snav-mob-item:hover { color: #94a3b8; }
-    .snav-mob-active     { color: #f59e0b !important; }
+    .snav-mob-item:hover { color: #94a3b8; border-left-color: #374151; }
+    .snav-mob-active     { color: #f59e0b !important; border-left-color: #f59e0b !important; }
 
     /* ── Responsive ── */
-    @media (max-width: 780px) {
+    @media (max-width: 820px) {
       .snav-nav        { display: none; }
       .snav-hamburger  { display: inline-flex; }
-      .snav-meta       { margin-left: 8px; }
+      .snav-meta       { margin-left: 8px; padding-left: 0; }
+      .snav-logo       { font-size: 1.2em; margin-right: 12px; }
     }
   `;
 
