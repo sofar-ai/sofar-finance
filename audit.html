@@ -75,6 +75,44 @@
 
     .au-loading { text-align:center; padding:40px; color:#475569; font-family:'IBM Plex Mono',monospace; font-size:11px; }
     @media(max-width:900px){ .au-grid{ grid-template-columns:1fr; } }
+
+    /* ── Panel 5: Prediction History ── */
+    .au-hist-wrap { max-height:460px; overflow-y:auto; }
+    .au-hist-table { width:100%; border-collapse:collapse; }
+    .au-hist-table th { font-family:'IBM Plex Mono',monospace; font-size:9px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:#374151; padding:5px 8px; text-align:left; border-bottom:1px solid #1a1f28; position:sticky; top:0; background:#111827; z-index:1; }
+    .au-hist-row { cursor:pointer; transition:background .1s; }
+    .au-hist-row:hover { filter:brightness(1.15); }
+    .au-hist-row.au-score-hi  { background:rgba(34,197,94,.06); }
+    .au-hist-row.au-score-mid { background:rgba(245,158,11,.06); }
+    .au-hist-row.au-score-lo  { background:rgba(239,68,68,.06); }
+    .au-hist-row.au-score-pend{ background:transparent; }
+    .au-hist-table td { padding:6px 8px; border-bottom:1px solid #0d1117; vertical-align:middle; }
+    .au-hist-ts  { font-family:'IBM Plex Mono',monospace; font-size:9px; color:#64748b; white-space:nowrap; }
+    .au-hist-tf  { font-family:'IBM Plex Mono',monospace; font-size:9px; color:#94a3b8; }
+    .au-hist-dir { font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:700; }
+    .au-dir-bull { color:#22c55e; } .au-dir-bear { color:#ef4444; } .au-dir-neut { color:#64748b; }
+    .au-hist-conf { font-family:'IBM Plex Mono',monospace; font-size:10px; color:#94a3b8; }
+    .au-hist-cov  { font-family:'IBM Plex Mono',monospace; font-size:9px; color:#60a5fa; }
+    .au-hist-drv  { font-family:'IBM Plex Mono',monospace; font-size:9px; color:#a78bfa; }
+    .au-hist-status-pend { background:rgba(245,158,11,.15); color:#f59e0b; font-family:'IBM Plex Mono',monospace; font-size:8px; font-weight:700; padding:2px 6px; border-radius:3px; }
+    .au-hist-status-res  { background:rgba(100,116,139,.15); color:#94a3b8; font-family:'IBM Plex Mono',monospace; font-size:8px; font-weight:700; padding:2px 6px; border-radius:3px; }
+    .au-hist-score { font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:700; }
+    .au-sc-hi  { color:#22c55e; } .au-sc-mid { color:#f59e0b; } .au-sc-lo  { color:#ef4444; }
+    .au-hist-sub { font-family:'IBM Plex Mono',monospace; font-size:9px; color:#475569; }
+
+    /* Expanded row detail */
+    .au-expand-row { display:none; }
+    .au-expand-row.open { display:table-row; }
+    .au-expand-cell { padding:12px 16px !important; background:#06080d !important; border-bottom:2px solid #1e2433 !important; }
+    .au-expand-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .au-expand-section { font-family:'IBM Plex Mono',monospace; font-size:9px; color:#374151; text-transform:uppercase; letter-spacing:.07em; margin-bottom:6px; }
+    .au-expand-chain { font-size:11px; color:#94a3b8; line-height:1.6; background:#0d1117; padding:8px 10px; border-radius:4px; border:1px solid #1a1f28; }
+    .au-expand-wt-bar { height:16px; border-radius:3px; overflow:hidden; display:flex; margin:4px 0; }
+    .au-expand-wt-seg { height:100%; }
+    .au-sig-row { display:flex; align-items:center; gap:6px; padding:3px 0; border-bottom:1px solid #0d1117; font-family:'IBM Plex Mono',monospace; font-size:9px; }
+    .au-sig-name { color:#64748b; width:110px; flex-shrink:0; }
+    .au-sig-bar  { height:6px; border-radius:2px; }
+    .au-sig-val  { color:#94a3b8; font-size:9px; }
   </style>
 </head>
 <body>
@@ -325,16 +363,224 @@
     </div>`;
   }
 
+  // ── Panel 5: Prediction History ─────────────────────────────────────────────
+  let _expandedRow = null;
+  function toggleExpand(id) {
+    const el = document.getElementById(`au-exp-${id}`);
+    if (!el) return;
+    const isOpen = el.classList.contains('open');
+    if (_expandedRow && _expandedRow !== id) {
+      const prev = document.getElementById(`au-exp-${_expandedRow}`);
+      if (prev) prev.classList.remove('open');
+    }
+    el.classList.toggle('open', !isOpen);
+    _expandedRow = isOpen ? null : id;
+  }
+
+  function buildExpandContent(row) {
+    const attr = row.signal_attribution || {};
+    const weights = attr.weights || {};
+    const chain = attr.reasoning_chain || 'No reasoning chain available';
+    const snapScores = row.snapScores || {};
+    const archScore = row.archScore || {};
+
+    // Mini weight bar
+    const wSegs = Object.keys(SIG_COLORS).map(k => {
+      const w = (weights[k]?.weight || 0) * 100;
+      if (!w) return '';
+      return `<div class="au-expand-wt-seg" style="width:${w.toFixed(0)}%;background:${SIG_COLORS[k]}" title="${SIG_LABELS[k]} ${w.toFixed(0)}%"></div>`;
+    }).join('');
+
+    // Per-signal comparison: opus weight vs predictive score
+    const sigRows = Object.keys(SIG_COLORS).filter(k=>k!=='price_data').map(k => {
+      const wt    = ((weights[k]?.weight || 0)*100).toFixed(0);
+      const pred  = snapScores[k]?.predictive_score;
+      const wAcc  = snapScores[k]?.weight_accuracy || '';
+      const accBadge = wAcc.includes('under') ? `<span class="au-cal-badge au-under">under</span>`
+                     : wAcc.includes('over')  ? `<span class="au-cal-badge au-over">over</span>` : '';
+      const barW = pred != null ? Math.round(pred * 0.6) : 0;
+      return `<div class="au-sig-row">
+        <span class="au-sig-name">${SIG_LABELS[k]}</span>
+        <div class="au-sig-bar" style="width:${Math.round(Number(wt)*0.6)}px;background:${SIG_COLORS[k]}88" title="Opus weight ${wt}%"></div>
+        ${pred!=null ? `<div class="au-sig-bar" style="width:${barW}px;background:${SIG_COLORS[k]}" title="Predictive score ${pred}"></div>` : ''}
+        <span class="au-sig-val">${wt}% wt${pred!=null?` / ${pred} score`:''}</span>
+        ${accBadge}
+      </div>`;
+    }).join('');
+
+    // Backcheck narrative (from archive per-ticker)
+    let narrative = '';
+    if (archScore.per_ticker) {
+      const spy = archScore.per_ticker.SPY;
+      if (spy) {
+        const dir = spy.direction || {};
+        const tgt = spy.price_target || {};
+        narrative = `SPY: moved ${dir.move_pct!=null?(dir.move_pct>0?'+':'')+dir.move_pct.toFixed(2)+'%':'?'} — direction ${dir.correct?'✓ correct':'✗ wrong'}, composite ${spy.composite_score!=null?(spy.composite_score*100).toFixed(0):'-'}/100`;
+        if (tgt.target_error_pct != null) narrative += `, target error ${tgt.target_error_pct.toFixed(2)}%`;
+      }
+    }
+
+    return `<div class="au-expand-grid">
+      <div>
+        <div class="au-expand-section">Signal Weights + Scores</div>
+        ${wSegs ? `<div class="au-expand-wt-bar">${wSegs}</div>` : ''}
+        ${sigRows}
+      </div>
+      <div>
+        <div class="au-expand-section">Reasoning Chain</div>
+        <div class="au-expand-chain">${chain}</div>
+        ${narrative ? `<div style="margin-top:8px"><div class="au-expand-section">Outcome</div><div class="au-expand-chain">${narrative}</div></div>` : ''}
+      </div>
+    </div>`;
+  }
+
+  function buildPanel5(synth, archive, snapshots) {
+    // Build unified row list from archive + current synth
+    const rows = [];
+    const TFS = [
+      {key:'intraday',  label:'Intraday',  scoreKey:'intraday_scoring',  checkedKey:'intraday_checked'},
+      {key:'next_day',  label:'Next-Day',  scoreKey:'nextday_scoring',   checkedKey:'nextday_checked'},
+      {key:'long_term', label:'30-Day',    scoreKey:'longterm_scoring',  checkedKey:'longterm_checked'},
+    ];
+
+    // Build snap lookup: generated_at → snapshot
+    const snapMap = {};
+    for (const s of snapshots) {
+      if (s.generated_at) snapMap[s.generated_at] = s;
+      if (s.snapshot_id)  {
+        // also index by minute-precision ISO
+        const sid = s.snapshot_id; // e.g. 2026-03-15T1802
+        snapMap[sid] = s;
+      }
+    }
+
+    for (const e of [...archive].reverse().slice(0, 10)) {
+      const genAt = e.generated_at;
+      const snap  = snapMap[genAt] || Object.values(snapMap).find(s => s.generated_at?.slice(0,16) === genAt?.slice(0,16)) || null;
+      const attr  = snap?.signal_attribution || e.signal_attribution || {};
+
+      for (const {key, label, scoreKey, checkedKey} of TFS) {
+        const tf     = e[key] || {};
+        if (!tf.signal) continue;
+        const scoring = e[scoreKey];
+        const checked = e[checkedKey];
+
+        // Signal coverage: count non-zero weights
+        const wts = attr?.weights || {};
+        const coverage = Object.values(wts).filter(w => (w?.weight || 0) > 0).length;
+
+        // Composite score (avg across SPY + QQQ)
+        let composite = null, dirScore = null, convScore = null, tgtScore = null;
+        if (scoring?.per_ticker) {
+          const tickers = Object.values(scoring.per_ticker);
+          if (tickers.length) {
+            composite = Math.round(tickers.reduce((a,t)=>a+(t.composite_score||0),0)/tickers.length*100);
+            const spy = scoring.per_ticker.SPY;
+            if (spy) {
+              dirScore  = Math.round((spy.direction?.direction_score||0)*60);
+              convScore = Math.round((spy.conviction?.conviction_score||0)*25);
+              tgtScore  = Math.round((spy.price_target?.target_score||0)*15);
+            }
+          }
+        }
+
+        // Get attribution scores from snapshots (signal-attribution files)
+        const snapScores = {};  // populated below if available
+
+        const rowId = `${genAt?.replace(/[^0-9]/g,'')}_${key}`;
+        rows.push({
+          rowId, genAt, label, key,
+          signal:    tf.signal,
+          confidence: tf.confidence,
+          coverage:  coverage,
+          totalSources: 8,
+          primaryDriver: attr?.primary_driver || tf.primary_driver || '—',
+          status:    checked ? 'resolved' : 'pending',
+          composite, dirScore, convScore, tgtScore,
+          signal_attribution: attr,
+          archScore: scoring || {},
+          snapScores,
+        });
+      }
+    }
+
+    // Also add current synth if not in archive
+    if (synth?.intraday?.signal) {
+      const sAttr = synth.signal_attribution || {};
+      const wts   = sAttr?.weights || {};
+      const cov   = Object.values(wts).filter(w=>(w?.weight||0)>0).length;
+      const rowId = `current_intraday`;
+      if (!rows.find(r => r.genAt === synth.generated_at && r.key === 'intraday')) {
+        rows.unshift({
+          rowId, genAt: synth.generated_at, label: 'Intraday', key: 'intraday',
+          signal: synth.intraday.signal, confidence: synth.intraday.confidence,
+          coverage: cov, totalSources: 8,
+          primaryDriver: sAttr.primary_driver || synth.intraday.primary_driver || '—',
+          status: 'pending', composite:null, dirScore:null, convScore:null, tgtScore:null,
+          signal_attribution: sAttr, archScore: {}, snapScores: {},
+        });
+      }
+    }
+
+    if (!rows.length) return `<div class="au-card au-card-full">
+      <div class="au-title">Prediction History</div>
+      <div class="au-loading">No prediction history yet</div>
+    </div>`;
+
+    const cols = ['Timestamp','Timeframe','Direction','Confidence','Coverage','Primary Driver','Status','Score','Dir','Conv','Target'];
+    const thead = `<thead><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead>`;
+
+    const tbodyRows = rows.slice(0,30).map(row => {
+      const ts  = row.genAt ? fmtTs(row.genAt) : '—';
+      const dir = row.signal === 'BULLISH' ? 'BULL' : row.signal === 'BEARISH' ? 'BEAR' : 'NEUT';
+      const dirCls = row.signal === 'BULLISH' ? 'au-dir-bull' : row.signal === 'BEARISH' ? 'au-dir-bear' : 'au-dir-neut';
+      const rowCls = row.status === 'pending' ? 'au-score-pend'
+                   : row.composite >= 70 ? 'au-score-hi'
+                   : row.composite >= 40 ? 'au-score-mid' : 'au-score-lo';
+      const scoreCls = row.composite == null ? '' : row.composite >= 70 ? 'au-sc-hi' : row.composite >= 40 ? 'au-sc-mid' : 'au-sc-lo';
+      const expandContent = buildExpandContent(row);
+
+      return `<tr class="au-hist-row ${rowCls}" onclick="toggleExpand('${row.rowId}')">
+        <td class="au-hist-ts">${ts}</td>
+        <td class="au-hist-tf">${row.label}</td>
+        <td><span class="au-hist-dir ${dirCls}">${dir}</span></td>
+        <td class="au-hist-conf">${row.confidence ?? '—'}%</td>
+        <td class="au-hist-cov">${row.coverage}/${row.totalSources}</td>
+        <td class="au-hist-drv">${row.primaryDriver}</td>
+        <td><span class="${row.status === 'pending' ? 'au-hist-status-pend' : 'au-hist-status-res'}">${row.status === 'pending' ? 'PENDING' : 'RESOLVED'}</span></td>
+        <td><span class="au-hist-score ${scoreCls}">${row.composite ?? '—'}</span></td>
+        <td class="au-hist-sub">${row.dirScore ?? '—'}</td>
+        <td class="au-hist-sub">${row.convScore ?? '—'}</td>
+        <td class="au-hist-sub">${row.tgtScore ?? '—'}</td>
+      </tr>
+      <tr class="au-expand-row" id="au-exp-${row.rowId}">
+        <td class="au-expand-cell" colspan="11">${expandContent}</td>
+      </tr>`;
+    }).join('');
+
+    return `<div class="au-card au-card-full">
+      <div class="au-title">Prediction History <span style="font-weight:400;font-size:9px">Click row to expand</span></div>
+      <div class="au-hist-wrap">
+        <table class="au-hist-table">
+          ${thead}
+          <tbody>${tbodyRows}</tbody>
+        </table>
+      </div>
+    </div>`;
+  }
+
   // ── Load + render ─────────────────────────────────────────────────────────
   async function loadAndRender() {
     const t = Date.now();
-    const [calR, synthR] = await Promise.all([
+    const [calR, synthR, archR] = await Promise.all([
       fetch(`data/attribution-calibration.json?t=${t}`),
       fetch(`data/ai-synthesis.json?t=${t}`),
+      fetch(`data/prediction-archive.json?t=${t}`),
     ]);
 
-    const cal   = calR.ok   ? await calR.json()   : {history:[]};
-    const synth = synthR.ok ? await synthR.json()  : null;
+    const cal     = calR.ok   ? await calR.json()   : {history:[]};
+    const synth   = synthR.ok ? await synthR.json()  : null;
+    const archive = archR.ok  ? await archR.json()   : [];
     const attrHistory = cal.history || [];
 
     // Load snapshots via API (lists files in data/synthesis-snapshots/)
@@ -359,6 +605,7 @@
       buildPanel2(attrHistory),
       buildPanel3(attrHistory),
       buildPanel4(snapshots),
+      buildPanel5(synth, Array.isArray(archive)?archive:[], snapshots),
     ].join('');
   }
 
