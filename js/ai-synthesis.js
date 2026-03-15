@@ -339,7 +339,7 @@ const AISynthesis = (() => {
             ${idea.stop_invalidation ? `<div class="ai-idea-detail"><strong>Stop:</strong> ${idea.stop_invalidation}</div>` : ''}
             ${idea.target ? `<div class="ai-idea-detail"><strong>Target:</strong> ${idea.target}</div>` : ''}
             <div class="ai-idea-risk"><strong>Risk:</strong> ${idea.risk||'—'}</div>
-            ${idea.risk_reward ? `<div class="ai-idea-rr">R/R: ${idea.risk_reward}</div>` : ''}\`;
+            ${idea.risk_reward ? `<div class="ai-idea-rr">R/R: ${idea.risk_reward}</div>` : ''}`;
           ideasEl.appendChild(card);
         });
       }
