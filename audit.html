@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Synthesis Audit — SOFAR FINANCE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0d1117">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .au-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; padding:16px; max-width:1400px; margin:0 auto; }
+    .au-card { background:#111827; border:1px solid #1e2433; border-radius:8px; padding:16px; }
+    .au-card-full { grid-column:1/-1; }
+    .au-title { font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:#64748b; margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+    .au-ts { margin-left:auto; font-weight:400; font-size:9px; color:#374151; }
+
+    /* Coverage grid */
+    .au-cov-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:8px; margin-bottom:14px; }
+    .au-cov-cell { padding:8px 10px; border-radius:5px; border:1px solid; }
+    .au-cov-ok    { background:rgba(34,197,94,.08);  border-color:rgba(34,197,94,.25);  }
+    .au-cov-stale { background:rgba(245,158,11,.08); border-color:rgba(245,158,11,.25); }
+    .au-cov-miss  { background:rgba(239,68,68,.08);  border-color:rgba(239,68,68,.25);  }
+    .au-cov-label { font-family:'IBM Plex Mono',monospace; font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; }
+    .au-cov-ok .au-cov-label    { color:#22c55e; }
+    .au-cov-stale .au-cov-label { color:#f59e0b; }
+    .au-cov-miss .au-cov-label  { color:#ef4444; }
+    .au-cov-age  { font-family:'IBM Plex Mono',monospace; font-size:9px; color:#475569; margin-top:2px; }
+
+    /* Stacked weight bar */
+    .au-bar-wrap { height:28px; border-radius:4px; overflow:hidden; display:flex; margin-bottom:10px; }
+    .au-bar-seg  { height:100%; display:flex; align-items:center; justify-content:center; font-family:'IBM Plex Mono',monospace; font-size:8px; font-weight:700; overflow:hidden; white-space:nowrap; transition:width .4s; }
+    .au-bar-legend { display:flex; gap:8px; flex-wrap:wrap; margin-top:6px; }
+    .au-bar-dot    { display:inline-block; width:8px; height:8px; border-radius:2px; flex-shrink:0; }
+    .au-leg-item   { display:flex; align-items:center; gap:4px; font-family:'IBM Plex Mono',monospace; font-size:9px; color:#64748b; }
+
+    /* Reasoning chain */
+    .au-reason { font-size:11px; color:#94a3b8; background:#06080d; border:1px solid #1a1f28; border-radius:5px; padding:12px 14px; line-height:1.7; margin-bottom:10px; }
+
+    /* Pipeline health */
+    .au-pip-table { width:100%; border-collapse:collapse; }
+    .au-pip-table th { font-family:'IBM Plex Mono',monospace; font-size:9px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:#374151; padding:4px 8px; text-align:left; border-bottom:1px solid #1a1f28; }
+    .au-pip-table td { padding:6px 8px; border-bottom:1px solid #0d1117; }
+    .au-pip-name { font-family:'IBM Plex Mono',monospace; font-size:10px; color:#94a3b8; }
+    .au-pip-dot  { display:inline-block; width:10px; height:10px; border-radius:50%; }
+    .au-dot-ok    { background:#22c55e; }
+    .au-dot-stale { background:#f59e0b; }
+    .au-dot-miss  { background:#ef4444; }
+    .au-dot-na    { background:#374151; }
+    .au-pip-age  { font-family:'IBM Plex Mono',monospace; font-size:9px; color:#475569; }
+
+    /* SVG charts */
+    .au-svg { width:100%; overflow:visible; display:block; }
+    .au-axis { fill:#475569; font-size:9px; font-family:'IBM Plex Mono',monospace; }
+    .au-grid-line { stroke:#1a1f28; stroke-width:1; }
+
+    /* Attribution badges */
+    .au-badges { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
+    .au-badge  { font-family:'IBM Plex Mono',monospace; font-size:9px; font-weight:700; padding:3px 9px; border-radius:10px; }
+
+    /* Calibration */
+    .au-cal-row { display:flex; align-items:center; gap:8px; padding:5px 0; border-bottom:1px solid #0d1117; }
+    .au-cal-name { font-family:'IBM Plex Mono',monospace; font-size:10px; color:#94a3b8; width:120px; flex-shrink:0; }
+    .au-cal-bars { flex:1; display:flex; gap:4px; align-items:center; }
+    .au-cal-bar  { height:10px; border-radius:2px; }
+    .au-cal-opus { background:rgba(59,130,246,.6); }
+    .au-cal-pred { background:rgba(34,197,94,.6); }
+    .au-cal-vals { font-family:'IBM Plex Mono',monospace; font-size:9px; color:#475569; white-space:nowrap; }
+    .au-cal-badge { font-family:'IBM Plex Mono',monospace; font-size:8px; padding:1px 5px; border-radius:3px; }
+    .au-under  { background:rgba(245,158,11,.15); color:#f59e0b; }
+    .au-over   { background:rgba(239,68,68,.15);  color:#ef4444; }
+    .au-ok-acc { background:rgba(34,197,94,.15);  color:#22c55e; }
+
+    .au-loading { text-align:center; padding:40px; color:#475569; font-family:'IBM Plex Mono',monospace; font-size:11px; }
+    @media(max-width:900px){ .au-grid{ grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <div id="nav-root"></div>
+  <script src="js/nav.js"></script>
+  <script>NavComponent.setMeta(`<span class="live-dot"></span>LIVE<span style="margin-left:8px" id="clock"></span>`);</script>
+
+  <div class="au-grid" id="au-main">
+    <div class="au-loading au-card-full">Loading audit data…</div>
+  </div>
+
+  <script>
+  'use strict';
+
+  function tickClock() {
+    const el = document.getElementById('clock');
+    if (el) el.textContent = new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false,timeZone:'America/New_York'})+' ET';
+  }
+  setInterval(tickClock,1000); tickClock();
+
+  const fmtTs = iso => { try{ return new Date(iso).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit',hour12:true,timeZone:'America/New_York'}).replace(',','')+' ET'; }catch(e){return iso||'';} };
+  const fmtAge = m => m==null?'?': m<60?`${Math.round(m)}m`:`${(m/60).toFixed(1)}h`;
+
+  const SIG_COLORS = {
+    gex:'#60a5fa', vix_structure:'#a78bfa', options_flow:'#fb923c',
+    headlines:'#4ade80', vol_regime:'#f87171', prediction_feedback:'#94a3b8',
+    event_trees:'#fbbf24', price_data:'#374151',
+  };
+  const SIG_LABELS = {
+    gex:'GEX', vix_structure:'VIX Curve', options_flow:'Options Flow',
+    headlines:'Headlines', vol_regime:'Vol Regime', prediction_feedback:'Feedback',
+    event_trees:'Event Trees', price_data:'Price Data',
+  };
+  const SCRAPERS = [
+    {id:'headlines_rss',  label:'Headlines RSS',  thresh:120},
+    {id:'headlines_x',    label:'Headlines X',    thresh:120},
+    {id:'options_flow',   label:'Options Flow',   thresh:120},
+    {id:'gex',            label:'GEX Calculator', thresh:120},
+    {id:'vix_structure',  label:'VIX Structure',  thresh:120},
+    {id:'vol_regime',     label:'Vol Regime',     thresh:120},
+    {id:'event_trees',    label:'Event Monitor',  thresh:360},
+    {id:'prediction_feedback', label:'Backcheck', thresh:480},
+  ];
+
+  // ── Panel 1 ──────────────────────────────────────────────────────────────
+  function buildPanel1(snap) {
+    const inputs = snap?.inputs || {};
+    const stale  = snap?.data_staleness || {};
+    const health = snap?.pipeline_health || {};
+    const attr   = snap?.signal_attribution || {};
+
+    // Coverage grid
+    const covHtml = SCRAPERS.map(sc => {
+      const s = stale[sc.id] || {};
+      const cls = s.age_minutes==null ? 'au-cov-miss' : s.stale ? 'au-cov-stale' : 'au-cov-ok';
+      return `<div class="au-cov-cell ${cls}">
+        <div class="au-cov-label">${sc.label}</div>
+        <div class="au-cov-age">${s.age_minutes==null?'MISSING':fmtAge(s.age_minutes)+' ago'}</div>
+      </div>`;
+    }).join('');
+
+    // Stacked weight bar
+    const weights = attr?.weights || {};
+    const segs = Object.keys(SIG_COLORS).map(k => {
+      const w = weights[k]?.weight ?? 0;
+      const pct = Math.round(w * 100);
+      if (!pct) return '';
+      return `<div class="au-bar-seg" style="width:${pct}%;background:${SIG_COLORS[k]};color:#000">
+        ${pct>=8?SIG_LABELS[k].slice(0,4):''}
+      </div>`;
+    }).join('');
+    const legendHtml = Object.keys(SIG_COLORS).map(k => {
+      const w = weights[k]?.weight ?? 0;
+      if (!w) return '';
+      return `<div class="au-leg-item"><span class="au-bar-dot" style="background:${SIG_COLORS[k]}"></span>${SIG_LABELS[k]} ${Math.round(w*100)}%</div>`;
+    }).join('');
+
+    const chain = attr?.reasoning_chain || attr?.primary_driver
+      ? `Primary: ${attr.primary_driver} — ${attr.reasoning_chain || 'No chain provided'}`
+      : (snap ? 'No signal attribution in this snapshot (pre-Layer 2 run)' : 'No snapshot available');
+
+    const missingBadge = health.missing_sources?.length
+      ? `<span style="color:#ef4444;font-family:'IBM Plex Mono',monospace;font-size:10px">⚠ Missing: ${health.missing_sources.join(', ')}</span>`
+      : `<span style="color:#22c55e;font-family:'IBM Plex Mono',monospace;font-size:10px">✓ All sources present</span>`;
+    const staleBadge = health.stale_sources?.length
+      ? `<span style="color:#f59e0b;font-family:'IBM Plex Mono',monospace;font-size:10px;margin-left:8px">⚑ Stale: ${health.stale_sources.join(', ')}</span>` : '';
+
+    return `<div class="au-card au-card-full">
+      <div class="au-title">Latest Synthesis Audit
+        <span class="au-ts">${snap ? fmtTs(snap.generated_at) : 'No snapshot'}</span>
+      </div>
+      <div class="au-cov-grid">${covHtml}</div>
+      ${segs ? `<div style="margin-bottom:6px;font-family:'IBM Plex Mono',monospace;font-size:9px;color:#374151">OPUS SIGNAL WEIGHTS</div>
+      <div class="au-bar-wrap">${segs}</div>
+      <div class="au-bar-legend">${legendHtml}</div>` : ''}
+      <div style="margin:12px 0 6px;font-family:'IBM Plex Mono',monospace;font-size:9px;color:#374151">REASONING CHAIN</div>
+      <div class="au-reason">${chain}</div>
+      <div>${missingBadge}${staleBadge}</div>
+    </div>`;
+  }
+
+  // ── Panel 2: Signal scores over time (SVG line chart) ────────────────────
+  function buildPanel2(attrHistory) {
+    if (!attrHistory?.length) return `<div class="au-card">
+      <div class="au-title">Signal Predictive Scores</div>
+      <div class="au-loading">No attribution history yet — populates after first backcheck</div>
+    </div>`;
+
+    const sigs = Object.keys(SIG_COLORS).filter(k => k !== 'price_data');
+    const W = 500, H = 200, PL = 36, PR = 10, PT = 10, PB = 28;
+    const plotW = W-PL-PR, plotH = H-PT-PB;
+    const N = attrHistory.length;
+    const px = i => PL + i/(Math.max(N-1,1)) * plotW;
+    const py = v => PT + plotH - (v/100)*plotH;
+
+    let svg = [`<svg class="au-svg" viewBox="0 0 ${W} ${H}">`];
+    // Grid lines
+    [0,25,50,75,100].forEach(v => {
+      const y = py(v);
+      svg.push(`<line x1="${PL}" y1="${y}" x2="${W-PR}" y2="${y}" class="au-grid-line"/>`);
+      svg.push(`<text x="${PL-3}" y="${y+3}" text-anchor="end" class="au-axis">${v}</text>`);
+    });
+
+    // Lines per signal
+    sigs.forEach(sig => {
+      const pts = attrHistory.map((h, i) => {
+        const score = (h.signal_scores||{})[sig]?.predictive_score;
+        return score != null ? `${i===0?'M':'L'}${px(i).toFixed(1)},${py(score).toFixed(1)}` : null;
+      }).filter(Boolean);
+      if (pts.length > 1) {
+        svg.push(`<path d="${pts.join(' ')}" fill="none" stroke="${SIG_COLORS[sig]}" stroke-width="1.5" opacity=".8"/>`);
+      }
+      // Last dot
+      const last = attrHistory[attrHistory.length-1];
+      const lastScore = (last?.signal_scores||{})[sig]?.predictive_score;
+      if (lastScore != null) {
+        svg.push(`<circle cx="${px(N-1)}" cy="${py(lastScore)}" r="3" fill="${SIG_COLORS[sig]}"/>`);
+      }
+    });
+
+    // X-axis labels (first and last)
+    if (attrHistory[0]?.prediction_id) {
+      const lbl0 = attrHistory[0].prediction_id.slice(5,13);
+      const lblN = attrHistory[N-1].prediction_id.slice(5,13);
+      svg.push(`<text x="${px(0)}" y="${H-2}" text-anchor="middle" class="au-axis">${lbl0}</text>`);
+      svg.push(`<text x="${px(N-1)}" y="${H-2}" text-anchor="middle" class="au-axis">${lblN}</text>`);
+    }
+    svg.push('</svg>');
+
+    // Rolling avg badges
+    const avgBadges = sigs.map(sig => {
+      const scores = attrHistory.map(h => (h.signal_scores||{})[sig]?.predictive_score).filter(v => v!=null);
+      if (!scores.length) return '';
+      const avg = Math.round(scores.reduce((a,b)=>a+b,0)/scores.length);
+      return `<span class="au-badge" style="background:${SIG_COLORS[sig]}22;color:${SIG_COLORS[sig]};border:1px solid ${SIG_COLORS[sig]}44">${SIG_LABELS[sig]} avg ${avg}</span>`;
+    }).join('');
+
+    return `<div class="au-card au-card-full">
+      <div class="au-title">Signal Predictive Scores — Last ${N} Cycles</div>
+      <div class="au-badges">${avgBadges}</div>
+      ${svg.join('')}
+      <div class="au-bar-legend" style="margin-top:8px">
+        ${sigs.map(s=>`<div class="au-leg-item"><span class="au-bar-dot" style="background:${SIG_COLORS[s]}"></span>${SIG_LABELS[s]}</div>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  // ── Panel 3: Weight calibration ──────────────────────────────────────────
+  function buildPanel3(attrHistory) {
+    if (!attrHistory?.length) return `<div class="au-card">
+      <div class="au-title">Weight Calibration</div>
+      <div class="au-loading">No attribution history yet</div>
+    </div>`;
+
+    const sigs = Object.keys(SIG_COLORS).filter(k => k !== 'price_data');
+    const BAR_MAX = 80;
+
+    const rows = sigs.map(sig => {
+      const scores = attrHistory.map(h => (h.signal_scores||{})[sig]).filter(Boolean);
+      if (!scores.length) return '';
+      const avgPred  = Math.round(scores.reduce((a,b)=>a+(b.predictive_score||0),0)/scores.length);
+      const avgOpus  = Math.round(scores.filter(s=>s.opus_weight!=null).reduce((a,b)=>a+(b.opus_weight||0)*100,0) / Math.max(scores.filter(s=>s.opus_weight!=null).length,1));
+      const accCounts = scores.reduce((acc,s)=>{const wa=s.weight_accuracy||''; acc[wa]=(acc[wa]||0)+1; return acc;},{});
+      const dominant = Object.entries(accCounts).sort((a,b)=>b[1]-a[1])[0]?.[0]||'appropriate';
+      const badgeCls = dominant.includes('under')?'au-under':dominant.includes('over')?'au-over':'au-ok-acc';
+      const badgeLbl = dominant.replace('_',' ');
+      return `<div class="au-cal-row">
+        <div class="au-cal-name">${SIG_LABELS[sig]}</div>
+        <div class="au-cal-bars">
+          <div class="au-cal-bar au-cal-opus" style="width:${Math.round(avgOpus/100*BAR_MAX)}px" title="Opus weight ${avgOpus}%"></div>
+          <div class="au-cal-bar au-cal-pred"  style="width:${Math.round(avgPred/100*BAR_MAX)}px" title="Predictive score ${avgPred}"></div>
+        </div>
+        <div class="au-cal-vals">${avgOpus}% wt / ${avgPred} score</div>
+        <span class="au-cal-badge ${badgeCls}">${badgeLbl}</span>
+      </div>`;
+    }).join('');
+
+    return `<div class="au-card">
+      <div class="au-title">Weight Calibration</div>
+      <div class="au-bar-legend" style="margin-bottom:10px">
+        <div class="au-leg-item"><span class="au-bar-dot" style="background:rgba(59,130,246,.6)"></span>Opus weight</div>
+        <div class="au-leg-item"><span class="au-bar-dot" style="background:rgba(34,197,94,.6)"></span>Actual score</div>
+      </div>
+      ${rows || '<div class="au-loading" style="padding:16px">No calibration data yet</div>'}
+    </div>`;
+  }
+
+  // ── Panel 4: Pipeline health ──────────────────────────────────────────────
+  function buildPanel4(snapshots) {
+    const pipRows = SCRAPERS.map(sc => {
+      // Find age from the latest snapshot
+      const latestSnap = snapshots[snapshots.length-1];
+      const stale = latestSnap?.data_staleness?.[sc.id];
+      const age   = stale?.age_minutes;
+      const cls   = age==null ? 'au-dot-miss' : stale.stale ? 'au-dot-stale' : 'au-dot-ok';
+      const ageStr = age==null ? 'NO DATA' : fmtAge(age)+' ago';
+
+      // Render 7-day timeline (one dot per snapshot, capped at 7 most recent)
+      const recent = snapshots.slice(-14);
+      const dots = recent.map(s => {
+        const si = s?.data_staleness?.[sc.id];
+        const dotCls = !si ? 'au-dot-na' : si.stale ? 'au-dot-stale' : 'au-dot-ok';
+        return `<span class="au-pip-dot ${dotCls}" title="${s.snapshot_id||'?'}: ${si?.age_minutes!=null?fmtAge(si.age_minutes)+' ago':'missing'}"></span>`;
+      }).join(' ');
+
+      return `<tr>
+        <td><span class="au-pip-name">${sc.label}</span></td>
+        <td><span class="au-pip-dot ${cls}"></span></td>
+        <td><span class="au-pip-age">${ageStr}</span></td>
+        <td style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:2px">${dots}</td>
+      </tr>`;
+    }).join('');
+
+    return `<div class="au-card">
+      <div class="au-title">Data Pipeline Health</div>
+      <table class="au-pip-table">
+        <thead><tr>
+          <th>Source</th><th>Status</th><th>Last Seen</th><th>History</th>
+        </tr></thead>
+        <tbody>${pipRows}</tbody>
+      </table>
+      <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap">
+        <div class="au-leg-item"><span class="au-pip-dot au-dot-ok"></span><span style="font-size:9px;color:#64748b">Fresh</span></div>
+        <div class="au-leg-item"><span class="au-pip-dot au-dot-stale"></span><span style="font-size:9px;color:#64748b">Stale</span></div>
+        <div class="au-leg-item"><span class="au-pip-dot au-dot-miss"></span><span style="font-size:9px;color:#64748b">Missing</span></div>
+        <div class="au-leg-item"><span class="au-pip-dot au-dot-na"></span><span style="font-size:9px;color:#64748b">No snapshot</span></div>
+      </div>
+    </div>`;
+  }
+
+  // ── Load + render ─────────────────────────────────────────────────────────
+  async function loadAndRender() {
+    const t = Date.now();
+    const [calR, synthR] = await Promise.all([
+      fetch(`data/attribution-calibration.json?t=${t}`),
+      fetch(`data/ai-synthesis.json?t=${t}`),
+    ]);
+
+    const cal   = calR.ok   ? await calR.json()   : {history:[]};
+    const synth = synthR.ok ? await synthR.json()  : null;
+    const attrHistory = cal.history || [];
+
+    // Load snapshots via API (lists files in data/synthesis-snapshots/)
+    let snapshots = [];
+    try {
+      const listR = await fetch(`/api/list-snapshots?t=${t}`);
+      if (listR.ok) {
+        const { files = [] } = await listR.json();
+        const recent = files.slice(-10);  // last 10 snapshots
+        const loaded = await Promise.all(
+          recent.map(f => fetch(`data/synthesis-snapshots/${f}?t=${t}`)
+            .then(r=>r.ok?r.json():null).catch(()=>null))
+        );
+        snapshots = loaded.filter(Boolean);
+      }
+    } catch(e) { /* silent */ }
+
+    const latestSnap = snapshots[snapshots.length-1] || null;
+
+    document.getElementById('au-main').innerHTML = [
+      buildPanel1(latestSnap),
+      buildPanel2(attrHistory),
+      buildPanel3(attrHistory),
+      buildPanel4(snapshots),
+    ].join('');
+  }
+
+  loadAndRender();
+  setInterval(loadAndRender, 60000);
+  </script>
+</body>
+</html>

@@ -40,6 +40,7 @@
       default: 'performance.html',
       items: [
         { href: 'performance.html', label: 'Performance' },
+        { href: 'audit.html',       label: 'Audit' },
       ],
     },
     {
