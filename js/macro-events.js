@@ -169,6 +169,23 @@ async function activateEvent(event_id) {
   } catch(e) { setStatus('Error: ' + e.message, '#ef4444'); }
 }
 
+async function deleteEvent(event_id, root_label) {
+  if (!confirm(`Permanently DELETE "${root_label}"?\n\nThis removes the tree and all its nodes. It cannot be undone.`)) return;
+  try {
+    const r = await fetch(TRIGGER_API, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'delete', event_id }),
+    });
+    if (r.status === 202) {
+      setStatus('⚙️ Deleting…', '#ef4444');
+      trees.events = trees.events.filter(e => e.event_id !== event_id);
+      if (activeEventId === event_id) activeEventId = null;
+      startPolling();
+      renderAll();
+    }
+  } catch(e) { setStatus('Error: ' + e.message, '#ef4444'); }
+}
+
 async function archiveEvent(event_id) {
   if (!confirm('Archive this event? It will stop being monitored.')) return;
   try {
@@ -294,22 +311,38 @@ function renderHero(event) {
     </div>`;
 }
 
+let _archiveExpanded = false;
 function renderEventList() {
   const el = $('me-event-list');
   if (!el) return;
   const events = trees.events || [];
-  // Hide entirely when 0 or 1 event — hero box handles the display
-  if (events.length <= 1) { el.innerHTML = ''; el.style.display = 'none'; return; }
+  const nonArchived = events.filter(e => e.status !== 'archived');
+  const archived    = events.filter(e => e.status === 'archived');
+  // Hide if only one non-archived and no archived — hero handles it
+  if (events.length <= 1 && !archived.length) { el.innerHTML = ''; el.style.display = 'none'; return; }
   el.style.display = '';
-  // Multiple events: show compact switcher row
-  el.innerHTML = `<div style="font-family:var(--font-mono);font-size:9px;color:var(--text-secondary);margin-bottom:6px;letter-spacing:.08em;text-transform:uppercase">Switch Event</div>` +
-    events.map(e => {
-      const active = e.event_id === activeEventId;
-      return `<span class="me-event-chip ${active?'active':''}" onclick="selectEvent('${e.event_id}')">
-        <span class="me-chip-status" style="background:${chipColor(e.status)}"></span>
-        ${e.root_label} <span style="color:${chipColor(e.status)};font-size:9px">[${e.status}]</span>
-      </span>`;
-    }).join('');
+
+  const chip = e => {
+    const sel = e.event_id === activeEventId;
+    const tag = e.status === 'draft' ? ` <span style="color:#f59e0b;font-size:9px">[draft]</span>` : '';
+    return `<span class="me-event-chip ${sel?'active':''}" onclick="selectEvent('${e.event_id}')" style="${e.status==='archived'?'opacity:.6;':''}" >
+      <span class="me-chip-status" style="background:${chipColor(e.status)}"></span>
+      ${e.root_label}${tag}
+    </span>`;
+  };
+
+  const divider = (nonArchived.length && archived.length)
+    ? `<span style="display:inline-block;width:1px;height:20px;background:#1e2433;margin:0 6px;vertical-align:middle"></span>` : '';
+
+  const archivedHtml = archived.length ? `
+    <span class="me-event-chip me-archive-toggle" onclick="_archiveExpanded=!_archiveExpanded;renderEventList();"
+      style="border-style:dashed;color:#475569;cursor:pointer">
+      ${_archiveExpanded ? '▾' : '▸'} Archived (${archived.length})
+    </span>
+    ${_archiveExpanded ? archived.map(chip).join('') : ''}` : '';
+
+  el.innerHTML = `<div style="font-family:var(--font-mono);font-size:9px;color:var(--text-secondary);margin-bottom:6px;letter-spacing:.08em;text-transform:uppercase">Switch Event</div>`
+    + nonArchived.map(chip).join('') + divider + archivedHtml;
 }
 
 function selectEvent(event_id) {
@@ -478,6 +511,7 @@ function renderTree(event) {
             <button id="me-submit-btn" class="me-btn me-btn-primary" onclick="submitChanges()" disabled>No Changes</button>` : ''}
           ${isDraft ? `<button class="me-btn me-btn-success" onclick="activateEvent('${event.event_id}')">▶ Activate</button>` : ''}
           ${isActive ? `<button class="me-btn me-btn-ghost" onclick="archiveEvent('${event.event_id}')">Archive</button>` : ''}
+          ${event.status === 'archived' ? `<button class="me-btn me-btn-danger me-btn-sm" onclick="deleteEvent('${event.event_id}', '${event.root_label.replace(/'/g,'\\&apos;')}')">🗑 Delete</button>` : ''}
         </div>
       </div>
 
@@ -553,10 +587,11 @@ function renderAll() {
     setStatus('No events — create one above');
     return;
   }
-  if (!activeEventId || !events.find(e=>e.event_id===activeEventId)) {
-    // Auto-select first non-archived event
-    const first = events.find(e=>e.status!=='archived') || events[0];
-    activeEventId = first?.event_id;
+  // Never auto-select an archived event
+  const isSelectable = id => { const e = events.find(x=>x.event_id===id); return e && e.status !== 'archived'; };
+  if (!activeEventId || !isSelectable(activeEventId)) {
+    const first = events.find(e=>e.status==='active') || events.find(e=>e.status==='draft') || null;
+    activeEventId = first?.event_id ?? null;
   }
   renderEventList();
   const event = events.find(e=>e.event_id===activeEventId);

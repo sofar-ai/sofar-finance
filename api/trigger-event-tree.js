@@ -60,7 +60,7 @@ module.exports = async (req, res) => {
     if (req.method === 'POST') {
       const body = req.body || {};
       const { action, event_id, root_label, changes } = body;
-      const VALID_ACTIONS = ['generate', 'curate', 'activate', 'archive', 'regenerate'];
+      const VALID_ACTIONS = ['generate', 'curate', 'activate', 'archive', 'regenerate', 'delete'];
       if (!action || !VALID_ACTIONS.includes(action)) {
         return res.status(400).json({ error: `Invalid action. Must be one of: ${VALID_ACTIONS.join(', ')}` });
       }
