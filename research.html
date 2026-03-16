@@ -160,8 +160,16 @@
   function tickClock(){const el=document.getElementById('clock');if(el)el.textContent=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false,timeZone:'America/New_York'})+' ET';}
   setInterval(tickClock,1000); tickClock();
 
-  const fmtTs = iso => { try{const d=new Date(iso);return d.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit',hour12:true,timeZone:'America/New_York'}).replace(',','')+' ET';}catch(e){return iso||'';} };
-  const fmtAge = iso => { try{const m=Math.round((Date.now()-new Date(iso))/60000);return m<60?`${m}m ago`:`${(m/60).toFixed(1)}h ago`;}catch(e){return '';} };
+  const parseTs = iso => {
+    if(!iso) return null;
+    // Normalise: strip double-suffix like "+00:00Z", then ensure trailing Z
+    let s2 = iso.replace(/\+00:00Z$/, 'Z').replace(/\+00:00$/, 'Z');
+    if(!s2.endsWith('Z')) s2 += 'Z';
+    const d = new Date(s2);
+    return isNaN(d.getTime()) ? null : d;
+  };
+  const fmtTs = iso => { try{const d=parseTs(iso);if(!d)return '';return d.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit',hour12:true,timeZone:'America/New_York'}).replace(',','')+' ET';}catch(e){return '';} };
+  const fmtAge = iso => { try{const d=parseTs(iso);if(!d)return '';const m=Math.round((Date.now()-d)/60000);if(m<0)return '';return m<60?`${m}m ago`:`${(m/60).toFixed(1)}h ago`;}catch(e){return '';} };
 
   const CAT_CLASS = {
     gex:'re-cat-gex',vix:'re-cat-vix',options_flow:'re-cat-flow',sentiment:'re-cat-sent',
