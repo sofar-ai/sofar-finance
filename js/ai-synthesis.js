@@ -429,7 +429,7 @@ const AISynthesis = (() => {
         <div class="ai-tf-bars">${barsHTML}</div>
         <div class="ai-acc-sub" style="margin:8px 0 4px">
           Avg price error: ${stats.avg_price_error_pct != null ? stats.avg_price_error_pct + '%' : '—'}
-          ${stats.best_ticker ? ` &nbsp;·&nbsp; Best: <strong>${stats.best_ticker}</strong> · Worst: <strong>${stats.worst_ticker||'—'}</strong>` : ''}
+          ${stats.best_ticker ? ` &nbsp;·&nbsp; Best: <strong>${stats.best_ticker?.ticker || '—'} (${stats.best_ticker?.directional_accuracy_pct?.toFixed(1) ?? '—'}%)</strong> · Worst: <strong>${stats.worst_ticker?.ticker || '—'} (${stats.worst_ticker?.directional_accuracy_pct?.toFixed(1) ?? '—'}%)</strong>` : ''}
         </div>
         <div class="ai-acc-hist-title">Last 10 Predictions</div>
         <div class="ai-acc-hist">${tableRows || '<div class="ai-empty">No predictions yet</div>'}</div>`;
