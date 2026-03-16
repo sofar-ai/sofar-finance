@@ -4,7 +4,7 @@
  */
 
 const OptionsFlow = (() => {
-  const STALE_MIN = 10;
+  const STALE_MIN = 30;
   const MAX_ROWS  = 80;
 
   let currentSymbol = 'SPY';
@@ -88,7 +88,12 @@ const OptionsFlow = (() => {
       feedEl.innerHTML = `<div class="opt-empty">No ${currentSymbol} flow in latest fetch</div>`;
       return;
     }
-    trades.forEach(t => feedEl.appendChild(renderRow(t)));
+    let rendered = 0;
+    trades.forEach(t => {
+      try { feedEl.appendChild(renderRow(t)); rendered++; }
+      catch(e) { console.warn('renderRow error:', e, t); }
+    });
+    if (!rendered) feedEl.innerHTML = `<div class="opt-empty">Flow data loaded but rows failed to render</div>`;
   }
 
   async function loadData() {
@@ -97,8 +102,10 @@ const OptionsFlow = (() => {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       allTrades = data.trades || [];
-      renderFeed(data);
-    } catch {
+      try { renderFeed(data); }
+      catch(e) { console.error('renderFeed error:', e); if (feedEl) feedEl.innerHTML = `<div class="opt-empty">Render error: ${e.message}</div>`; }
+    } catch(fetchErr) {
+      console.error('loadData fetch error:', fetchErr);
       if (feedEl) feedEl.innerHTML = '<div class="opt-empty">Awaiting first data fetch</div>';
     }
   }
