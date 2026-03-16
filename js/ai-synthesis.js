@@ -429,7 +429,8 @@ const AISynthesis = (() => {
           const tOk = t.correct;
           const tErr = t.price_error_pct != null ? `${(+t.price_error_pct).toFixed(2)}%` : '—';
           const pred = t.predicted_price != null ? `$${(+t.predicted_price).toFixed(2)}` : '—';
-          const act  = t.actual_price  != null ? `$${(+t.actual_price).toFixed(2)}`  : '—';
+          const actVal = t.price_at_backcheck ?? t.actual_price;
+          const act  = actVal != null ? `$${(+actVal).toFixed(2)}` : '—';
           return `<div class="ai-hist-expand-row">
             <span>${t.ticker||'?'}</span>
             <span>${pred}</span>
@@ -468,7 +469,19 @@ const AISynthesis = (() => {
           ${stats.best_ticker ? ` &nbsp;·&nbsp; Best: <strong>${stats.best_ticker?.ticker || '—'} (${stats.best_ticker?.directional_accuracy_pct?.toFixed(1) ?? '—'}%)</strong> · Worst: <strong>${stats.worst_ticker?.ticker || '—'} (${stats.worst_ticker?.directional_accuracy_pct?.toFixed(1) ?? '—'}%)</strong>` : ''}
         </div>
         <div class="ai-acc-hist-title">Last 10 Predictions</div>
-        <div class="ai-acc-hist">${tableRows || '<div class="ai-empty">No predictions yet</div>'}</div>`;
+        <div class="ai-acc-hist">
+          <div class="ai-hist-header">
+            <span>DATE</span>
+            <span>TF</span>
+            <span>SIGNAL</span>
+            <span>CONF</span>
+            <span>RESULT</span>
+            <span>AVG ERR</span>
+            <span>GRADE</span>
+            <span></span>
+          </div>
+          ${tableRows || '<div class="ai-empty">No predictions yet</div>'}
+        </div>`;
     } else if (accSection) {
       accSection.innerHTML = '<div class="ai-empty">No accuracy data yet — check back after first backcheck run</div>';
     }
