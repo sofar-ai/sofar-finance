@@ -36,9 +36,9 @@ const OptionsFlow = (() => {
   }
 
   function renderRow(row) {
-    const right   = (row.right || '?').toUpperCase();
+    const right   = String(row.right ?? '?').toUpperCase();
     const isCall  = right === 'C' || right === 'CALL';
-    const side    = (row.side || row.condition || '').toUpperCase();
+    const side    = String(row.side ?? row.condition ?? '').toUpperCase();
     const sideLabel = side === 'A' || side === 'BUY' ? 'BUY' : side === 'B' || side === 'SELL' ? 'SELL' : side || '—';
     const sideClass = sideLabel === 'BUY' ? 'opt-bid' : sideLabel === 'SELL' ? 'opt-ask' : '';
     const unusual = (row.premium || 0) >= 50000 || row.sweep;
@@ -53,7 +53,7 @@ const OptionsFlow = (() => {
       <span class="opt-size">${row.size != null ? `${row.size}x` : '—'}</span>
       <span class="opt-prem">${fmtPrem(row.premium)}</span>
       <span class="opt-side ${sideClass}">${sideLabel}</span>
-      <span class="opt-cond">${row.exchange || ''}</span>
+      <span class="opt-cond">${String(row.exchange ?? '')}</span>
     `;
     return el;
   }
@@ -81,7 +81,7 @@ const OptionsFlow = (() => {
     else                   setStatus(since || '—');
 
     const trades = (data.trades || [])
-      .filter(t => !currentSymbol || (t.symbol || '').toUpperCase() === currentSymbol)
+      .filter(t => !currentSymbol || String(t.symbol ?? '').toUpperCase() === currentSymbol)
       .slice(0, MAX_ROWS);
 
     if (!trades.length) {
