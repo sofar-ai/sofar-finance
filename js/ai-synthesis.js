@@ -411,7 +411,11 @@ const AISynthesis = (() => {
         const label = `${dt.getMonth()+1}/${dt.getDate()} ${dt.getHours()}:${String(dt.getMinutes()).padStart(2,'0')}`;
         const sig   = e.signal || e.short_term_signal || '—';
         const tf    = TF_LABEL[e.timeframe] || e.timeframe || 'ID';
-        const ok    = e.signal_correct ?? e.short_term_correct;
+        const ok    = e.signal_correct ?? e.short_term_correct ?? (
+          e.ticker_results && e.ticker_results.length > 0
+            ? e.ticker_results.filter(t => t.correct).length > e.ticker_results.length / 2
+            : undefined
+        );
         return `<div class="ai-hist-row">
           <span class="ai-hist-time">${label}</span>
           <span class="ai-hist-tf">${tf}</span>
