@@ -864,3 +864,365 @@ tail -30 ~/logs/ai-synthesis.log
 ---
 
 *Last updated: March 2026*
+
+---
+
+## 12. Volatility Intelligence System
+
+Added March 2026. Three-stage pipeline feeding the Vol Regime Dashboard (`vol-regime.html`).
+
+### Architecture
+
+```
+ThetaData Terminal (localhost:25503)
+    │
+    ├─► gex-calculator.py          (cron 9:30 ET Mon-Fri)
+    │       ├─ Fetches SPY/SPXW options within DTE ≤45 days
+    │       ├─ Strike range: 70–130% of spot
+    │       ├─ Call GEX = OI × Gamma × 100 × Spot
+    │       ├─ Put GEX  = OI × Gamma × −100 × Spot
+    │       └─ Writes: data/gex-data.json
+    │           {net_gex, gex_flip_point, call_wall, put_wall, gex_regime, strike_chart[]}
+    │
+    ├─► vix-term-structure.py      (cron 9:35 ET Mon-Fri)
+    │       ├─ Fetches VX1–VX4 futures via put-call parity on SPX options
+    │       ├─ Derives contango/backwardation from curve slope
+    │       └─ Writes: data/vix-structure.json
+    │           {spot_vix, vx1..vx4, contango_pct, structure, curve[]}
+    │
+    └─► vol-regime.py              (cron 9:40 ET Mon-Fri)
+            ├─ Reads gex-data.json + vix-structure.json
+            ├─ 4-state classifier: explosive / pinned / tension / transitioning
+            ├─ Weighted composite:
+            │     GEX magnitude 40% | Contango deviation 25%
+            │     VIX spot level 20% | Term structure slope 15%
+            └─ Writes: data/vol-regime.json
+                {regime, confidence, component_scores{}, implications[]}
+```
+
+### GEX Methodology
+
+- **Gamma clipping:** `max(dte, 0.5)` days prevents near-expiry over-amplification
+- **IV fallback:** 0.20 (20%) when ThetaData IV unavailable
+- **GEX multiplier:** 100 for both SPY and SPXW (standard contract size)
+- **Strike filtering:** 70–130% of spot for GEX; −25% to +25% for OTM clustering in synthesis
+- **Deep ITM exclusion:** ≥100% moneyness excluded from price target clustering
+- **Flip point:** Net GEX zero-crossing in the strike chart — the level where dealer hedging flips from stabilizing to amplifying
+
+### Vol Regime States
+
+| Regime | Trigger | Implication |
+|---|---|---|
+| `explosive` | Large negative net GEX + VIX backwardation | Tail risk elevated; widen predicted ranges 30% |
+| `pinned` | Large positive net GEX near ATM | Compressed realized vol; narrow ranges 20% |
+| `tension` | High VIX contango + neutral GEX | Volatility pricing premium; moderate widening |
+| `transitioning` | Mixed signals across components | Conflicting regime signals; add uncertainty |
+
+### AI Synthesis Integration
+
+Vol regime block injected into Claude Opus prompt after `CURRENT MARKET REGIME:` with:
+- Regime label + confidence score
+- Implication text (regime-specific instruction to Claude on range adjustment)
+- Component breakdown with numeric scores
+
+---
+
+## 13. Institutional Audit System
+
+Added March 2026. Four-layer architecture for full pipeline observability and signal calibration.
+
+### Layer 1: Input Snapshots
+
+Every synthesis run creates an **immutable forensic snapshot** before calling Claude.
+
+- **Location:** `data/synthesis-snapshots/YYYY-MM-DDTHHMM.json`
+- **Format:** Minute-precision ISO timestamp (never overwritten if same minute runs twice)
+- **Contents:** All 9 inputs with staleness metadata, pipeline health, data age in minutes
+- **Retention:** 90 days (pruned by `backcheck-predictions.sh`)
+
+```json
+{
+  "snapshot_id": "2026-03-16T0930",
+  "inputs": {
+    "headlines": {"age_minutes": 12, "stale": false, "count": 69},
+    "options_flow": {"age_minutes": 3, "stale": false, "count": 145},
+    "gex": {"age_minutes": 1, "stale": false, "net_gex": -2.4e9},
+    "vix_structure": {"age_minutes": 2, "stale": false, "spot": 22.3},
+    "vol_regime": {"age_minutes": 1, "stale": false, "regime": "tension"}
+  },
+  "pipeline_health": {"sources_fresh": 8, "sources_stale": 1}
+}
+```
+
+### Layer 2: Signal Attribution Enforcement
+
+Claude Opus **must** return a `signal_attribution` block — enforced via system prompt Rule 11.
+
+- **8 tracked signals:** `headlines`, `options_flow`, `gex`, `vix_structure`, `vol_regime`, `prediction_feedback`, `event_trees`, `price_data`
+- **Weight constraints:** All 8 weights must sum exactly to 1.00
+- **Per-signal fields:** `weight` (0–1), `values_cited` (specific numerics), `influence` (one of: primary/supporting/context/negligible)
+- **Primary driver rule:** `primary_driver` field must match the signal with highest weight
+- **Snapshot storage:** Self-reported weights copied into snapshot after response parsing
+
+### Layer 3: Post-Resolution Attribution Scoring
+
+After each prediction resolves, deterministic scorers evaluate signal quality retroactively.
+
+- **8 scorers:** One per input signal, 0–100 scale based on actual market outcome vs prediction signal
+- **Output:** `data/signal-attribution/{prediction_id}_{timeframe}.json` per resolved prediction
+- **Calibration loop:** `data/attribution-calibration.json` — rolling 30-cycle history
+  - Weight accuracy classifiers: `appropriate` / `underweighted` / `overweighted`
+  - Predictive scores per signal fed back into next synthesis prompt as `<attribution_calibration>` block
+- **Frontend data files:**
+  - `data/audit-latest.json` — current snapshot + attribution for dashboard
+  - `data/attribution-history.json` — last 30 cycles for trend charts
+
+### Layer 4: Audit Dashboard (`audit.html`)
+
+Full-page observability dashboard at `/audit.html`. Panel layout:
+
+```
+┌──────────────────────────────────────────────────────────┐
+│ Panel 1: Latest Synthesis Audit              [full-width] │
+│ Snapshot metadata · Input coverage grid · Weights bar    │
+│ Reasoning chain · Pipeline health                        │
+├─────────────────────────┬────────────────────────────────┤
+│ Panel 5: Pipeline Health│ Panel 4: Weight Calibration    │
+│ 7-day timeline          │ Opus weight vs actual score    │
+│ Green/amber/red dots    │ Bias trends per signal         │
+├─────────────────────────┼────────────────────────────────┤
+│ Panel 2: Pred History   │ Panel 3: Signal Predictiveness │
+│ Timeframe/direction     │ Line chart 30 cycles           │
+│ Expandable detail rows  │ Per-signal score badges        │
+└─────────────────────────┴────────────────────────────────┘
+```
+
+**CSS classes:** `.au-card`, `.au-card-full`, `.au-grid`, `.au-hist-wrap`, `.au-expand-row`
+
+---
+
+## 14. Event Tree System
+
+Added March 2026. Macro event catalyst tracking with node-based analysis.
+
+### Architecture
+
+```
+event-processor.py  (invoked via /api/trigger-event-tree POST)
+    ├─ Generates, curates, activates, archives, regenerates, deletes event trees
+    ├─ Writes to data/event-trees.json
+    └─ Results polled by frontend via status endpoint
+
+event-monitor.py  (cron — runs with ai-synthesis.py)
+    ├─ Reads active event trees + latest headlines
+    ├─ Matches headlines to nodes via word-boundary regex
+    │     Pattern: r'\b' + re.escape(keyword) + r'\b'
+    │     Prevents substring false positives (e.g. "APT" ≠ "capital")
+    └─ Updates data/event-analysis.json with node match counts + sensitivity
+```
+
+### Event Tree Schema (`data/event-trees.json`)
+
+```json
+{
+  "event_id": "iran-conflict-2026",
+  "status": "active",   // active | draft | archived
+  "root_label": "Iran Military Conflict 2026",
+  "nodes": [
+    {
+      "node_id": "oil-supply-shock",
+      "label": "Oil Supply Shock",
+      "keywords": ["Hormuz shipping", "Gulf shipping disruption", "oil supply"],
+      "probability": 0.72,
+      "impact": "high"
+    }
+  ]
+}
+```
+
+### Archive/Delete Workflow
+
+- **Archive:** Sets `status: "archived"` — tree persists in JSON for read-only viewing
+- **Delete:** Removes entry completely — only available on archived trees
+- **UI guards:** Two-step confirmation for all destructive actions ("ACTION?" → "Are you sure?")
+- **Dropdown split:** Active trees / `▸ Archived (N)` collapsible section; auto-select never lands on archived
+
+### Keyword Matching Rules
+
+- Word-boundary regex: `r'\b' + re.escape(kw) + r'\b'` — no substring matches
+- Compound terms required for commodity/shipping nodes (e.g. `"Red Sea shipping"` not `"tankers"`)
+- Keywords quoted in HTML attributes to prevent injection
+
+### Pre-defined Events
+
+| Event ID | Status | Nodes | Description |
+|---|---|---|---|
+| `iran-conflict-2026` | active | 10 | US-Iran military escalation macro impact tree |
+| `helium-shortage-2026` | active | 1 | Global helium supply shock — CPI/inflation node |
+
+---
+
+## 15. Research Intelligence Pipeline
+
+Added March 2026. Five-layer automated research pipeline producing daily scored research feeds for the human review interface.
+
+### Architecture Overview
+
+```
+Layer 1: Scrapers (no AI)
+│   research-scout-scraper.py   → X/FinTwit, SeekingAlpha, Reddit, Quantpedia
+│   research-lab-scraper.py     → arXiv q-fin, Substacks, GitHub trending, SpotGamma
+│   Output: data/research-raw/{scout|lab}-raw-{date}.json
+│   Dedup: SHA-256 content hash (scout 7-day window, lab 30-day window)
+│
+Layer 2: Summarizer (AI — research agent, text in/out only)
+│   research-summarizer.py
+│   ├─ Sends raw items in batches of 12 to research agent
+│   ├─ Agent: research librarian persona — no web access, no tool calls
+│   │     Strict rules: paraphrase only, no extrapolation, relevance prefixed "Agent assessment:"
+│   ├─ Post-validation (Python, deterministic):
+│   │     - URL must match raw file (agent cannot invent URLs)
+│   │     - Summary ≤500 chars
+│   │     - relevance_to_sofar must start with "Agent assessment:"
+│   │     - Tickers validated against KNOWN_TICKERS list (163 symbols)
+│   │     - Categories and credibility enum validated
+│   └─ Output: data/research-scored/{scout|lab}-scored-{date}.json
+│
+Layer 3: Human Review Interface (research.html)
+│   ├─ Left panel: Scout (trade ideas) — sorted by relevance desc, starred first
+│   ├─ Right panel: Lab (algo improvements) — agent assessment shown as distinct styled block
+│   ├─ Cards: title (clickable link), summary, credibility badge, category badge, tickers, relevance bar
+│   ├─ Action buttons: ⭐ Star / ✕ Dismiss / → Action (saves to research-actions.json)
+│   ├─ Filters: category, credibility, relevance ≥ slider
+│   └─ Bottom bar: pipeline status, last run timestamps, next scheduled run
+│
+Layer 4: Cron Schedule
+│   10:30 UTC (6:30 ET) Mon-Fri  → scout scraper
+│   11:00 UTC (7:00 ET) Mon-Fri  → scout summarizer
+│   02:30 UTC (10:30 ET prev night) Mon-Fri → lab scraper
+│   03:00 UTC (11:00 ET prev night) Mon-Fri → lab summarizer
+│
+Layer 5: Auditability
+    ├─ raw file — immutable once written
+    ├─ scored file — raw_id references back to source
+    ├─ validation-log — rejections + reasons
+    └─ Retention: raw/scored/validation 90 days; research-reviews.json never deleted
+```
+
+### Scout Sources
+
+| Source | Items/run | Notes |
+|---|---|---|
+| X/FinTwit | ~20 | Loaded from cached `headlines-x.json` (reuses existing scrape) |
+| SeekingAlpha | ~30 | RSS feed (headline + excerpt) |
+| Reddit r/options + r/algotrading | 1–40 | Filtered: min 50 upvotes |
+| Quantpedia | 10 | Strategy summaries |
+
+### Lab Sources
+
+| Source | Items/run | Notes |
+|---|---|---|
+| arXiv q-fin | 0–50 | Atom API; 0 items Sat/Sun is normal (no weekend submissions) |
+| Papers With Backtest | 15 | |
+| The Quant's Playbook | 15 | |
+| SetupAlpha | 15 | |
+| Macro Compass | 15 | |
+| Quantpedia Blog | 10 | |
+| GitHub trending | 26–30 | 3 search topics: algorithmic-trading, options-trading, quantitative-finance |
+| SpotGamma blog | 5 | |
+| Kris Abdelmessih | 0–5 | Inconsistent RSS |
+
+### Scoring Schema
+
+```json
+{
+  "raw_id": "scout-0042",
+  "skip": false,
+  "type": "trade_idea",
+  "title": "Short title under 80 chars",
+  "summary": "2-3 sentence paraphrase under 500 chars",
+  "relevance_to_sofar": "Agent assessment: ...",
+  "relevance_score": 0.82,
+  "tickers": ["SPY", "QQQ"],
+  "category": "gex",
+  "credibility": "high",
+  "credibility_basis": "45K followers, verified GEX researcher",
+  "actionable": true,
+  "url": "https://..."
+}
+```
+
+**Category → SOFAR component mapping:**
+
+| Category | SOFAR Component |
+|---|---|
+| `gex` | GEX calculator (delta-hedging flows) |
+| `vix` | VIX term structure |
+| `options_flow` | Options flow detection |
+| `methodology` | AI synthesis / scoring improvements |
+| `new_signal` | Novel signal candidates |
+| `backtesting` | Prediction backcheck system |
+| `sentiment` | Headlines/X feed |
+| `macro` | Event tree / macro impact |
+| `trade_setup` | Direct trade ideas for analysis |
+| `risk_management` | Position sizing / drawdown controls |
+
+### Known Ticker List (163 symbols)
+
+Covers US equities, sector ETFs, commodity ETFs (GLD, USO, BNO, DBA, UNG), crypto ETFs (IBIT, ETHE, BITO), futures symbols (CL, NG, GC, SI, ES, NQ), and rare earth symbols (LYC, MP). Maintained in all three research scripts. Agent-cited tickers not in this list are stripped on validation (soft reject — item kept, invalid tickers removed).
+
+### Research Agent
+
+- **Agent ID:** `research` (separate OpenClaw agent, isolated workspace)
+- **Invocation:** `openclaw agent --agent research --local --json --message "<prompt>"`
+- **Capabilities:** None (no tools, no web search — text in, text out)
+- **Model:** `anthropic/claude-sonnet-4-6`
+- **Batch size:** 12 items per API call
+- **System prompt persona:** "research librarian for a quantitative trading system" — strict paraphrase-only rules
+
+### Data Files (Research Pipeline)
+
+| File | Retention | Description |
+|---|---|---|
+| `data/research-raw/scout-raw-{date}.json` | 90 days | Raw scraped items, immutable |
+| `data/research-raw/lab-raw-{date}.json` | 90 days | Raw scraped items, immutable |
+| `data/research-scored/scout-scored-{date}.json` | 90 days | Agent-scored output |
+| `data/research-scored/lab-scored-{date}.json` | 90 days | Agent-scored output |
+| `data/research-raw/validation-log-{date}.json` | 90 days | Per-run validation results |
+| `data/research-reviews.json` | Forever | Human review decisions (star/dismiss/action) |
+| `data/research-actions.json` | Forever | Items flagged for follow-up |
+| `data/research-raw/seen-hashes-scout.json` | Rolling 7d | SHA-256 dedup window |
+| `data/research-raw/seen-hashes-lab.json` | Rolling 30d | SHA-256 dedup window |
+
+---
+
+## 16. Navigation System
+
+Added March 2026. Shared navigation across all pages via `js/nav.js`.
+
+### Usage
+
+All pages include:
+```html
+<div id="nav-root"></div>
+<script src="js/nav.js"></script>
+```
+
+`NavComponent.setMeta(html)` sets the right-side status content (clock, live dot, etc.)
+
+### Dropdown Groups
+
+| Group | Pages |
+|---|---|
+| **Markets** | Dashboard · Options Flow · Vol Regime |
+| **AI** | AI Analysis · Macro Events · Deep Dives · Daily Summary · Research |
+| **Performance** | Performance |
+| **Config** | Config |
+
+### Active State
+
+Active page detected by `window.location.pathname` match against `href`. Active group gets amber bottom border; active item gets amber left border in dropdown. Mobile hamburger collapse at 780px breakpoint.
+
+---
+
+*Last updated: March 2026*
