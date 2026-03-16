@@ -27,6 +27,7 @@
     .vr-badge-transitioning{ background:rgba(251,146,60,.15); color:#fb923c; border:1px solid rgba(251,146,60,.3); }
     .vr-badge-explosive    { background:rgba(239,68,68,.15);  color:#ef4444; border:1px solid rgba(239,68,68,.3); }
     .vr-badge-unknown      { background:rgba(100,116,139,.15);color:#94a3b8; border:1px solid rgba(100,116,139,.3); }
+    .vr-regime-explain { font-size:11px; color:#64748b; font-style:italic; line-height:1.6; margin-top:8px; max-width:520px; }
 
     /* ── Confidence meter ───────────────────────────── */
     .vr-conf-wrap { display:flex; flex-direction:column; gap:4px; min-width:160px; }
@@ -125,6 +126,12 @@
   }
 
   const REGIME_CLASS = { pinned:'pinned', tension:'tension', transitioning:'transitioning', explosive:'explosive' };
+  const REGIME_EXPLAIN = {
+    explosive:     'Dealer hedging is amplifying moves in both directions. Market makers are short gamma — as price drops they must sell more, as it rises they must buy more. Expect outsized moves and wide intraday ranges.',
+    pinned:        'Dealer hedging is suppressing volatility. Market makers are long gamma — they sell rallies and buy dips automatically. Expect tight ranges and mean reversion.',
+    transitioning: 'Dealers are shifting from stabilizing to amplifying. Directional moves are more likely to extend. Watch for the regime to tip into explosive.',
+    tension:       'GEX is positive but VIX signals stress. Something is building beneath a calm surface. Watch for a volatility breakout if GEX flips negative.',
+  };
   const REGIME_COLOR = { pinned:'#22c55e', tension:'#f59e0b', transitioning:'#fb923c', explosive:'#ef4444' };
 
   function confColor(c) {
@@ -394,7 +401,10 @@
       <div class="vr-card">
         <div class="vr-card-title">Volatility Regime</div>
         <div class="vr-regime-hero">
-          <span class="vr-regime-badge vr-badge-${regClass}">${regimeName.toUpperCase()}</span>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <span class="vr-regime-badge vr-badge-${regClass}">${regimeName.toUpperCase()}</span>
+            ${REGIME_EXPLAIN[regimeName]?`<div class="vr-regime-explain">${REGIME_EXPLAIN[regimeName]}</div>`:''}
+          </div>
           <div class="vr-conf-wrap">
             <span class="vr-conf-label">Confidence</span>
             <span class="vr-conf-pct">${Math.round(conf*100)}%</span>
