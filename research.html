@@ -85,6 +85,24 @@
     .re-toast { position:fixed; bottom:60px; right:16px; background:#1e2433; border:1px solid #252c38; color:#e2e8f0; font-family:'IBM Plex Mono',monospace; font-size:10px; padding:8px 14px; border-radius:4px; z-index:9999; opacity:0; transition:opacity .2s; pointer-events:none; }
     .re-toast.show { opacity:1; }
 
+    .re-gap-toggle { font-family:'IBM Plex Mono',monospace; font-size:9px; color:#64748b; display:flex; align-items:center; gap:4px; cursor:pointer; white-space:nowrap; }
+    .re-gap-toggle input { accent-color:#f59e0b; cursor:pointer; }
+    .re-gap-badge  { background:rgba(34,197,94,.13); color:#4ade80; font-family:'IBM Plex Mono',monospace; font-size:8px; font-weight:700; padding:2px 7px; border-radius:3px; }
+    .re-nogap-note { font-size:10px; color:#374151; font-style:italic; margin-bottom:8px; line-height:1.5; }
+    .re-gap-panel  { background:rgba(34,197,94,.04); border:1px solid rgba(34,197,94,.15); border-radius:5px; padding:10px 12px; margin-bottom:8px; }
+    .re-gap-hdr    { font-family:'IBM Plex Mono',monospace; font-size:9px; font-weight:700; color:#4ade80; margin-bottom:6px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .re-gap-desc   { font-size:11px; color:#94a3b8; line-height:1.6; margin-bottom:6px; }
+    .re-gap-meta   { display:flex; gap:5px; flex-wrap:wrap; }
+    .re-complexity { font-family:'IBM Plex Mono',monospace; font-size:8px; font-weight:700; padding:2px 6px; border-radius:3px; }
+    .re-cplx-lo    { background:rgba(34,197,94,.15);  color:#4ade80; }
+    .re-cplx-mid   { background:rgba(245,158,11,.15); color:#f59e0b; }
+    .re-cplx-hi    { background:rgba(239,68,68,.15);  color:#ef4444; }
+    .re-action-note-wrap { margin-top:6px; display:none; }
+    .re-action-note-wrap.open { display:block; }
+    .re-action-note { width:100%; background:#080b10; border:1px solid #1e2433; color:#e2e8f0; font-family:'IBM Plex Mono',monospace; font-size:10px; padding:6px 8px; border-radius:3px; outline:none; resize:none; }
+    .re-action-note:focus { border-color:#22c55e55; }
+    .re-save-note  { margin-top:4px; font-family:'IBM Plex Mono',monospace; font-size:9px; font-weight:700; padding:3px 10px; border-radius:3px; border:1px solid #22c55e44; background:transparent; color:#22c55e; cursor:pointer; }
+    .re-save-note:hover { background:rgba(34,197,94,.08); }
     .re-empty { text-align:center; padding:40px 20px; color:#374151; font-family:'IBM Plex Mono',monospace; font-size:11px; }
     @media(max-width:800px){ .re-panels{grid-template-columns:1fr;} .re-panel{max-height:50vh;} }
   </style>
@@ -118,6 +136,7 @@
               Rel ≥ <input type="range" class="re-slider" id="scout-rel" min="0" max="100" value="0">
               <span id="scout-rel-val">0%</span>
             </div>
+            <label class="re-gap-toggle"><input type="checkbox" id="scout-gaps-only"> Gaps only</label>
           </div>
         </div>
         <div class="re-scroll" id="scout-cards"></div>
@@ -139,6 +158,7 @@
               Rel ≥ <input type="range" class="re-slider" id="lab-rel" min="0" max="100" value="0">
               <span id="lab-rel-val">0%</span>
             </div>
+            <label class="re-gap-toggle"><input type="checkbox" id="lab-gaps-only"> Gaps only</label>
           </div>
         </div>
         <div class="re-scroll" id="lab-cards"></div>
@@ -255,18 +275,59 @@
     const tickers= (item.tickers||[]).slice(0,5);
     const ts     = item.timestamp || '';
     const verified = item.fetch_verified !== false;
-    const agentNote = item.relevance_to_sofar || '';
-    const actionBtnTxt = actions.find(a=>a.item_id===rid) ? '✓ Saved' : '→ Action';
-    const actionBtnCls = actions.find(a=>a.item_id===rid) ? 'saved' : '';
+    const hasGap = item.has_gap === true;
+    const pc     = item.proposed_change;
+    const gapAnalysis = item.sofar_gap_analysis || item.relevance_to_sofar || '';
+    const summary  = item.source_summary || item.summary || '';
+    const actionSaved = actions.find(a=>a.item_id===rid);
 
     const tickerBadges = tickers.map(t=>`<span class="re-ticker">${t}</span>`).join('');
     const verifiedHtml = verified
       ? `<span class="re-verified" title="Fetch verified">✓ verified</span>`
-      : `<span class="re-unverif" title="${item.partial_reason||'unverified'}">⚠ ${item.partial_reason||'partial'}</span>`;
+      : `<span class="re-unverif">${item.partial_reason||'partial'}</span>`;
+
+    const ageStr = fmtAge(ts);
+
+    // Gap analysis block
+    let gapBlock = '';
+    if(hasGap && pc) {
+      const cplxCls = pc.implementation_complexity==='low'?'re-cplx-lo':pc.implementation_complexity==='high'?'re-cplx-hi':'re-cplx-mid';
+      gapBlock = `<div class="re-gap-panel">
+        <div class="re-gap-hdr">
+          <span class="re-gap-badge">⚡ GAP IDENTIFIED</span>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:8px;color:#60a5fa;background:rgba(59,130,246,.1);padding:2px 6px;border-radius:3px;">${pc.target_component||''}</span>
+          <span class="re-complexity ${cplxCls}">${(pc.implementation_complexity||'').toUpperCase()}</span>
+          ${pc.estimated_effort?`<span style="font-family:'IBM Plex Mono',monospace;font-size:8px;color:#475569">${pc.estimated_effort}</span>`:''}
+        </div>
+        <div class="re-gap-desc">${pc.change_description||''}</div>
+      </div>`;
+    } else if(gapAnalysis && !hasGap) {
+      gapBlock = `<div class="re-nogap-note">${gapAnalysis}</div>`;
+    }
+
+    // Agent assessment (lab) or gap analysis text for has_gap items
+    let agentBlock = '';
+    if(hasGap && gapAnalysis) {
+      agentBlock = `<div class="re-agent-note">${gapAnalysis}</div>`;
+    } else if(isLab && gapAnalysis && !hasGap) {
+      agentBlock = '';  // already shown in nogap-note
+    } else if(isLab && gapAnalysis) {
+      agentBlock = `<div class="re-agent-note">${gapAnalysis}</div>`;
+    }
+
+    // Action button / note area
+    const actionBtnTxt = actionSaved ? '✓ Saved' : '→ Action';
+    const actionBtnCls = actionSaved ? 'saved' : '';
+    const noteArea = hasGap ? `
+      <div class="re-action-note-wrap" id="re-note-${rid}">
+        <textarea class="re-action-note" id="re-note-text-${rid}" rows="2" placeholder="Add a note (e.g. 'implement next sprint', 'discuss with Claude first')…"></textarea>
+        <button class="re-save-note" onclick="saveActionNote('${rid}',${JSON.stringify({title:item.title,url:item.url,source_summary:summary.slice(0,200),relevance_score:rel,tickers:item.tickers||[],proposed_change:pc}).replace(/</g,'&lt;')})">Save note</button>
+      </div>` : '';
 
     return `<div class="re-card${rev.starred?' re-starred':''}${rev.dismissed?' re-dismissed':''}"
          id="re-card-${rid}"
-         data-cat="${cat}" data-cred="${cred}" data-rel="${relPct}" data-starred="${rev.starred?1:0}">
+         data-cat="${cat}" data-cred="${cred}" data-rel="${relPct}"
+         data-gap="${hasGap?1:0}" data-starred="${rev.starred?1:0}">
       <div class="re-card-top">
         <div class="re-card-title">
           <a href="${item.url}" target="_blank" rel="noopener">${item.title||'Untitled'}</a>
@@ -274,29 +335,30 @@
       </div>
       <div class="re-card-meta">
         ${(item.author||item.source)?`<span class="re-author">${item.author||item.source}</span>`:''}
-        <span class="re-ts">${fmtAge(ts)}</span>
+        ${ageStr?`<span class="re-ts">${ageStr}</span>`:''}
         ${verifiedHtml}
-        ${item.credibility_basis?`<span title="${item.credibility_basis}">ℹ</span>`:''}
       </div>
-      <div class="re-summary">${item.summary||''}</div>
-      ${isLab && agentNote ? `<div class="re-agent-note">${agentNote}</div>` : ''}
+      <div class="re-summary">${summary}</div>
+      ${agentBlock}
+      ${gapBlock}
       <div class="re-badges">
         <span class="re-badge ${credCls}">${cred.toUpperCase()}</span>
         <span class="re-badge ${catCls}">${catLbl}</span>
+        ${hasGap?'<span class="re-gap-badge">GAP</span>':''}
         ${tickerBadges}
       </div>
       <div class="re-rel-bar">
         <div class="re-rel-label">Relevance ${relPct}%</div>
         <div class="re-rel-track"><div class="re-rel-fill" style="width:${relPct}%;background:${relColor(rel)}"></div></div>
       </div>
-      ${isLab && !agentNote ? `<div class="re-agent-note">${agentNote}</div>` : (agentNote && !isLab ? `<div class="re-agent-note" style="display:none" title="${agentNote}"></div>` : '')}
+      ${noteArea}
       <div class="re-actions">
         <button class="re-action-btn re-btn-star${rev.starred?' active':''}"
           onclick="doStar('${rid}',this)">⭐ Star</button>
         <button class="re-action-btn re-btn-dim"
           onclick="doDismiss('${rid}')">✕ Dismiss</button>
         <button class="re-action-btn re-btn-action ${actionBtnCls}"
-          onclick="doAction('${rid}',${JSON.stringify({title:item.title,url:item.url,summary:(item.summary||'').slice(0,200),relevance_score:rel,tickers:item.tickers||[]}).replace(/</g,'&lt;')},this)">${actionBtnTxt}</button>
+          onclick="${hasGap?`toggleActionNote('${rid}',this)`:`doAction('${rid}',${JSON.stringify({title:item.title,url:item.url,source_summary:summary.slice(0,200),relevance_score:rel,tickers:item.tickers||[]}).replace(/</g,'&lt;')},this)`}">${actionBtnTxt}</button>
       </div>
     </div>`;
   }
@@ -307,10 +369,12 @@
     if(!items || !items.length){ el.innerHTML = `<div class="re-empty">No data loaded.<br>Run the research scrapers first.</div>`; return; }
 
     // Separate starred, normal, dismissed
+    const gapsOnly = document.getElementById(containerId.replace('-cards','-gaps-only'))?.checked || false;
     let filtered = items.filter(i => !i.skip)
       .filter(i => !catFilter  || i.category === catFilter)
       .filter(i => !credFilter || i.credibility === credFilter)
-      .filter(i => Math.round((i.relevance_score||0)*100) >= relMin);
+      .filter(i => Math.round((i.relevance_score||0)*100) >= relMin)
+      .filter(i => !gapsOnly || i.has_gap === true);
 
     // Sort: starred first, then by relevance desc, then dismissed last
     filtered.sort((a,b) => {
@@ -325,7 +389,8 @@
 
     const shown = filtered.filter(i => !reviews[i.raw_id]?.dismissed).length;
     if(countEl && stats) {
-      countEl.textContent = `${shown} shown (${stats.skipped||0} skipped, ${stats.rejected_by_validation||0} rejected)`;
+      const gapCount = filtered.filter(i => i.has_gap).length;
+      countEl.textContent = `${shown} shown · ${gapCount} gaps · ${stats.skipped||0} skipped`;
     }
     el.innerHTML = filtered.map(i => buildCard(i, isLab)).join('') ||
       `<div class="re-empty">No items match current filters.</div>`;
