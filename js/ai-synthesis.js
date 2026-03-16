@@ -403,10 +403,10 @@ const AISynthesis = (() => {
           </div>`;
       }).join('');
 
-      // Last 10 predictions table
+      // Last 10 predictions table — expandable rows
       const last10 = (log || []).slice(-10).reverse();
       const TF_LABEL = { intraday: 'ID', next_day: 'ND', long_term: 'LT' };
-      const tableRows = last10.map(e => {
+      const tableRows = last10.map((e, idx) => {
         const dt = new Date(e.prediction_time);
         const label = `${dt.getMonth()+1}/${dt.getDate()} ${dt.getHours()}:${String(dt.getMinutes()).padStart(2,'0')}`;
         const sig   = e.signal || e.short_term_signal || '—';
@@ -416,12 +416,48 @@ const AISynthesis = (() => {
             ? e.ticker_results.filter(t => t.correct).length > e.ticker_results.length / 2
             : undefined
         );
-        return `<div class="ai-hist-row">
-          <span class="ai-hist-time">${label}</span>
-          <span class="ai-hist-tf">${tf}</span>
-          <span class="ai-hist-sig" style="color:${signalColor(sig)}">${sig}</span>
-          <span class="ai-hist-conf">${e.confidence_at_prediction ?? '—'}%</span>
-          <span class="ai-hist-result ${ok ? 'ai-correct' : 'ai-incorrect'}">${ok ? '✓' : '✗'}</span>
+        const avgErr = e.overall_price_error_pct != null
+          ? `${(+e.overall_price_error_pct).toFixed(2)}%` : '—';
+        // Most common grade from ticker_results
+        const grades = (e.ticker_results||[]).map(t => t.price_accuracy_grade).filter(Boolean);
+        const grade = grades.length
+          ? Object.entries(grades.reduce((a,g)=>{a[g]=(a[g]||0)+1;return a},{}))
+              .sort((a,b)=>b[1]-a[1])[0][0]
+          : (e.price_accuracy_grade || '—');
+        // Expanded ticker rows
+        const tickerRows = (e.ticker_results||[]).map(t => {
+          const tOk = t.correct;
+          const tErr = t.price_error_pct != null ? `${(+t.price_error_pct).toFixed(2)}%` : '—';
+          const pred = t.predicted_price != null ? `$${(+t.predicted_price).toFixed(2)}` : '—';
+          const act  = t.actual_price  != null ? `$${(+t.actual_price).toFixed(2)}`  : '—';
+          return `<div class="ai-hist-expand-row">
+            <span>${t.ticker||'?'}</span>
+            <span>${pred}</span>
+            <span>${act}</span>
+            <span>${tErr}</span>
+            <span class="${tOk?'ai-correct':'ai-incorrect'}">${tOk?'✓':'✗'}</span>
+          </div>`;
+        }).join('');
+        const expandHtml = tickerRows ? `
+          <div class="ai-hist-expand">
+            <div class="ai-hist-expand-hdr">
+              <span>TICKER</span><span>PRED</span><span>ACTUAL</span><span>ERR%</span><span>DIR</span>
+            </div>
+            ${tickerRows}
+          </div>` : '';
+        const wrapId = `ai-hist-wrap-${idx}`;
+        return `<div class="ai-hist-wrap" id="${wrapId}" onclick="this.classList.toggle('open')">
+          <div class="ai-hist-row">
+            <span class="ai-hist-time">${label}</span>
+            <span class="ai-hist-tf">${tf}</span>
+            <span class="ai-hist-sig" style="color:${signalColor(sig)}">${sig}</span>
+            <span class="ai-hist-conf">${e.confidence_at_prediction ?? '—'}%</span>
+            <span class="ai-hist-result ${ok===undefined?'':''}${ok?'ai-correct':ok===false?'ai-incorrect':''}">${ok===undefined?'—':ok?'✓':'✗'}</span>
+            <span class="ai-hist-err">${avgErr}</span>
+            <span class="ai-hist-grade">${grade}</span>
+            ${expandHtml ? '<span class="ai-hist-caret">▶</span>' : '<span></span>'}
+          </div>
+          ${expandHtml}
         </div>`;
       }).join('');
 
