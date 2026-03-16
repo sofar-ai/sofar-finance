@@ -1,5 +1,43 @@
 # Changelog
 
+## 2026-03-11
+
+### Features
+
+- **Manual backcheck queue** (`data/pending-backchecks.json`, `scripts/refresh-poller.py`)
+  — Manual refresh now schedules a backcheck 2 hours after prediction via `pending-backchecks.json` in the repo
+  — Poller processes queue on every cron tick: finds due entries, runs `backcheck-predictions.sh intraday manual`, marks `completed` or `missed`
+  — Dedup guard: no duplicate entries for same prediction_time; MAX_PENDING=5 cap with dashboard warning
+  — Late-by-min tracking when machine was offline at due time
+
+- **Step progress messages in refresh trigger** (`scripts/refresh-poller.py`, `js/refresh.js`)
+  — Trigger JSON now carries a `message` field updated at each step
+  — Button shows live: "⚙️ Step 1/3: Fetching fresh options flow…" → "⚙️ Step 2/3: Running AI analysis…" → "⚙️ Step 3/3: Scheduling backcheck…" → "✅ Done — backcheck scheduled for X:XX PM ET"
+  — Frontend `setState()` prefers API message over local label text
+
+- **`trigger_type` field in accuracy log** (`scripts/backcheck-predictions.sh`)
+  — Every `accuracy-log.json` entry now includes `trigger_type: "manual" | "scheduled"`
+  — Backcheck script accepts optional 2nd arg (`manual`/`scheduled`); defaults to `scheduled` for cron runs
+
+- **`accuracy-stats.json` restructured** (`scripts/backcheck-predictions.sh`)
+  — Added `overall: {total, correct, accuracy_pct}` top-level block
+  — Added `by_trigger: {scheduled: {}, manual: {}}` breakdown
+  — `by_timeframe` entries now each include `by_signal` sub-breakdown
+  — Added `by_signal` top-level (BULLISH/BEARISH/NEUTRAL)
+  — Legacy flat fields (`total_predictions`, `correct`, `accuracy_pct`) preserved for backward compat
+
+- **Performance tab v2** (`performance.html`, `js/performance.js`, `css/style.css`)
+  — Accuracy Overview: 4 scorecards + Scheduled vs Manual side-by-side comparison + By Timeframe bars + By Signal bars
+  — Pending Backchecks section: live countdown per entry, completed/missed badges, late indicator
+  — Last 20 Predictions table: Trigger column (⏰ Sched / 👆 Manual), per-timeframe signal + result columns, coverage bar
+  — Ticker Performance table: per-ticker accuracy broken down by timeframe
+  — Detail log filter bar: All / Intraday / Next Day / Long Term / Correct / Wrong
+
+- **GitHub-based manual refresh (completed)** (`api/trigger-refresh.js`, `scripts/refresh-poller.py`)
+  — End-to-end tested: Vercel API POST → GitHub trigger file → local poller picks up → scripts run → done
+  — Works from any device including iPhone — no localhost dependency
+  — `GITHUB_TOKEN` + `GITHUB_REPO` added to Vercel environment variables
+
 ## 2026-03-13
 
 ### Features
