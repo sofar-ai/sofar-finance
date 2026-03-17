@@ -43,6 +43,17 @@ const HealthCheck = (() => {
 
   function todayStr() { return new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' }); }
 
+  function isMarketHours() {
+    var now = new Date();
+    var et = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+    var day = et.getDay();
+    var hour = et.getHours();
+    var min = et.getMinutes();
+    var timeNum = hour * 60 + min;
+    if (day === 0 || day === 6) return false;
+    return timeNum >= 570 && timeNum <= 960;
+  }
+
   function fmtAge(mins) {
     if (mins < 1) return 'just now';
     if (mins < 60) return Math.round(mins) + 'm ago';
@@ -60,8 +71,9 @@ const HealthCheck = (() => {
     } catch { return iso; }
   }
 
-  function statusClass(ageMins, th) {
+  function statusClass(ageMins, th, isMarketFeed) {
     if (ageMins === null) return 'stale';
+    if (isMarketFeed && !isMarketHours() && ageMins < 1200) return 'ok';
     if (ageMins > th.err) return 'err';
     if (ageMins > th.warn) return 'warn';
     return 'ok';
@@ -191,9 +203,11 @@ const HealthCheck = (() => {
   function renderFeedCard(result) {
     var th = THRESHOLDS[result.key];
     if (!th) return '';
+    var MARKET_FEEDS = ['ai_synthesis','options_flow','flow_sentiment','top_flow','gex_data','vix_structure','vol_regime'];
+    var isMarketFeed = MARKET_FEEDS.indexOf(result.key) >= 0;
     var cls = result.status === 'missing' ? 'stale'
             : result.status === 'error' ? 'err'
-            : statusClass(result.age, th);
+            : statusClass(result.age, th, isMarketFeed);
     var badge = { cls: cls, text: statusLabel(cls) };
     var rows = [];
 
@@ -224,6 +238,9 @@ const HealthCheck = (() => {
     if (e.accuracy !== undefined) rows.push({ label: 'Dir accuracy', value: e.accuracy + '%' });
     if (e.cycles !== undefined) rows.push({ label: 'Cal cycles', value: e.cycles });
 
+    if (isMarketFeed && !isMarketHours() && cls === 'ok' && result.age > th.warn) {
+      rows.push({ label: 'Note', value: 'Market closed — data from last session', cls: 'hc-value-muted' });
+    }
     return renderCard(th.emoji + ' ' + th.label, badge, rows);
   }
 
@@ -251,6 +268,24 @@ const HealthCheck = (() => {
     if (flowResult && flowResult.ts) rows.push({ label: 'Last flow fetch', value: fmtTs(flowResult.ts) });
     rows.push({ label: 'Note', value: 'Direct health requires local access', cls: 'hc-value-muted' });
     return renderCard('🖥️ ThetaData Terminal', { cls: cls, text: statusLabel(cls) }, rows);
+  }
+
+  function renderCronCard(cronData) {
+    if (!cronData) return renderCard('⏰ Cron Health', { cls: 'stale', text: 'N/A' }, [{ label: 'Status', value: 'No cron-health.json', cls: 'hc-value-muted' }]);
+    var age = (Date.now() - new Date(cronData.checked_at).getTime()) / 60000;
+    var cls = age > 60 ? 'err' : age > 35 ? 'warn' : 'ok';
+    var rows = [
+      { label: '<span class="hc-dot hc-dot-' + cls + '"></span>Heartbeat', value: fmtAge(age), cls: 'hc-value-' + cls },
+      { label: 'Cron service', value: cronData.cron_service || '?', cls: cronData.cron_service === 'active' ? 'hc-value-ok' : 'hc-value-err' },
+      { label: 'ThetaData', value: cronData.thetadata_service || '?', cls: cronData.thetadata_service === 'active' ? 'hc-value-ok' : 'hc-value-err' },
+      { label: 'Flow daemon', value: cronData.daemon_status || '?', cls: cronData.daemon_status === 'streaming' ? 'hc-value-ok' : 'hc-value-warn' },
+      { label: 'Trades today', value: (cronData.daemon_trades_today || 0).toLocaleString() },
+      { label: 'Cron entries', value: cronData.cron_entry_count || '?' },
+    ];
+    var logs = cronData.log_age_minutes || {};
+    if (logs.ai_synthesis !== undefined) rows.push({ label: 'Synthesis log age', value: logs.ai_synthesis + 'm', cls: logs.ai_synthesis > 300 ? 'hc-value-warn' : '' });
+    if (logs.flow_fetch !== undefined) rows.push({ label: 'Flow log age', value: logs.flow_fetch + 'm', cls: logs.flow_fetch > 300 ? 'hc-value-warn' : '' });
+    return renderCard('⏰ Cron Health', { cls: cls, text: cls === 'ok' ? 'OK' : cls === 'warn' ? 'STALE' : 'DOWN' }, rows);
   }
 
   function renderOverall(results, qr) {
@@ -293,9 +328,11 @@ const HealthCheck = (() => {
 
     grid.innerHTML = '<div class="health-card health-card-full" style="text-align:center;color:#4b5563;padding:40px">Running diagnostics...</div>';
 
+    var cronPromise = fetch('data/cron-health.json?t=' + Date.now()).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; });
     var feedResults = await Promise.all(FEEDS.map(function(f){return fetchFeed(f)}));
     var researchResults = await fetchResearch();
     var quoteResult = await fetchQuoteHealth();
+    var cronResult = await cronPromise;
     var allResults = feedResults.concat(researchResults);
     var flowResult = allResults.find(function(r){return r.key==='options_flow'});
 
@@ -304,6 +341,7 @@ const HealthCheck = (() => {
     var cards = [];
     cards.push(renderQuoteCard(quoteResult));
     cards.push(renderThetaCard(flowResult));
+    cards.push(renderCronCard(cronResult));
 
     ['ai_synthesis','options_flow','flow_sentiment','top_flow','gex_data','vix_structure','vol_regime'].forEach(function(k) {
       var r = allResults.find(function(x){return x.key===k});
