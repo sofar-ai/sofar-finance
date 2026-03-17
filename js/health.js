@@ -41,7 +41,7 @@ const HealthCheck = (() => {
     { key: 'pred_archive',   url: 'data/prediction-archive.json',     tsField: '_last_entry' },
   ];
 
-  function todayStr() { return new Date().toISOString().slice(0, 10); }
+  function todayStr() { return new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' }); }
 
   function fmtAge(mins) {
     if (mins < 1) return 'just now';
