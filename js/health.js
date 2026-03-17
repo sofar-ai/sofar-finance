@@ -153,20 +153,27 @@ const HealthCheck = (() => {
   }
 
   async function fetchResearch() {
-    const date = todayStr();
-    const results = [];
-    for (const prefix of ['scout', 'lab']) {
-      try {
-        const r = await fetch('data/research-scored/' + prefix + '-scored-' + date + '.json?t=' + Date.now());
-        if (r.ok) {
-          const data = await r.json();
-          const items = data.items || (Array.isArray(data) ? data : []);
-          results.push({ key: 'research_' + prefix, status: 'loaded', age: 0, ts: data.scored_at || date, extra: { count: items.length, date: date } });
-        } else {
-          results.push({ key: 'research_' + prefix, status: 'missing', age: null, ts: null, extra: { date: date } });
-        }
-      } catch (e) {
-        results.push({ key: 'research_' + prefix, status: 'error', age: null, ts: null, extra: {} });
+    var today = todayStr();
+    var yesterday = new Date(new Date().getTime() - 86400000).toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+    var results = [];
+    for (var i = 0; i < 2; i++) {
+      var prefix = i === 0 ? 'scout' : 'lab';
+      var found = false;
+      for (var d = 0; d < 2; d++) {
+        var date = d === 0 ? today : yesterday;
+        try {
+          var r = await fetch('data/research-scored/' + prefix + '-scored-' + date + '.json?t=' + Date.now());
+          if (r.ok) {
+            var data = await r.json();
+            var items = data.items || (Array.isArray(data) ? data : []);
+            results.push({ key: 'research_' + prefix, status: 'loaded', age: d === 0 ? 0 : 1440, ts: data.scored_at || date, extra: { count: items.length, date: date } });
+            found = true;
+            break;
+          }
+        } catch (e) {}
+      }
+      if (!found) {
+        results.push({ key: 'research_' + prefix, status: 'missing', age: null, ts: null, extra: { date: today } });
       }
     }
     return results;
