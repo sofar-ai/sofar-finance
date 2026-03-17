@@ -393,3 +393,52 @@ Added to all three research scripts: BNO, IBIT, CL, LYC, DBA, ETHE, GC, ES, NQ, 
 - Scout summarizer: 29/61 scored, 0 rejected, avg relevance 0.467
 - Lab summarizer: 70/139 scored, 0 rejected, avg relevance 0.525
 - End-to-end pipeline: all 5 file types committed to GitHub (raw, scored, validation log × 2 pipelines)
+
+---
+
+## 2026-03-16 — Pipeline Restoration + Audit System + Health Diagnostics
+
+### Fixed
+- **Crontab restored** — research pipeline development wiped all market data crons; restored full schedule (GEX, VIX, vol-regime, options flow, synthesis, backcheck, daily summary, headlines, refresh poller)
+- **Archive write: `_dt` NameError** — `_dt.datetime.utcnow()` in `archive_entry` only valid inside `_log_tokens()` scope; replaced with `datetime.datetime.utcnow()` at module level
+- **Archive write: KeyError on dedup check** — `synthesis['generated_at']` → `synthesis.get('generated_at', '')` to handle empty synthesis dicts
+- **Archive write: dict slice error** — `calibration_notes[:300]` crashed when value is a structured dict; fixed with `str(calibration_notes)[:300]`
+- **Archive cap corrected** — accidentally trimmed to 50 entries during prompt-size optimization; restored to 200 per spec
+- **Daily summary missed** — wiped crontab caused March 13 to be last entry; manually triggered today's summary, cron restored
+- **Next-day backchecks caught up** — March 13 predictions manually backchecked; 7 new entries added to accuracy-log.json (45 total)
+- **AI Analysis track record** — `signal_correct` field absent on newer entries; now derives correctness from `ticker_results` majority vote when field missing
+- **Track record `[object Object]` rendering** — `best_ticker`/`worst_ticker` are objects `{ticker, directional_accuracy_pct}`; fixed to extract `.ticker` and `.directional_accuracy_pct`
+- **`GENERATE_CONTRARIAN` NameError** — confirmed resolved; synthesis running clean without traceback
+- **Calibration notes log print** — `cal[:120]` crashed when `cal` is dict; fixed with `str(cal)` cast
+- **Vol regime page** — `NavComponent is not defined` on all 9 pages fixed; wrapped in `DOMContentLoaded`; null guard added on `vr-status`
+- **Options flow rendering** — `toUpperCase is not a function` on all 200 rows; fixed with `String()` cast on `side`, `condition`, `right`, `symbol`, `exchange` fields
+- **Health page date** — `todayStr()` used UTC date causing mismatch after 8 PM ET; fixed with `toLocaleDateString('en-CA', { timeZone: 'America/New_York' })`
+
+### Added
+- **Attribution scoring system** (`score-attribution.py`) — Audit Layer 3
+  - 8 signal scorers: headlines, options_flow, gex, vix_structure, vol_regime, prediction_feedback, event_trees, price_data
+  - Weight accuracy classification: appropriate / underweighted / overweighted
+  - Rolling 30-cycle calibration history in `data/attribution-calibration.json`
+  - Per-prediction attribution files in `data/signal-attribution/`
+  - Hooked into backcheck pipeline automatically after 3D scoring pass
+- **System Health diagnostics page** (`health.html` + `js/health.js`)
+  - Overall health score with color-coded percentage bar
+  - 17 feed monitors with staleness thresholds and age display
+  - Quote API live test with latency measurement
+  - ThetaData terminal health (inferred from flow freshness)
+  - Research pipeline status (scout/lab last run, items scored)
+  - Audit/attribution status
+  - One-click refresh button
+  - Added to Config nav dropdown
+- **Cron health heartbeat** (`cron-health.sh`) — runs every 30 minutes, writes `cron-health.json`
+- **Prediction history enriched** — expandable rows showing per-ticker predicted vs actual prices, error %, direction ✓/✗
+- **Table headers** added to Last 10 Predictions section
+- **Vol regime explanation text** — italic description below EXPLOSIVE/PINNED/TENSION/TRANSITIONING badge
+- **Net GEX prominent display** — 26px bold color-coded `$-1.26B` style number alongside regime badge
+
+### Verified Working
+- Finnhub API key on Vercel confirmed
+- Full synthesis pipeline operational (archive saving, backchecks resuming)
+- Research summarizer: 28/31 scout items scored successfully
+- Event trees feeding into synthesis with real Iran/Hormuz data
+- All services: cron active, ThetaData active, flow daemon streaming

@@ -1217,7 +1217,7 @@ All pages include:
 | **Markets** | Dashboard · Options Flow · Vol Regime |
 | **AI** | AI Analysis · Macro Events · Deep Dives · Daily Summary · Research |
 | **Performance** | Performance |
-| **Config** | Config |
+| **Config** | Config · System Health |
 
 ### Active State
 
