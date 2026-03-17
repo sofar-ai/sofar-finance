@@ -258,7 +258,7 @@ const HealthCheck = (() => {
 
   function renderThetaCard(flowResult) {
     var th = THRESHOLDS.options_flow;
-    var cls = !flowResult || flowResult.status !== 'loaded' ? 'err' : statusClass(flowResult.age, th);
+    var cls = !flowResult || flowResult.status !== 'loaded' ? 'err' : statusClass(flowResult.age, th, true);
     var e = flowResult ? flowResult.extra || {} : {};
     var rows = [
       { label: '<span class="hc-dot hc-dot-' + cls + '"></span>Inferred Status', value: cls === 'ok' ? 'Healthy (flow fresh)' : cls === 'warn' ? 'Possibly stale' : 'Check terminal', cls: 'hc-value-' + cls }
@@ -289,11 +289,12 @@ const HealthCheck = (() => {
   }
 
   function renderOverall(results, qr) {
+    var MARKET_FEEDS = ['ai_synthesis','options_flow','flow_sentiment','top_flow','gex_data','vix_structure','vol_regime'];
     var statuses = results.map(function(r) {
       var th = THRESHOLDS[r.key];
       if (!th) return 'ok';
       if (r.status === 'missing' || r.status === 'error') return 'err';
-      return statusClass(r.age, th);
+      return statusClass(r.age, th, MARKET_FEEDS.indexOf(r.key) >= 0);
     });
     var ok = statuses.filter(function(s){return s==='ok'}).length;
     var warn = statuses.filter(function(s){return s==='warn'}).length;
