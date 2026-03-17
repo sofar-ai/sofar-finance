@@ -48,7 +48,10 @@
       id: 'config',
       label: 'Config',
       default: 'config.html',
-      items: null,  // standalone — no dropdown
+      items: [
+        { href: 'config.html', label: 'Config' },
+        { href: 'health.html', label: 'System Health' },
+      ],  // standalone — no dropdown
     },
   ];
 
