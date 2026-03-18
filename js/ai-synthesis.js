@@ -212,14 +212,29 @@ const AISynthesis = (() => {
     // ── Calibration Notes ──
     const calEl = document.getElementById('ai-calibration-notes');
     if (calEl) {
-      const notes = data.calibration_notes;
+      const rawNotes = data.calibration_notes;
       const regime = data.regime || '';
-      if (notes && notes.length > 20) {
+      // calibration_notes may be a string or a structured dict
+      let notesHtml = '';
+      if (rawNotes && typeof rawNotes === 'object') {
+        const fields = [
+          ['Pattern', rawNotes.pattern_acknowledgment],
+          ['Conviction', rawNotes.conviction_audit],
+          ['Target bias', rawNotes.target_bias_correction],
+          ['Regime', rawNotes.regime_adjustment],
+        ];
+        const parts = fields.filter(([,v]) => v && v.length > 5).map(([k,v]) => `<b>${k}:</b> ${v}`);
+        notesHtml = parts.join('<br>');
+        if (!notesHtml && rawNotes.specific_changes?.length) notesHtml = rawNotes.specific_changes.join('; ');
+      } else if (rawNotes && typeof rawNotes === 'string' && rawNotes.length > 20) {
+        notesHtml = rawNotes;
+      }
+      if (notesHtml) {
         calEl.innerHTML = `
           <div class="ai-cal-header">🧠 Calibration Notes
             ${regime ? `<span class="ai-regime-badge">${regime.replace(/_/g,' ')}</span>` : ''}
           </div>
-          <div class="ai-cal-text">${notes}</div>`;
+          <div class="ai-cal-text">${notesHtml}</div>`;
         calEl.style.display = 'block';
       } else { calEl.style.display = 'none'; }
     }
