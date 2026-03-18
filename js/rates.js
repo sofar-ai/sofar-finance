@@ -24,22 +24,24 @@ const RatesPage = (() => {
 
   async function fetchQuote(sym) {
     try {
-      var url = '/api/chart?ticker=' + encodeURIComponent(sym) + '&range=2d&interval=1d';
+      var url = '/api/chart?ticker=' + encodeURIComponent(sym) + '&timeframe=1D';
       var r = await fetch(url);
       if (!r.ok) return null;
       var d = await r.json();
-      var meta = d.chart && d.chart.result && d.chart.result[0] && d.chart.result[0].meta;
-      if (!meta) return null;
-      var price = meta.regularMarketPrice;
-      var prevClose = meta.chartPreviousClose || meta.previousClose;
-      var change = prevClose ? price - prevClose : null;
-      var changePct = prevClose ? ((price - prevClose) / prevClose * 100) : null;
+      var candles = d.candles || [];
+      if (candles.length === 0) return null;
+      var last = candles[candles.length - 1];
+      var first = candles[0];
+      var price = last.close;
+      var prevClose = first.open;
+      var change = price - prevClose;
+      var changePct = prevClose ? (change / prevClose * 100) : null;
       return {
         price: price,
         prevClose: prevClose,
         change: change,
         changePct: changePct,
-        ts: meta.regularMarketTime ? new Date(meta.regularMarketTime * 1000).toISOString() : null
+        ts: last.time ? new Date(last.time * 1000).toISOString() : null
       };
     } catch (e) {
       return null;
