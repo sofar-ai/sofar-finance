@@ -12,6 +12,7 @@ const HealthCheck = (() => {
     gex_data:       { warn: 150, err: 300, label: 'GEX Data', emoji: '⚡' },
     vix_structure:  { warn: 150, err: 300, label: 'VIX Term Structure', emoji: '📈' },
     vol_regime:     { warn: 150, err: 300, label: 'Vol Regime', emoji: '🎯' },
+    rates:          { warn: 1500, err: 2900, label: 'Rates & Dollar', emoji: '💵' },
     headlines:      { warn: 400, err: 800, label: 'Headlines (RSS)', emoji: '📰' },
     headlines_x:    { warn: 400, err: 800, label: 'Headlines (X)', emoji: '🐦' },
     daily_summary:  { warn: 1500, err: 2900, label: 'Daily Summary', emoji: '📋' },
@@ -32,6 +33,7 @@ const HealthCheck = (() => {
     { key: 'gex_data',       url: 'data/gex-data.json',               tsField: 'generated_at', altTs: 'fetched_at' },
     { key: 'vix_structure',  url: 'data/vix-structure.json',          tsField: 'generated_at', altTs: 'fetched_at' },
     { key: 'vol_regime',     url: 'data/vol-regime.json',             tsField: 'generated_at', altTs: 'fetched_at' },
+    { key: 'rates',          url: 'api/chart?ticker=%5ETNX&timeframe=1D', tsField: '_last_candle' },
     { key: 'headlines',      url: 'headlines.json',                    tsField: 'fetched_at' },
     { key: 'headlines_x',    url: 'headlines-x.json',                  tsField: 'fetched_at' },
     { key: 'accuracy_log',   url: 'data/accuracy-log.json',           tsField: '_last_entry' },
@@ -97,6 +99,14 @@ const HealthCheck = (() => {
           const last = arr[arr.length - 1];
           ts = last.generated_at || last.check_time || last.prediction_time || last.date || null;
           extra.count = arr.length;
+        }
+      } else if (feed.tsField === '_last_candle') {
+        var candles = data.candles || [];
+        if (candles.length > 0) {
+          var lastC = candles[candles.length - 1];
+          ts = lastC.time ? new Date(lastC.time * 1000).toISOString() : null;
+          extra.price = lastC.close;
+          extra.count = candles.length;
         }
       } else {
         ts = data[feed.tsField] || (feed.altTs ? data[feed.altTs] : null);
@@ -210,7 +220,7 @@ const HealthCheck = (() => {
   function renderFeedCard(result) {
     var th = THRESHOLDS[result.key];
     if (!th) return '';
-    var MARKET_FEEDS = ['ai_synthesis','options_flow','flow_sentiment','top_flow','gex_data','vix_structure','vol_regime'];
+    var MARKET_FEEDS = ['ai_synthesis','options_flow','flow_sentiment','top_flow','gex_data','vix_structure','vol_regime','rates'];
     var isMarketFeed = MARKET_FEEDS.indexOf(result.key) >= 0;
     var cls = result.status === 'missing' ? 'stale'
             : result.status === 'error' ? 'err'
@@ -296,7 +306,7 @@ const HealthCheck = (() => {
   }
 
   function renderOverall(results, qr) {
-    var MARKET_FEEDS = ['ai_synthesis','options_flow','flow_sentiment','top_flow','gex_data','vix_structure','vol_regime'];
+    var MARKET_FEEDS = ['ai_synthesis','options_flow','flow_sentiment','top_flow','gex_data','vix_structure','vol_regime','rates'];
     var statuses = results.map(function(r) {
       var th = THRESHOLDS[r.key];
       if (!th) return 'ok';
@@ -351,7 +361,7 @@ const HealthCheck = (() => {
     cards.push(renderThetaCard(flowResult));
     cards.push(renderCronCard(cronResult));
 
-    ['ai_synthesis','options_flow','flow_sentiment','top_flow','gex_data','vix_structure','vol_regime'].forEach(function(k) {
+    ['ai_synthesis','options_flow','flow_sentiment','top_flow','gex_data','vix_structure','vol_regime','rates'].forEach(function(k) {
       var r = allResults.find(function(x){return x.key===k});
       if (r) cards.push(renderFeedCard(r));
     });
