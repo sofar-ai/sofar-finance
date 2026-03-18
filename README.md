@@ -60,6 +60,7 @@ SOFAR Finance is a three-page financial dashboard with:
 | Market Dashboard | `/` | Quotes sidebar, 4-chart grid, options flow panel, headlines, trends, top flow, AI strip |
 | Options Flow | `/options-flow.html` | Full options flow tape with filters, top tickers by volume, unusual activity, Greeks summary |
 | AI Analysis | `/ai-analysis.html` | Intraday/next-day/long-term signals, SPY & QQQ benchmarks, news+flow impact, tickers to watch, trade ideas, accuracy track record |
+| Rates & Dollar | `/rates.html` | Treasury yields (10Y/30Y/3M), yield curve, DXY dollar index |
 
 ### Data Flow
 
@@ -123,6 +124,8 @@ BROWSER (Vercel CDN)
   - Indices: `^VIX`, `^GSPC`, `^DJI`, `^N225`, `^KS11`, `^TWII`
   - TOPIX: `1306.T` (`^TOPX` unavailable on Yahoo Finance)
   - Commodities: `GC=F` (gold), `SI=F` (silver), `CL=F` (WTI), `BZ=F` (Brent)
+  - Treasury yields: `^TNX` (10Y), `^TYX` (30Y), `^IRX` (3M T-bill)
+  - Dollar Index: `DX-Y.NYB` (DXY)
   - Crypto: `BTC-USD`
 - **Chart intervals used:** `5m` (1D), `30m` (1W), `1d` (1M), `1wk` (1Y)
 - **Response path:** `chart.result[0].timestamp`, `chart.result[0].indicators.quote[0]`
@@ -1214,7 +1217,7 @@ All pages include:
 
 | Group | Pages |
 |---|---|
-| **Markets** | Dashboard · Options Flow · Vol Regime |
+| **Markets** | Dashboard · Options Flow · Vol Regime · Rates & Dollar |
 | **AI** | AI Analysis · Macro Events · Deep Dives · Daily Summary · Research |
 | **Performance** | Performance |
 | **Config** | Config · System Health |

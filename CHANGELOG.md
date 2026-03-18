@@ -442,3 +442,57 @@ Added to all three research scripts: BNO, IBIT, CL, LYC, DBA, ETHE, GC, ES, NQ, 
 - Research summarizer: 28/31 scout items scored successfully
 - Event trees feeding into synthesis with real Iran/Hormuz data
 - All services: cron active, ThetaData active, flow daemon streaming
+
+---
+
+## 2026-03-16 — Pipeline Restoration + Audit System + Health Diagnostics
+
+### Fixed
+- **Crontab restored** — research pipeline development wiped all market data crons; entire market data schedule was missing
+- **Archive write: `_dt` NameError** — `_dt.datetime.utcnow()` only valid inside `_log_tokens()` scope; replaced with `datetime.datetime.utcnow()`
+- **Archive write: KeyError on dedup check** — `synthesis['generated_at']` → `synthesis.get('generated_at', '')`
+- **Archive write: dict slice error** — `calibration_notes[:300]` crashed when value is a structured dict; fixed with `str(calibration_notes)[:300]`
+- **Archive cap corrected** — trimmed to 50 during prompt-size optimization; restored to 200 per spec
+- **Daily summary manually triggered** — missed cron window; ran manually, cron restored
+- **Next-day backchecks caught up** — March 13 predictions manually backchecked; 7 new entries added
+- **AI Analysis track record** — `signal_correct` absent on newer entries; now derives from `ticker_results` majority vote
+- **Best/worst ticker `[object Object]` rendering** — objects not strings; fixed to extract `.ticker` and `.directional_accuracy_pct`
+- **Prediction history table headers** added to Last 10 Predictions section
+- **Health page date lookup** fixed from UTC to ET timezone
+
+### Added
+- **Attribution scoring system** (`score-attribution.py`) — Audit Layer 3: 8 signal scorers, weight accuracy classification, rolling 30-cycle calibration, hooked into backcheck pipeline
+- **System Health diagnostics page** (`health.html`) — 17 feed monitors with staleness thresholds, quote API live test, overall health score, cron health card
+- **Cron health heartbeat** (`cron-health.sh`) — runs every 30 minutes, writes `cron-health.json`
+- **Prediction history expandable ticker detail rows** — click to expand per-ticker predicted vs actual prices, error %, direction
+
+---
+
+## 2026-03-17 — AI Quality Overhaul + Rates & Dollar
+
+### Fixed
+- **Cron timezone mismatch** — crons written in UTC hours but system runs ET; 9:30 AM morning runs were missing; corrected all 4 daily windows (9:30, 11:30, 1:30, 3:30 PM ET)
+- **GEX/VIX/vol-regime not pushing to GitHub** — data files missing from synthesis `git add`; added to `ai-synthesis.sh`
+- **Scout summarizer re-scored** — 49/52 items scored with new R&D analyst prompt
+- **Attribution calibration format fixed** — schema mismatch between `signal_scores` int vs dict format; fixed `classify_weight`, calibration history reader, and `score-attribution.py` to handle both formats
+- **Research health page date fallback** — now tries today → yesterday for scout/lab files
+
+### Added — AI Quality (System Prompt)
+- **Base rate awareness** — US equities close positive ~53% daily, ~62% monthly, ~74% yearly; prior injected before predictions
+- **Rule 12: Directional bias check** — mandatory acknowledgment when >70% of last 10 predictions same direction; per-ticker bull/bear case required; confidence reduced on streaks
+- **Rule 13: Regime-specific strategies** — PINNED=mean reversion, EXPLOSIVE=trend following, TENSION=cautious, TRANSITIONING=mean reversion with tight stops; each with confidence and price target guidance
+- **Conviction demotion** — LOW tier (81.8% accuracy) prioritized over MEDIUM (0% accuracy); mandatory demotion until MEDIUM recovers
+- **Signal-direction asymmetry** — BEARISH requires higher evidence bar when BULLISH accuracy significantly exceeds BEARISH
+- **Overshoot correction** — 30% haircut on all predicted moves (79% were overshooting) until rate drops below 50%
+- **Put flow nuance** — large put buying = institutional hedging, not necessarily bearish conviction; weight bearish only with confirming signals
+- **`regime_strategy` field** tracked in archive, backcheck scoring, and `feedback-summary.json`
+- **`by_regime_and_strategy` cross-tabulation** in `feedback-summary.json` — answers "does MEAN_REVERSION outperform TREND_FOLLOWING in explosive regime?"
+
+### Added — Data & Pages
+- **Treasury yields + DXY** — `RATES_MAP`: `^TNX` (10Y), `^TYX` (30Y), `^IRX` (3M T-bill), `DX-Y.NYB` (Dollar Index) fetched from Yahoo Finance; 10Y-3M spread computed with NY Fed recession model label (INVERTED/FLAT/NORMAL)
+- **Rates & Dollar interpretation** in system prompt — yield curve, rising/falling 10Y, DXY inverse correlation with SPY, rate sensitivity by sector
+- **Rates & Dollar page** (`rates.html` + `js/rates.js`) — yield curve visualization, DXY strength, rate signals, added to Markets nav dropdown
+- **Rates monitoring card** on health page — `^TNX` freshness with market-hours awareness
+- **Reddit scraper expanded** — 6 subreddits (options, algotrading, wallstreetbets, stocks, investing, thetagang), threshold lowered from 50 to 20 upvotes
+- **OpenClaw heartbeat enabled** — 30m interval, 6:00–16:45 ET, Haiku model
+- **Health page market-hours awareness** — market feeds show OK after close when data is from last session, not false STALE
