@@ -290,7 +290,8 @@ const HealthCheck = (() => {
   function renderCronCard(cronData) {
     if (!cronData) return renderCard('⏰ Cron Health', { cls: 'stale', text: 'N/A' }, [{ label: 'Status', value: 'No cron-health.json', cls: 'hc-value-muted' }]);
     var age = (Date.now() - new Date(cronData.checked_at).getTime()) / 60000;
-    var cls = age > 60 ? 'err' : age > 35 ? 'warn' : 'ok';
+    var mktOpen = isMarketHours();
+    var cls = mktOpen ? (age > 60 ? 'err' : age > 35 ? 'warn' : 'ok') : (age > 300 ? 'warn' : 'ok');
     var rows = [
       { label: '<span class="hc-dot hc-dot-' + cls + '"></span>Heartbeat', value: fmtAge(age), cls: 'hc-value-' + cls },
       { label: 'Cron service', value: cronData.cron_service || '?', cls: cronData.cron_service === 'active' ? 'hc-value-ok' : 'hc-value-err' },
