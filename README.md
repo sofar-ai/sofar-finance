@@ -61,6 +61,7 @@ SOFAR Finance is a three-page financial dashboard with:
 | Options Flow | `/options-flow.html` | Full options flow tape with filters, top tickers by volume, unusual activity, Greeks summary |
 | AI Analysis | `/ai-analysis.html` | Intraday/next-day/long-term signals, SPY & QQQ benchmarks, news+flow impact, tickers to watch, trade ideas, accuracy track record |
 | Rates & Dollar | `/rates.html` | Treasury yields (10Y/30Y/3M), yield curve, DXY dollar index |
+| Health Diagnostics | `/health.html` | 17 feed monitors, market-hours awareness, cron health card, quote API test |
 
 ### Data Flow
 
@@ -129,6 +130,16 @@ BROWSER (Vercel CDN)
   - Crypto: `BTC-USD`
 - **Chart intervals used:** `5m` (1D), `30m` (1W), `1d` (1M), `1wk` (1Y)
 - **Response path:** `chart.result[0].timestamp`, `chart.result[0].indicators.quote[0]`
+
+### Financial Modeling Prep (FMP Premium)
+
+- **Used for:** 33 years of historical OHLCV prices, earnings calendar, treasury rates, technical indicators
+- **Base URL:** `https://financialmodelingprep.com/stable`
+- **Key:** `FMP_API_KEY` — stored in `/etc/fmp.env` on host; `FMP_API_KEY` env var on Vercel
+- **Endpoints used:**
+  - `GET /historical-price-eod/full?symbol={ticker}` — full historical OHLCV
+  - `GET /earnings-calendar?from={YYYY-MM-DD}&to={YYYY-MM-DD}` — upcoming earnings
+  - `GET /treasury-rates` — current treasury yield rates by maturity
 
 ### Finnhub
 
@@ -241,6 +252,9 @@ If you see `"Invalid session ID"` errors, only one Terminal instance may run at 
 | `~/scripts/fetch-options-flow.sh` | 4× daily Mon-Fri | ThetaData → filter → Claude Sonnet → JSON files → git push |
 | `~/scripts/ai-synthesis.sh` | 4× daily Mon-Fri | Reads all data → fetches prices (Finnhub/Yahoo) → calls `ai-synthesis.py` → Claude Opus → `ai-synthesis.json` + `prediction-archive.json` → git push |
 | `~/scripts/ai-synthesis.py` | Called by `ai-synthesis.sh` | Python subprocess handling Claude API call, prompt construction, self-calibration history injection |
+| `~/scripts/score-attribution.py` | Called by backcheck | 8 signal scorers for attribution analysis (headlines, GEX, VIX, flow, vol_regime, event_trees, feedback, price_data) |
+| `~/scripts/event-monitor.py` | Cron `25 9,11,13,15 ET` Mon-Fri | Matches headlines against event tree nodes via word-boundary regex |
+| `~/scripts/pre-push-test.sh` | Manual / CI | Python syntax validation + JSON integrity + synthesis structure checks |
 | `~/scripts/backcheck-predictions.sh` | 5× daily Mon-Fri | Verifies price predictions by timeframe → updates accuracy log/stats → git push |
 
 ---
@@ -863,6 +877,46 @@ tail -30 ~/logs/ai-synthesis.log
 - Check: `grep "GENERATE_CONTRARIAN" ~/logs/ai-synthesis.log | tail -5`
 - If `GENERATE_CONTRARIAN=False`: check ET hour and whether today's idea already exists
 - Manual test: `python3 -c "import json; print(json.load(open('~/sofar-finance/data/contrarian-ideas.json')))"`
+
+
+---
+
+## 17. AI Calibration System
+
+### Self-Correcting Dynamic Rules (`build_dynamic_rules()`)
+
+Every synthesis call computes corrections from `data/feedback-summary.json` and injects a `<dynamic_corrections>` block into the prompt. This replaces hardcoded heuristics with data-driven instructions that update automatically every backcheck cycle.
+
+**Computed corrections:**
+
+| Correction | Source data | Logic |
+|---|---|---|
+| Direction bias | `bullish_accuracy_pct` vs `bearish_accuracy_pct` | If gap >10pp, require stronger evidence for weaker direction |
+| Overshoot haircut | `TARGET_OVERSHOOT_BIAS` pattern, `overshoot_pct` | 20/30/40/50% haircut progressive by overshoot severity |
+| Conviction tier | `by_conviction_tier[tier].accuracy_pct` | MEDIUM demoted to LOW when MEDIUM underperforms LOW |
+| Timeframe flags | `by_timeframe[tf].directional_accuracy_pct` | WEAK flag when <40%, STRONG when >60% |
+| Regime weakness | `REGIME_WEAKNESS` pattern | Injects regime-specific warning |
+
+**How to read the corrections in a synthesis prompt:**
+```
+<dynamic_corrections>
+DIRECTION BIAS CORRECTION: Your BEARISH calls are 34pp less accurate than BULLISH...
+OVERSHOOT CORRECTION: 79% of targets overshoot. Apply 40% haircut...
+CONVICTION CALIBRATION:
+  LOW tier: 81.8% accuracy (n=11) — this is your baseline
+  MEDIUM tier: 0.0% accuracy (n=14)
+  WARNING: MEDIUM underperforms LOW. Default to LOW unless 3+ signals converge.
+</dynamic_corrections>
+```
+
+---
+
+## 18. Roadmap
+
+- **Backtest engine** — SQLite + FMP historical data (33 years), signal correlation analysis across VIX, yields, GEX, options flow
+- **Neon Postgres on Vercel** — structured queries for frontend charts and historical analysis
+- **Earnings calendar integration** — flag upcoming earnings in trade idea safety checks
+- **Signal correlation matrix** — cross-signal predictiveness (does high GEX + low VIX reliably → PINNED regime?)
 
 ---
 

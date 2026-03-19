@@ -496,3 +496,55 @@ Added to all three research scripts: BNO, IBIT, CL, LYC, DBA, ETHE, GC, ES, NQ, 
 - **Reddit scraper expanded** — 6 subreddits (options, algotrading, wallstreetbets, stocks, investing, thetagang), threshold lowered from 50 to 20 upvotes
 - **OpenClaw heartbeat enabled** — 30m interval, 6:00–16:45 ET, Haiku model
 - **Health page market-hours awareness** — market feeds show OK after close when data is from last session, not false STALE
+
+---
+
+## 2026-03-18 — Self-Correcting Calibration + Rates & Dollar + Research Pipeline
+
+### AI Quality
+- **Dynamic calibration system** (`build_dynamic_rules()`) — replaces three hardcoded rules (SIGNAL-DIRECTION ASYMMETRY, OVERSHOOT CORRECTION, MEDIUM-TO-LOW DEMOTION) with data-driven corrections computed fresh from `feedback-summary.json` every synthesis run
+- **Progressive overshoot haircut** — 20/30/40/50% based on actual overshoot rate from backcheck data
+- **Direction bias auto-correction** — detects BULLISH vs BEARISH accuracy gap >10pp; auto-requires stronger evidence for the weaker direction
+- **Conviction tier guidance** — adapts LOW/MEDIUM/HIGH thresholds to actual tier performance; MEDIUM demotion triggered automatically when MEDIUM underperforms LOW
+- **Weak/strong timeframe flags** — computed from backcheck data, injected into each synthesis prompt
+
+### Rates & Dollar Integration
+- **`RATES_MAP`** added to `ai-synthesis.py`: 10Y (`^TNX`), 30Y (`^TYX`), 3M T-bill (`^IRX`), DXY (`DX-Y.NYB`)
+- **Yield spread**: 10Y-3M (NY Fed's preferred recession probability indicator); labeled INVERTED/FLAT/NORMAL
+- **Rates interpretation guidance** added to synthesis system prompt
+- **`rates.html` + `js/rates.js`** — yield curve visualization, DXY strength, rate signals; added to Markets nav
+- **Fix**: `RATES_MAP` was calling `fetch_yahoo()` (returns raw dict) instead of `get_price()`; caused TypeError on yield spread subtraction at 9:40 AM ET
+
+### Research Pipeline
+- **Split summarizer prompts** — Scout gets `SYSTEM_PROMPT_SCOUT` (senior trading analyst persona → trade ideas), Lab gets `SYSTEM_PROMPT_LAB` (quant R&D analyst persona → algo improvements)
+- **Reddit scraper expanded** — 6 subreddits (options, algotrading, wallstreetbets, stocks, investing, thetagang), threshold lowered 50→20 upvotes
+
+### Event Monitoring
+- `event-analysis.json` and `event-trees.json` added to synthesis `git add` line
+- Iran conflict tree: 10 headline matches active
+
+### Infrastructure
+- **Health page market-hours awareness** — cron health card uses 60-min threshold during market hours, 5h after close
+- **Rates & Dollar monitoring card** on health page (`^TNX` freshness)
+- **`pre-push-test.sh`** — validates Python syntax on all 4 scripts + JSON validity + synthesis structure before every push
+- **`ai-synthesis.js` fix** — `calibration_notes` is now a dict; `notes.length` was crashing `renderPage()` silently; now handles both string and structured object formats
+
+---
+
+## 2026-03-17 — AI Quality Foundation + Pipeline Restoration
+
+### Pipeline Restoration
+- **Crontab restored** — all market data crons wiped; restored 19 entries (GEX, VIX, vol-regime, flow, synthesis, backcheck, daily summary, headlines, refresh poller, cron health)
+- **Cron timezone mismatch fixed** — system runs ET not UTC; 9:30 AM morning run was missing
+- **Archive write bugs** — three separate crashes fixed: `_dt` NameError, `KeyError` on dedup check, dict `[:300]` slice error on `calibration_notes`
+- **Archive cap** corrected 50→200 entries
+- **Morning check script + cron watchdog** + bashrc auto-start for resilience
+- **`signal_attribution` field** added to archive entries
+
+### AI Quality Foundation
+- **Base rate awareness** injected into system prompt — markets up 53% daily, 62% monthly, 74% yearly; BEARISH prior bias discouraged
+- **Rule 12: Directional Bias Check** — forces explicit bull AND bear case for each ticker when >70% same-direction streak
+- **Rule 13: Regime-Specific Strategy Adaptation** — PINNED=mean reversion, EXPLOSIVE=trend following, TENSION=cautious, TRANSITIONING=mean reversion with tight stops
+- **Put flow nuance** — large put buying = institutional hedging, not necessarily bearish conviction
+- **`regime_strategy` field** added to JSON output schema, archive, and backcheck scoring
+- **`by_regime_and_strategy` cross-tabulation** in `feedback-summary.json`
