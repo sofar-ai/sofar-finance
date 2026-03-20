@@ -34,6 +34,7 @@
         { href: 'ticker-dives.html',  label: 'Deep Dives'   },
         { href: 'daily-summary.html', label: 'Daily Summary'},
         { href: 'research.html',       label: 'Research'     },
+        { href: 'strategy-lab.html',   label: 'Strategy Lab' },
       ],
     },
     {
