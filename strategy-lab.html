@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Strategy Lab — SOFAR FINANCE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0d1117">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* ── Layout ──────────────────────────────────────── */
+    .sl-page   { max-width:1400px; margin:0 auto; padding:16px; }
+    .sl-card   { background:#111827; border:1px solid #1e2433; border-radius:8px; padding:16px; margin-bottom:16px; }
+    .sl-grid2  { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    @media(max-width:900px){ .sl-grid2{ grid-template-columns:1fr; } }
+
+    /* ── Card titles ─────────────────────────────────── */
+    .sl-card-title { font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:700; letter-spacing:.08em; color:#94a3b8; text-transform:uppercase; margin-bottom:12px; display:flex; align-items:center; justify-content:space-between; }
+    .sl-ts         { font-size:9px; color:#374151; font-weight:400; }
+
+    /* ── Table ────────────────────────────────────────── */
+    .sl-table-wrap { overflow-x:auto; }
+    .sl-table      { width:100%; border-collapse:collapse; font-family:'IBM Plex Mono',monospace; font-size:11px; }
+    .sl-th         { padding:6px 10px; text-align:left; color:#374151; font-weight:700; font-size:9px; letter-spacing:.06em; border-bottom:1px solid #1e2433; cursor:pointer; white-space:nowrap; user-select:none; }
+    .sl-th:hover   { color:#64748b; }
+    .sl-th-active  { color:#f59e0b; }
+    .sl-row td     { padding:7px 10px; border-bottom:1px solid #0d1117; color:#94a3b8; white-space:nowrap; cursor:pointer; }
+    .sl-row:hover td { background:#1e2433; }
+    .sl-row.sl-expanded td { background:#141b24; }
+    .sl-name       { color:#e2e8f0; font-weight:600; }
+    .sl-detail-row td  { padding:0; background:#0d1117; }
+    .sl-detail-inner   { padding:12px 16px 16px; }
+    .sl-detail-title   { font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:700; color:#64748b; margin-bottom:10px; }
+
+    /* ── Weight bars ─────────────────────────────────── */
+    .sl-wbars     { display:flex; flex-direction:column; gap:5px; }
+    .sl-wbar-row  { display:flex; align-items:center; gap:8px; font-family:'IBM Plex Mono',monospace; font-size:10px; }
+    .sl-wbar-lbl  { width:140px; color:#64748b; text-align:right; flex-shrink:0; }
+    .sl-wbar-track{ height:6px; background:#1e2433; border-radius:3px; flex:1; max-width:340px; }
+    .sl-wbar-fill { height:6px; background:#f59e0b; border-radius:3px; }
+    .sl-wbar-pct  { width:42px; color:#94a3b8; font-size:9px; }
+
+    /* ── Active weights panel ────────────────────────── */
+    .sl-aw-meta   { display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin-bottom:6px; }
+    .sl-aw-version{ font-family:'IBM Plex Mono',monospace; font-size:14px; font-weight:700; color:#f59e0b; }
+    .sl-aw-stat   { font-family:'IBM Plex Mono',monospace; font-size:10px; color:#475569; }
+    .sl-aw-stat b { font-weight:700; }
+    .sl-rg-title  { font-family:'IBM Plex Mono',monospace; font-size:9px; font-weight:700; color:#374151; letter-spacing:.08em; margin-top:14px; margin-bottom:6px; }
+    .sl-rg-row    { font-family:'IBM Plex Mono',monospace; font-size:10px; color:#475569; line-height:1.6; }
+    .sl-rg-row b  { color:#64748b; }
+
+    /* ── Signal reading panel ────────────────────────── */
+    .sl-sr-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:700; color:#94a3b8; }
+    .sl-sr-meta   { font-size:9px; color:#374151; font-weight:400; }
+    .sl-sr-grid   { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:12px; }
+    @media(max-width:600px){ .sl-sr-grid{ grid-template-columns:repeat(2,1fr); } }
+    .sl-sr-card   { background:#0d1117; border:1px solid #1a1f28; border-radius:6px; padding:10px; }
+    .sl-sr-label  { font-family:'IBM Plex Mono',monospace; font-size:9px; color:#374151; margin-bottom:4px; }
+    .sl-sr-value  { font-family:'IBM Plex Mono',monospace; font-size:16px; font-weight:700; color:#e2e8f0; margin-bottom:4px; }
+    .sl-sr-weight { font-family:'IBM Plex Mono',monospace; font-size:9px; color:#f59e0b; }
+    .sl-sr-signal { font-family:'IBM Plex Mono',monospace; font-size:12px; color:#64748b; }
+    .sl-sr-conf   { color:#475569; font-size:10px; }
+
+    /* ── Colors ──────────────────────────────────────── */
+    .sl-green { color:#22c55e; }
+    .sl-amber { color:#f59e0b; }
+    .sl-red   { color:#ef4444; }
+    .sl-empty, .sl-placeholder { text-align:center; padding:32px; color:#374151; font-family:'IBM Plex Mono',monospace; font-size:11px; }
+  </style>
+</head>
+<body class="page-scrollable">
+  <div id="nav-root"></div>
+  <script src="js/nav.js"></script>
+  <script>document.addEventListener('DOMContentLoaded',()=>NavComponent.setMeta(`<span class="live-dot"></span>LIVE<span style="margin-left:8px" id="sl-ts"></span>`));</script>
+
+  <div class="sl-page">
+
+    <!-- Panel 1: Leaderboard -->
+    <div class="sl-card">
+      <div class="sl-card-title">🏆 Strategy Leaderboard <span class="sl-ts" id="sl-ts"></span></div>
+      <div class="sl-table-wrap">
+        <table class="sl-table">
+          <thead id="sl-thead"></thead>
+          <tbody id="sl-tbody"><tr><td colspan="12" class="sl-empty">Loading strategies…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Panels 2 + 3 side by side -->
+    <div class="sl-grid2">
+      <div class="sl-card">
+        <div class="sl-card-title">⚙️ Active Weight Set</div>
+        <div id="sl-active-weights"><div class="sl-empty">Loading…</div></div>
+      </div>
+      <div class="sl-card">
+        <div class="sl-card-title">🗂 Regime Performance Heatmap</div>
+        <div id="sl-regime-heatmap"><div class="sl-placeholder">Loading…</div></div>
+      </div>
+    </div>
+
+    <!-- Panel 4: Today's Signal Reading -->
+    <div class="sl-card">
+      <div class="sl-card-title">📡 Today's Signal Reading</div>
+      <div id="sl-signal-reading"><div class="sl-empty">Loading…</div></div>
+    </div>
+
+  </div>
+
+  <script src="js/strategy-lab.js"></script>
+</body>
+</html>
