@@ -306,7 +306,43 @@ const AISynthesis = (() => {
       } catch(e) { console.warn('Dark pool load error:', e); }
     })();
 
-    // ── Section 1: News & Flow impact ──
+    // -- Trade Recommendations --
+    (async () => {
+      try {
+        const trRes = await fetch('data/trade-recommendations.json?t=' + Date.now());
+        if (trRes.ok) {
+          const tr = await trRes.json();
+          const grid = document.getElementById('ai-trades-grid');
+          if (grid && tr.trades && tr.trades.length > 0) {
+            const dir = tr.direction || 'NEUTRAL';
+            const dirClass = dir === 'BEARISH' ? 'bearish' : dir === 'BULLISH' ? 'bullish' : '';
+            grid.innerHTML = tr.trades.map(function(trade) {
+              var legs = (trade.legs || []).map(function(leg) {
+                var cls = leg.action === 'BUY' ? 'buy' : 'sell';
+                return '<div class="ai-tc-leg"><span class="' + cls + '">' + leg.action + '</span> $' + leg.strike.toFixed(0) + ' ' + leg.right + ' @ $' + leg.premium.toFixed(2) + '</div>';
+              }).join('');
+              var rr = typeof trade.risk_reward === 'number' ? trade.risk_reward.toFixed(2) + 'x' : 'N/A';
+              return '<div class="ai-trade-card ' + dirClass + '">' +
+                '<div class="ai-tc-type">' + (trade.type || '').replace(/_/g, ' ').toUpperCase() + '</div>' +
+                '<div class="ai-tc-desc">' + (trade.description || '') + '</div>' +
+                '<div class="ai-tc-legs">' + legs + '</div>' +
+                '<div class="ai-tc-stats">' +
+                  '<div class="ai-tc-stat"><span>Debit</span><span class="ai-tc-val">$' + trade.debit + '</span></div>' +
+                  '<div class="ai-tc-stat"><span>Max Profit</span><span class="ai-tc-val green">$' + trade.max_profit + '</span></div>' +
+                  '<div class="ai-tc-stat"><span>Max Loss</span><span class="ai-tc-val red">$' + trade.max_loss + '</span></div>' +
+                  '<div class="ai-tc-stat"><span>Breakeven</span><span class="ai-tc-val">$' + trade.breakeven + '</span></div>' +
+                  '<div class="ai-tc-stat"><span>Risk/Reward</span><span class="ai-tc-val green">' + rr + '</span></div>' +
+                  '<div class="ai-tc-stat"><span>Size</span><span class="ai-tc-val">' + (trade.suggested_size_pct || '?') + '% portfolio</span></div>' +
+                '</div>' +
+                '<div class="ai-tc-hold">Hold ' + (tr.exit_rules ? tr.exit_rules.optimal_horizon : '?') + ' days | ' + (tr.exit_rules ? tr.exit_rules.exit_strategy.replace(/_/g,' ') : '') + '</div>' +
+              '</div>';
+            }).join('');
+          }
+        }
+      } catch(e) { console.warn('Trades load error:', e); }
+    })();
+
+    // -- Section 1: News & Flow impact --
     const impactEl = document.getElementById('ai-impact-grid');
     if (impactEl) impactEl.innerHTML = `
       <div class="ai-impact-card">
