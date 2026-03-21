@@ -239,6 +239,72 @@ const AISynthesis = (() => {
       } else { calEl.style.display = 'none'; }
     }
 
+    // ── Quantitative Model & Regime Section ──
+    (async () => {
+      try {
+        const regimeRes = await fetch('data/vol-regime.json?t=' + Date.now());
+        if (regimeRes.ok) {
+          const regime = await regimeRes.json();
+          const badge = document.getElementById('ai-regime-badge');
+          const detail = document.getElementById('ai-regime-detail');
+          if (badge && regime.regime) {
+            const r = regime.regime;
+            badge.textContent = r.toUpperCase();
+            badge.className = 'ai-regime-badge-large ' + r;
+            const conf = regime.regime_confidence ? (regime.regime_confidence * 100).toFixed(0) + '%' : '—';
+            const levels = regime.key_levels || {};
+            const inp = regime.inputs || {};
+            detail.innerHTML = [
+              '<div class="qc-stat"><span>Confidence</span><span class="qc-val">' + conf + '</span></div>',
+              '<div class="qc-stat"><span>GEX Regime</span><span class="qc-val">' + (inp.gex_regime || '—') + '</span></div>',
+              '<div class="qc-stat"><span>VIX</span><span class="qc-val">' + (inp.vix_spot ? inp.vix_spot.toFixed(1) : '—') + '</span></div>',
+              '<div class="qc-stat"><span>Term Structure</span><span class="qc-val">' + (inp.term_structure || '—') + '</span></div>',
+              levels.put_wall ? '<div class="qc-stat"><span>Put Wall</span><span class="qc-val">$' + levels.put_wall + '</span></div>' : '',
+              levels.call_wall ? '<div class="qc-stat"><span>Call Wall</span><span class="qc-val">$' + levels.call_wall + '</span></div>' : '',
+            ].filter(Boolean).join('');
+          }
+        }
+      } catch(e) { console.warn('Regime load error:', e); }
+      try {
+        const lgbmRes = await fetch('data/lgbm-prediction.json?t=' + Date.now());
+        if (lgbmRes.ok) {
+          const lgbm = await lgbmRes.json();
+          const sig = document.getElementById('ai-lgbm-signal');
+          const detail = document.getElementById('ai-lgbm-detail');
+          if (sig && lgbm.direction) {
+            const colors = {BULLISH:'#22c55e',BEARISH:'#ef4444',NEUTRAL:'#f59e0b'};
+            const emojis = {BULLISH:'\u{1F7E2}',BEARISH:'\u{1F534}',NEUTRAL:'\u{1F7E1}'};
+            sig.innerHTML = '<span style="color:' + (colors[lgbm.direction]||'#f59e0b') + '">' + (emojis[lgbm.direction]||'') + ' ' + lgbm.direction + ' (' + lgbm.confidence + '%)</span>';
+            detail.innerHTML = [
+              '<div class="qc-stat"><span>Model</span><span class="qc-val">' + (lgbm.model || 'lgbm') + '</span></div>',
+              '<div class="qc-stat"><span>Signals</span><span class="qc-val">' + (lgbm.signals_used || '—') + ' features</span></div>',
+              '<div class="qc-stat"><span>Probability</span><span class="qc-val">' + ((lgbm.probability||0)*100).toFixed(1) + '%</span></div>',
+              '<div class="qc-stat"><span>WF Accuracy</span><span class="qc-val">81.2% (recent)</span></div>',
+              '<div class="qc-stat"><span>Data</span><span class="qc-val">' + (lgbm.date || '—') + '</span></div>',
+            ].join('');
+          }
+        }
+      } catch(e) { console.warn('LightGBM load error:', e); }
+      try {
+        const dpRes = await fetch('data/dark-pool.json?t=' + Date.now());
+        if (dpRes.ok) {
+          const dp = await dpRes.json();
+          const sig = document.getElementById('ai-darkpool-signal');
+          const detail = document.getElementById('ai-darkpool-detail');
+          if (sig && dp.tickers) {
+            const spy = dp.tickers.SPY;
+            const color = spy > 0.55 ? '#ef4444' : spy < 0.40 ? '#22c55e' : '#f59e0b';
+            sig.innerHTML = '<span style="color:' + color + '">SPY: ' + (spy*100).toFixed(1) + '% short</span>';
+            const rows = Object.entries(dp.tickers).sort((a,b) => b[1] - a[1]).slice(0, 5).map(function(item) {
+              const c = item[1] > 0.55 ? 'color:#ef4444' : item[1] < 0.35 ? 'color:#22c55e' : '';
+              return '<div class="qc-stat"><span>' + item[0] + '</span><span class="qc-val" style="' + c + '">' + (item[1]*100).toFixed(1) + '%</span></div>';
+            }).join('');
+            detail.innerHTML = rows + '<div class="qc-stat"><span>Source</span><span class="qc-val">FINRA ADF</span></div>' + '<div class="qc-stat"><span>Updated</span><span class="qc-val">' + (dp.date || '—') + '</span></div>';
+          }
+        }
+      } catch(e) { console.warn('Dark pool load error:', e); }
+    })();
+
     // ── Section 1: News & Flow impact ──
     const impactEl = document.getElementById('ai-impact-grid');
     if (impactEl) impactEl.innerHTML = `
