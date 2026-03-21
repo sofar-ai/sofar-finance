@@ -1,3 +1,4 @@
+// v2026.03.21.quant
 /**
  * AI Synthesis — reads /data/ai-synthesis.json, /data/accuracy-stats.json, /data/accuracy-log.json
  * Powers both the main dashboard strip and ai-analysis.html page.
