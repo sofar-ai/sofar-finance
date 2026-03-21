@@ -332,7 +332,8 @@ const AISynthesis = (() => {
                   '<div class="ai-tc-stat"><span>Max Loss</span><span class="ai-tc-val red">$' + trade.max_loss + '</span></div>' +
                   '<div class="ai-tc-stat"><span>Breakeven</span><span class="ai-tc-val">$' + trade.breakeven + '</span></div>' +
                   '<div class="ai-tc-stat"><span>Risk/Reward</span><span class="ai-tc-val green">' + rr + '</span></div>' +
-                  '<div class="ai-tc-stat"><span>Size</span><span class="ai-tc-val">' + (trade.suggested_size_pct || '?') + '% portfolio</span></div>' +
+                  '<div class="ai-tc-stat"><span>Aggressive</span><span class="ai-tc-val">' + (trade.sizing && trade.sizing.aggressive ? trade.sizing.aggressive.pct + '%' : (trade.suggested_size_pct || '?') + '%') + ' portfolio</span></div>' +
+                  '<div class="ai-tc-stat"><span>Conservative</span><span class="ai-tc-val">' + (trade.sizing && trade.sizing.conservative ? trade.sizing.conservative.pct + '%' : '1%') + ' portfolio</span></div>' +
                 '</div>' +
                 '<div class="ai-tc-hold">Hold ' + (tr.exit_rules ? tr.exit_rules.optimal_horizon : '?') + ' days | ' + (tr.exit_rules ? tr.exit_rules.exit_strategy.replace(/_/g,' ') : '') + '</div>' +
               '</div>';
