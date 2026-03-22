@@ -121,6 +121,14 @@
     <div id="me-event-hero"></div>
     <div id="me-event-list" class="me-event-list"></div>
     <div id="me-tree-panel"></div>
+
+    <!-- Polymarket Prediction Markets -->
+    <div style="margin-top:24px;">
+      <div class="me-section-title">🔮 Polymarket — Prediction Market Probabilities</div>
+      <div id="me-polymarket" style="margin-bottom:16px;">
+        <div style="color:#4b5563;font-size:11px;font-family:var(--font-mono);">Loading Polymarket data...</div>
+      </div>
+    </div>
   </div>
 
   <nav class="mobile-bottom-nav">
@@ -141,5 +149,54 @@
     }
     updateClock(); setInterval(updateClock, 1000);
   </script>
+<script>
+(async function loadPolymarket() {
+  try {
+    var res = await fetch('data/polymarket.json?t=' + Date.now());
+    if (!res.ok) return;
+    var pm = await res.json();
+    var el = document.getElementById('me-polymarket');
+    if (!el) return;
+    
+    var compColor = pm.composite < -0.1 ? '#ef4444' : pm.composite > 0.1 ? '#22c55e' : '#f59e0b';
+    var interp = pm.interpretation || 'NEUTRAL';
+    
+    var html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">';
+    
+    // Composite card
+    html += '<div style="background:#0a0f16;border:1px solid #30363d;border-radius:6px;padding:14px;">';
+    html += '<div style="font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:0.08em;color:#6b7280;margin-bottom:8px;">MACRO COMPOSITE</div>';
+    html += '<div style="font-size:22px;font-weight:700;color:' + compColor + '">' + pm.composite.toFixed(4) + '</div>';
+    html += '<div style="font-size:11px;color:' + compColor + ';margin-top:4px;">' + interp + '</div>';
+    
+    var cats = pm.categories || {};
+    Object.entries(cats).forEach(function(entry) {
+      var cat = entry[0], data = entry[1];
+      html += '<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:11px;border-top:1px solid #21262d;margin-top:4px;">';
+      html += '<span style="color:#8b949e;">' + cat + '</span>';
+      html += '<span style="color:#c9d1d9;">' + (data.probability * 100).toFixed(1) + '%</span>';
+      html += '</div>';
+    });
+    html += '</div>';
+    
+    // Markets list
+    html += '<div style="background:#0a0f16;border:1px solid #30363d;border-radius:6px;padding:14px;">';
+    html += '<div style="font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:0.08em;color:#6b7280;margin-bottom:8px;">KEY PREDICTION MARKETS</div>';
+    
+    (pm.markets || []).forEach(function(m) {
+      var probColor = m.probability > 60 ? '#ef4444' : m.probability < 30 ? '#22c55e' : '#f59e0b';
+      html += '<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:11px;border-bottom:1px solid #21262d;">';
+      html += '<span style="color:#c9d1d9;max-width:70%;">' + (m.question || '').substring(0, 55) + '</span>';
+      html += '<span style="color:' + probColor + ';font-weight:600;font-family:var(--font-mono);">' + m.probability + '%</span>';
+      html += '</div>';
+    });
+    
+    html += '<div style="font-size:9px;color:#4b5563;margin-top:8px;">Updated: ' + (pm.date || 'N/A') + ' | Source: Polymarket Gamma API</div>';
+    html += '</div></div>';
+    
+    el.innerHTML = html;
+  } catch(e) { console.warn('Polymarket load error:', e); }
+})();
+</script>
 </body>
 </html>
