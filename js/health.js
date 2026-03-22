@@ -175,8 +175,9 @@ const HealthCheck = (() => {
     for (var i = 0; i < 2; i++) {
       var prefix = i === 0 ? 'scout' : 'lab';
       var found = false;
-      for (var d = 0; d < 2; d++) {
-        var date = d === 0 ? today : yesterday;
+      for (var d = 0; d < 5; d++) {
+        var dt = new Date(); dt.setDate(dt.getDate() - d);
+        var date = dt.toISOString().split('T')[0];
         try {
           var r = await fetch('data/research-scored/' + prefix + '-scored-' + date + '.json?t=' + Date.now());
           if (r.ok) {
