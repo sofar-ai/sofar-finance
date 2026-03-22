@@ -343,6 +343,61 @@ const AISynthesis = (() => {
       } catch(e) { console.warn('Trades load error:', e); }
     })();
 
+    // -- Polymarket Prediction Markets --
+    (async () => {
+      try {
+        var pmRes = await fetch('data/polymarket.json?t=' + Date.now());
+        if (pmRes.ok) {
+          var pm = await pmRes.json();
+          var comp = document.getElementById('ai-pm-composite');
+          var detail = document.getElementById('ai-pm-detail');
+          var mkts = document.getElementById('ai-pm-markets');
+          if (comp && pm.composite !== undefined) {
+            var color = pm.composite < -0.1 ? '#ef4444' : pm.composite > 0.1 ? '#22c55e' : '#f59e0b';
+            var interp = pm.interpretation || (pm.composite < -0.1 ? 'BEARISH' : pm.composite > 0.1 ? 'BULLISH' : 'NEUTRAL');
+            comp.innerHTML = '<span style="color:' + color + '">' + pm.composite.toFixed(4) + ' (' + interp + ')</span>';
+            var cats = pm.categories || {};
+            detail.innerHTML = Object.entries(cats).map(function(e) {
+              return '<div class="qc-stat"><span>' + e[0] + '</span><span class="qc-val">' + (e[1].probability * 100).toFixed(1) + '%</span></div>';
+            }).join('');
+          }
+          if (mkts && pm.markets) {
+            mkts.innerHTML = pm.markets.slice(0, 6).map(function(m) {
+              return '<div class="qc-stat"><span>' + (m.question || '').substring(0, 45) + '</span><span class="qc-val">' + m.probability + '%</span></div>';
+            }).join('');
+          }
+        }
+      } catch(e) { console.warn('Polymarket load error:', e); }
+    })();
+
+    // -- Overnight Market Scan --
+    (async () => {
+      try {
+        var onRes = await fetch('data/overnight-scan.json?t=' + Date.now());
+        if (onRes.ok) {
+          var on = await onRes.json();
+          var comp = document.getElementById('ai-on-composite');
+          var detail = document.getElementById('ai-on-detail');
+          var mkts = document.getElementById('ai-on-markets');
+          if (comp && on.composite !== undefined) {
+            var color = on.composite < -0.1 ? '#ef4444' : on.composite > 0.1 ? '#22c55e' : '#f59e0b';
+            var interp = on.interpretation || (on.composite < -0.1 ? 'BEARISH' : on.composite > 0.1 ? 'BULLISH' : 'NEUTRAL');
+            comp.innerHTML = '<span style="color:' + color + '">' + on.composite.toFixed(4) + ' (' + interp + ')</span>';
+            if (detail) {
+              detail.innerHTML = '<div class="qc-stat"><span>Scan time</span><span class="qc-val">' + (on.scan_time || 'N/A') + '</span></div>' +
+                '<div class="qc-stat"><span>Phase</span><span class="qc-val">' + (on.phase || 'N/A') + '</span></div>';
+            }
+          }
+          if (mkts && on.markets) {
+            mkts.innerHTML = on.markets.filter(function(m) { return m.change_pct !== null; }).slice(0, 8).map(function(m) {
+              var chgColor = m.change_pct > 0 ? '#22c55e' : m.change_pct < 0 ? '#ef4444' : '#f59e0b';
+              return '<div class="qc-stat"><span>' + m.name + '</span><span class="qc-val" style="color:' + chgColor + '">' + (m.change_pct > 0 ? '+' : '') + m.change_pct.toFixed(2) + '%</span></div>';
+            }).join('');
+          }
+        }
+      } catch(e) { console.warn('Overnight load error:', e); }
+    })();
+
     // -- Section 1: News & Flow impact --
     const impactEl = document.getElementById('ai-impact-grid');
     if (impactEl) impactEl.innerHTML = `
