@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Research — SOFAR FINANCE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0d1117">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* ── Layout ─────────────────────────────────────────────────── */
+    .re-wrap     { display:flex; flex-direction:column; height:calc(100vh - 54px); overflow:hidden; }
+    .re-panels   { display:grid; grid-template-columns:1fr 1fr; gap:0; flex:1; overflow:hidden; }
+    .re-panel    { display:flex; flex-direction:column; overflow:hidden; border-right:1px solid #1a1f28; }
+    .re-panel:last-child { border-right:none; }
+    .re-panel-hdr{ padding:10px 14px 8px; border-bottom:1px solid #1a1f28; flex-shrink:0; background:#080b10; }
+    .re-panel-title { font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:700; letter-spacing:.06em; color:#e2e8f0; display:flex; align-items:center; gap:8px; }
+    .re-panel-count { font-size:9px; color:#475569; font-weight:400; }
+    .re-filters  { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; align-items:center; }
+    .re-select   { background:#111827; border:1px solid #1e2433; color:#94a3b8; font-family:'IBM Plex Mono',monospace; font-size:9px; padding:3px 6px; border-radius:3px; outline:none; }
+    .re-select:focus { border-color:#60a5fa; }
+    .re-slider-wrap { display:flex; align-items:center; gap:4px; font-family:'IBM Plex Mono',monospace; font-size:9px; color:#64748b; }
+    .re-slider   { width:80px; accent-color:#f59e0b; }
+    .re-scroll   { overflow-y:auto; padding:8px; flex:1; }
+
+    /* ── Cards ──────────────────────────────────────────────────── */
+    .re-card     { background:#111827; border:1px solid #1e2433; border-radius:6px; padding:12px; margin-bottom:8px; transition:border-color .15s; }
+    .re-card:hover { border-color:#252c38; }
+    .re-card.re-starred  { border-color:#f59e0b55; background:#111820; }
+    .re-card.re-dismissed{ opacity:.35; }
+    .re-card-top { display:flex; align-items:flex-start; gap:8px; margin-bottom:6px; }
+    .re-card-title { font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:700; color:#e2e8f0; flex:1; line-height:1.4; }
+    .re-card-title a { color:inherit; text-decoration:none; }
+    .re-card-title a:hover { color:#60a5fa; text-decoration:underline; }
+    .re-card-meta { display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-bottom:6px; font-family:'IBM Plex Mono',monospace; font-size:9px; color:#475569; }
+    .re-author   { color:#94a3b8; }
+    .re-ts       { color:#374151; }
+    .re-verified { color:#22c55e; }
+    .re-unverif  { color:#f59e0b; }
+    .re-summary  { font-size:11px; color:#64748b; line-height:1.6; margin-bottom:8px; }
+    .re-agent-note { font-size:10px; color:#60a5fa; font-style:italic; background:rgba(59,130,246,.06); border-left:2px solid #60a5fa44; padding:5px 8px; border-radius:0 4px 4px 0; margin-bottom:8px; line-height:1.5; }
+    .re-badges   { display:flex; gap:5px; flex-wrap:wrap; align-items:center; margin-bottom:8px; }
+    .re-badge    { font-family:'IBM Plex Mono',monospace; font-size:8px; font-weight:700; padding:2px 7px; border-radius:3px; }
+    .re-cred-hi  { background:rgba(34,197,94,.15);  color:#22c55e; }
+    .re-cred-mid { background:rgba(245,158,11,.15); color:#f59e0b; }
+    .re-cred-lo  { background:rgba(239,68,68,.15);  color:#ef4444; }
+    .re-cat-gex  { background:rgba(59,130,246,.15);  color:#60a5fa; }
+    .re-cat-vix  { background:rgba(168,85,247,.15);  color:#c084fc; }
+    .re-cat-flow { background:rgba(251,146,60,.15);  color:#fb923c; }
+    .re-cat-sent { background:rgba(34,197,94,.15);   color:#4ade80; }
+    .re-cat-meth { background:rgba(6,182,212,.15);   color:#22d3ee; }
+    .re-cat-mac  { background:rgba(245,158,11,.15);  color:#fbbf24; }
+    .re-cat-trd  { background:rgba(239,68,68,.15);   color:#f87171; }
+    .re-cat-sig  { background:rgba(20,184,166,.15);  color:#2dd4bf; }
+    .re-cat-risk { background:rgba(100,116,139,.15); color:#94a3b8; }
+    .re-cat-back { background:rgba(99,102,241,.15);  color:#818cf8; }
+    .re-ticker   { background:rgba(255,255,255,.06); color:#cbd5e1; font-family:'IBM Plex Mono',monospace; font-size:8px; padding:1px 5px; border-radius:2px; }
+    .re-rel-bar  { margin-bottom:8px; }
+    .re-rel-label { font-family:'IBM Plex Mono',monospace; font-size:9px; color:#475569; margin-bottom:3px; }
+    .re-rel-track { height:4px; background:#1e2433; border-radius:2px; }
+    .re-rel-fill  { height:4px; border-radius:2px; transition:width .3s; }
+    .re-actions  { display:flex; gap:6px; }
+    .re-action-btn { font-family:'IBM Plex Mono',monospace; font-size:9px; font-weight:700; padding:4px 10px; border-radius:3px; border:1px solid #1e2433; background:transparent; color:#64748b; cursor:pointer; transition:all .1s; }
+    .re-action-btn:hover { border-color:#374151; color:#e2e8f0; }
+    .re-btn-star  { color:#f59e0b; border-color:#f59e0b44; }
+    .re-btn-star:hover  { background:rgba(245,158,11,.1); }
+    .re-btn-star.active { background:rgba(245,158,11,.15); color:#f59e0b; border-color:#f59e0b88; }
+    .re-btn-dim  { color:#ef4444; border-color:#ef444444; }
+    .re-btn-dim:hover  { background:rgba(239,68,68,.08); }
+    .re-btn-action { color:#22c55e; border-color:#22c55e44; }
+    .re-btn-action:hover { background:rgba(34,197,94,.08); }
+    .re-btn-action.saved { color:#475569; border-color:#1e2433; }
+
+    /* ── Bottom pipeline bar ─────────────────────────────────────── */
+    .re-pipeline { border-top:1px solid #1a1f28; padding:8px 16px; display:flex; gap:20px; flex-wrap:wrap; align-items:center; background:#080b10; flex-shrink:0; }
+    .re-pip-item { font-family:'IBM Plex Mono',monospace; font-size:9px; color:#374151; }
+    .re-pip-item span { color:#64748b; }
+    .re-pip-ok   { color:#22c55e !important; }
+    .re-pip-warn { color:#f59e0b !important; }
+
+    /* ── Toast notification ──────────────────────────────────────── */
+    .re-toast { position:fixed; bottom:60px; right:16px; background:#1e2433; border:1px solid #252c38; color:#e2e8f0; font-family:'IBM Plex Mono',monospace; font-size:10px; padding:8px 14px; border-radius:4px; z-index:9999; opacity:0; transition:opacity .2s; pointer-events:none; }
+    .re-toast.show { opacity:1; }
+
+    .re-gap-toggle { font-family:'IBM Plex Mono',monospace; font-size:9px; color:#64748b; display:flex; align-items:center; gap:4px; cursor:pointer; white-space:nowrap; }
+    .re-gap-toggle input { accent-color:#f59e0b; cursor:pointer; }
+    .re-gap-badge  { background:rgba(34,197,94,.13); color:#4ade80; font-family:'IBM Plex Mono',monospace; font-size:8px; font-weight:700; padding:2px 7px; border-radius:3px; }
+    .re-nogap-note { font-size:10px; color:#374151; font-style:italic; margin-bottom:8px; line-height:1.5; }
+    .re-gap-panel  { background:rgba(34,197,94,.04); border:1px solid rgba(34,197,94,.15); border-radius:5px; padding:10px 12px; margin-bottom:8px; }
+    .re-gap-hdr    { font-family:'IBM Plex Mono',monospace; font-size:9px; font-weight:700; color:#4ade80; margin-bottom:6px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .re-gap-desc   { font-size:11px; color:#94a3b8; line-height:1.6; margin-bottom:6px; }
+    .re-gap-meta   { display:flex; gap:5px; flex-wrap:wrap; }
+    .re-complexity { font-family:'IBM Plex Mono',monospace; font-size:8px; font-weight:700; padding:2px 6px; border-radius:3px; }
+    .re-cplx-lo    { background:rgba(34,197,94,.15);  color:#4ade80; }
+    .re-cplx-mid   { background:rgba(245,158,11,.15); color:#f59e0b; }
+    .re-cplx-hi    { background:rgba(239,68,68,.15);  color:#ef4444; }
+    .re-action-note-wrap { margin-top:6px; display:none; }
+    .re-action-note-wrap.open { display:block; }
+    .re-action-note { width:100%; background:#080b10; border:1px solid #1e2433; color:#e2e8f0; font-family:'IBM Plex Mono',monospace; font-size:10px; padding:6px 8px; border-radius:3px; outline:none; resize:none; }
+    .re-action-note:focus { border-color:#22c55e55; }
+    .re-save-note  { margin-top:4px; font-family:'IBM Plex Mono',monospace; font-size:9px; font-weight:700; padding:3px 10px; border-radius:3px; border:1px solid #22c55e44; background:transparent; color:#22c55e; cursor:pointer; }
+    .re-save-note:hover { background:rgba(34,197,94,.08); }
+    .re-empty { text-align:center; padding:40px 20px; color:#374151; font-family:'IBM Plex Mono',monospace; font-size:11px; }
+    @media(max-width:800px){ .re-panels{grid-template-columns:1fr;} .re-panel{max-height:50vh;} }
+  </style>
+</head>
+<body class="page-scrollable" style="height:100vh;overflow:hidden;">
+  <div id="nav-root"></div>
+  <script src="js/nav.js"></script>
+  <script>document.addEventListener('DOMContentLoaded',()=>NavComponent.setMeta(`<span class="live-dot"></span>LIVE<span style="margin-left:8px" id="clock"></span>`));</script>
+
+  <div class="re-wrap" id="re-wrap">
+    <div class="re-panels" id="re-panels">
+      <div class="re-panel">
+        <div class="re-panel-hdr">
+          <div class="re-panel-title">🔭 Scout <span style="color:#f59e0b;font-size:9px">Trade Ideas</span>
+            <span class="re-panel-count" id="scout-count">Loading…</span>
+          </div>
+          <div class="re-filters">
+            <select class="re-select" id="scout-cat">
+              <option value="">All categories</option>
+              <option value="gex">GEX</option><option value="vix">VIX</option>
+              <option value="options_flow">Options Flow</option><option value="sentiment">Sentiment</option>
+              <option value="macro">Macro</option><option value="trade_setup">Trade Setup</option>
+              <option value="methodology">Methodology</option><option value="new_signal">New Signal</option>
+              <option value="risk_management">Risk Mgmt</option><option value="backtesting">Backtesting</option>
+            </select>
+            <select class="re-select" id="scout-cred">
+              <option value="">All credibility</option>
+              <option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option>
+            </select>
+            <div class="re-slider-wrap">
+              Rel ≥ <input type="range" class="re-slider" id="scout-rel" min="0" max="100" value="0">
+              <span id="scout-rel-val">0%</span>
+            </div>
+            <label class="re-gap-toggle"><input type="checkbox" id="scout-gaps-only"> Gaps only</label>
+          </div>
+        </div>
+        <div class="re-scroll" id="scout-cards"></div>
+      </div>
+      <div class="re-panel">
+        <div class="re-panel-hdr">
+          <div class="re-panel-title">🔬 Lab <span style="color:#22d3ee;font-size:9px">Algorithm Improvements</span>
+            <span class="re-panel-count" id="lab-count">Loading…</span>
+          </div>
+          <div class="re-filters">
+            <select class="re-select" id="lab-cat">
+              <option value="">All categories</option>
+              <option value="gex">GEX</option><option value="vix">VIX</option>
+              <option value="options_flow">Options Flow</option><option value="methodology">Methodology</option>
+              <option value="new_signal">New Signal</option><option value="backtesting">Backtesting</option>
+              <option value="macro">Macro</option><option value="risk_management">Risk Mgmt</option>
+            </select>
+            <div class="re-slider-wrap">
+              Rel ≥ <input type="range" class="re-slider" id="lab-rel" min="0" max="100" value="0">
+              <span id="lab-rel-val">0%</span>
+            </div>
+            <label class="re-gap-toggle"><input type="checkbox" id="lab-gaps-only"> Gaps only</label>
+          </div>
+        </div>
+        <div class="re-scroll" id="lab-cards"></div>
+      </div>
+    </div>
+    <div class="re-pipeline" id="re-pipeline">
+      <span class="re-pip-item">Loading pipeline status…</span>
+    </div>
+  </div>
+  <div class="re-toast" id="re-toast"></div>
+
+  <script>
+  'use strict';
+  const t = Date.now();
+  let reviews = {};   // raw_id → {action, starred}
+  let actions  = [];  // saved action items
+  let scoutData = null, labData = null;
+
+  function tickClock(){const el=document.getElementById('clock');if(el)el.textContent=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false,timeZone:'America/New_York'})+' ET';}
+  setInterval(tickClock,1000); tickClock();
+
+  const parseTs = iso => {
+    if(!iso) return null;
+    // Normalise: strip double-suffix like "+00:00Z", then ensure trailing Z
+    let s2 = iso.replace(/\+00:00Z$/, 'Z').replace(/\+00:00$/, 'Z');
+    if(!s2.endsWith('Z')) s2 += 'Z';
+    const d = new Date(s2);
+    return isNaN(d.getTime()) ? null : d;
+  };
+  const fmtTs = iso => { try{const d=parseTs(iso);if(!d)return '';return d.toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit',hour12:true,timeZone:'America/New_York'}).replace(',','')+' ET';}catch(e){return '';} };
+  const fmtAge = iso => { try{const d=parseTs(iso);if(!d)return '';const m=Math.round((Date.now()-d)/60000);if(m<0)return '';return m<60?`${m}m ago`:`${(m/60).toFixed(1)}h ago`;}catch(e){return '';} };
+
+  const CAT_CLASS = {
+    gex:'re-cat-gex',vix:'re-cat-vix',options_flow:'re-cat-flow',sentiment:'re-cat-sent',
+    methodology:'re-cat-meth',macro:'re-cat-mac',trade_setup:'re-cat-trd',
+    new_signal:'re-cat-sig',risk_management:'re-cat-risk',backtesting:'re-cat-back',
+  };
+  const CAT_LABEL = {
+    gex:'GEX',vix:'VIX',options_flow:'Flow',sentiment:'Sent',methodology:'Method',
+    macro:'Macro',trade_setup:'Trade',new_signal:'Signal',risk_management:'Risk',backtesting:'Backtest',
+  };
+
+  function relColor(s){return s>=0.7?'#22c55e':s>=0.4?'#f59e0b':'#ef4444';}
+
+  function toast(msg, ms=2500){
+    const el=document.getElementById('re-toast');
+    el.textContent=msg; el.classList.add('show');
+    setTimeout(()=>el.classList.remove('show'), ms);
+  }
+
+  // ── Save reviews/actions to GitHub via trigger (read from static JSON for now) ──
+  function saveReviews(){
+    try{ localStorage.setItem('re-reviews', JSON.stringify(reviews)); }catch(e){}
+  }
+  function loadReviews(){
+    try{ const r=localStorage.getItem('re-reviews'); if(r) reviews=JSON.parse(r); }catch(e){}
+  }
+
+  function doStar(rawId, el){
+    const isStarred = reviews[rawId]?.starred;
+    if(!reviews[rawId]) reviews[rawId]={};
+    reviews[rawId].starred = !isStarred;
+    reviews[rawId].action  = reviews[rawId].starred ? 'star' : 'unstar';
+    reviews[rawId].timestamp = new Date().toISOString();
+    saveReviews();
+    el.classList.toggle('active', reviews[rawId].starred);
+    const card = document.getElementById(`re-card-${rawId}`);
+    if(card){ card.classList.toggle('re-starred', reviews[rawId].starred); }
+    toast(reviews[rawId].starred ? '⭐ Starred' : 'Unstarred');
+    logReview(rawId, reviews[rawId].action);
+  }
+
+  function doDismiss(rawId){
+    if(!reviews[rawId]) reviews[rawId]={};
+    reviews[rawId].dismissed = true;
+    reviews[rawId].timestamp = new Date().toISOString();
+    saveReviews();
+    const card = document.getElementById(`re-card-${rawId}`);
+    if(card) card.classList.add('re-dismissed');
+    logReview(rawId, 'dismiss');
+    toast('Dismissed');
+  }
+
+  function doAction(rawId, itemData, el){
+    if(el.classList.contains('saved')){ toast('Already saved'); return; }
+    const entry = { item_id: rawId, action:'action', timestamp: new Date().toISOString(),
+                    title: itemData.title, url: itemData.url, summary: itemData.summary,
+                    relevance_score: itemData.relevance_score, tickers: itemData.tickers };
+    actions.push(entry);
+    try{ localStorage.setItem('re-actions', JSON.stringify(actions)); }catch(e){}
+    el.textContent='✓ Saved'; el.classList.add('saved');
+    logReview(rawId, 'action');
+    toast('→ Saved to action list');
+  }
+
+  function logReview(rawId, action){
+    // POST review to GitHub via trigger (non-blocking, best-effort)
+    fetch('/api/save-review', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ raw_id: rawId, action, timestamp: new Date().toISOString() })
+    }).catch(()=>{}); // silent — frontend localStorage is primary
+  }
+
+  function buildCard(item, isLab){
+    const rid    = item.raw_id;
+    const rev    = reviews[rid] || {};
+    const rel    = item.relevance_score || 0;
+    const relPct = Math.round(rel * 100);
+    const cat    = item.category || 'macro';
+    const cred   = item.credibility || 'medium';
+    const credCls= cred==='high'?'re-cred-hi':cred==='low'?'re-cred-lo':'re-cred-mid';
+    const catCls = CAT_CLASS[cat] || 're-cat-mac';
+    const catLbl = CAT_LABEL[cat] || cat;
+    const tickers= (item.tickers||[]).slice(0,5);
+    const ts     = item.timestamp || '';
+    const verified = item.fetch_verified !== false;
+    const hasGap = item.has_gap === true;
+    const pc     = item.proposed_change;
+    const gapAnalysis = item.sofar_gap_analysis || item.relevance_to_sofar || '';
+    const summary  = item.source_summary || item.summary || '';
+    const actionSaved = actions.find(a=>a.item_id===rid);
+
+    const tickerBadges = tickers.map(t=>`<span class="re-ticker">${t}</span>`).join('');
+    const verifiedHtml = verified
+      ? `<span class="re-verified" title="Fetch verified">✓ verified</span>`
+      : `<span class="re-unverif">${item.partial_reason||'partial'}</span>`;
+
+    const ageStr = fmtAge(ts);
+
+    // Gap analysis block
+    let gapBlock = '';
+    if(hasGap && pc) {
+      const cplxCls = pc.implementation_complexity==='low'?'re-cplx-lo':pc.implementation_complexity==='high'?'re-cplx-hi':'re-cplx-mid';
+      gapBlock = `<div class="re-gap-panel">
+        <div class="re-gap-hdr">
+          <span class="re-gap-badge">⚡ GAP IDENTIFIED</span>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:8px;color:#60a5fa;background:rgba(59,130,246,.1);padding:2px 6px;border-radius:3px;">${pc.target_component||''}</span>
+          <span class="re-complexity ${cplxCls}">${(pc.implementation_complexity||'').toUpperCase()}</span>
+          ${pc.estimated_effort?`<span style="font-family:'IBM Plex Mono',monospace;font-size:8px;color:#475569">${pc.estimated_effort}</span>`:''}
+        </div>
+        <div class="re-gap-desc">${pc.change_description||''}</div>
+      </div>`;
+    } else if(gapAnalysis && !hasGap) {
+      gapBlock = `<div class="re-nogap-note">${gapAnalysis}</div>`;
+    }
+
+    // Agent assessment (lab) or gap analysis text for has_gap items
+    let agentBlock = '';
+    if(hasGap && gapAnalysis) {
+      agentBlock = `<div class="re-agent-note">${gapAnalysis}</div>`;
+    } else if(isLab && gapAnalysis && !hasGap) {
+      agentBlock = '';  // already shown in nogap-note
+    } else if(isLab && gapAnalysis) {
+      agentBlock = `<div class="re-agent-note">${gapAnalysis}</div>`;
+    }
+
+    // Action button / note area
+    const actionBtnTxt = actionSaved ? '✓ Saved' : '→ Action';
+    const actionBtnCls = actionSaved ? 'saved' : '';
+    const noteArea = hasGap ? `
+      <div class="re-action-note-wrap" id="re-note-${rid}">
+        <textarea class="re-action-note" id="re-note-text-${rid}" rows="2" placeholder="Add a note (e.g. 'implement next sprint', 'discuss with Claude first')…"></textarea>
+        <button class="re-save-note" onclick="saveActionNote('${rid}',${JSON.stringify({title:item.title,url:item.url,source_summary:summary.slice(0,200),relevance_score:rel,tickers:item.tickers||[],proposed_change:pc}).replace(/</g,'&lt;')})">Save note</button>
+      </div>` : '';
+
+    return `<div class="re-card${rev.starred?' re-starred':''}${rev.dismissed?' re-dismissed':''}"
+         id="re-card-${rid}"
+         data-cat="${cat}" data-cred="${cred}" data-rel="${relPct}"
+         data-gap="${hasGap?1:0}" data-starred="${rev.starred?1:0}">
+      <div class="re-card-top">
+        <div class="re-card-title">
+          <a href="${item.url}" target="_blank" rel="noopener">${item.title||'Untitled'}</a>
+        </div>
+      </div>
+      <div class="re-card-meta">
+        ${(item.author||item.source)?`<span class="re-author">${item.author||item.source}</span>`:''}
+        ${ageStr?`<span class="re-ts">${ageStr}</span>`:''}
+        ${verifiedHtml}
+      </div>
+      <div class="re-summary">${summary}</div>
+      ${agentBlock}
+      ${gapBlock}
+      <div class="re-badges">
+        <span class="re-badge ${credCls}">${cred.toUpperCase()}</span>
+        <span class="re-badge ${catCls}">${catLbl}</span>
+        ${hasGap?'<span class="re-gap-badge">GAP</span>':''}
+        ${tickerBadges}
+      </div>
+      <div class="re-rel-bar">
+        <div class="re-rel-label">Relevance ${relPct}%</div>
+        <div class="re-rel-track"><div class="re-rel-fill" style="width:${relPct}%;background:${relColor(rel)}"></div></div>
+      </div>
+      ${noteArea}
+      <div class="re-actions">
+        <button class="re-action-btn re-btn-star${rev.starred?' active':''}"
+          onclick="doStar('${rid}',this)">⭐ Star</button>
+        <button class="re-action-btn re-btn-dim"
+          onclick="doDismiss('${rid}')">✕ Dismiss</button>
+        <button class="re-action-btn re-btn-action ${actionBtnCls}"
+          onclick="${hasGap?`toggleActionNote('${rid}',this)`:`doAction('${rid}',${JSON.stringify({title:item.title,url:item.url,source_summary:summary.slice(0,200),relevance_score:rel,tickers:item.tickers||[]}).replace(/</g,'&lt;')},this)`}">${actionBtnTxt}</button>
+      </div>
+    </div>`;
+  }
+
+  function renderCards(containerId, items, isLab, catFilter, credFilter, relMin, stats){
+    const el = document.getElementById(containerId);
+    const countEl = document.getElementById(containerId.replace('-cards','-count'));
+    if(!items || !items.length){ el.innerHTML = `<div class="re-empty">No data loaded.<br>Run the research scrapers first.</div>`; return; }
+
+    // Separate starred, normal, dismissed
+    const gapsOnly = document.getElementById(containerId.replace('-cards','-gaps-only'))?.checked || false;
+    let filtered = items.filter(i => !i.skip)
+      .filter(i => !catFilter  || i.category === catFilter)
+      .filter(i => !credFilter || i.credibility === credFilter)
+      .filter(i => Math.round((i.relevance_score||0)*100) >= relMin)
+      .filter(i => !gapsOnly || i.has_gap === true);
+
+    // Sort: starred first, then by relevance desc, then dismissed last
+    filtered.sort((a,b) => {
+      const aS = reviews[a.raw_id]?.starred?1:0;
+      const bS = reviews[b.raw_id]?.starred?1:0;
+      const aD = reviews[a.raw_id]?.dismissed?1:0;
+      const bD = reviews[b.raw_id]?.dismissed?1:0;
+      if(aD !== bD) return aD - bD;
+      if(aS !== bS) return bS - aS;
+      return (b.relevance_score||0) - (a.relevance_score||0);
+    });
+
+    const shown = filtered.filter(i => !reviews[i.raw_id]?.dismissed).length;
+    if(countEl && stats) {
+      const gapCount = filtered.filter(i => i.has_gap).length;
+      countEl.textContent = `${shown} shown · ${gapCount} gaps · ${stats.skipped||0} skipped`;
+    }
+    el.innerHTML = filtered.map(i => buildCard(i, isLab)).join('') ||
+      `<div class="re-empty">No items match current filters.</div>`;
+  }
+
+  function applyFilters(){
+    if(scoutData) renderCards('scout-cards',
+      scoutData.items, false,
+      document.getElementById('scout-cat').value,
+      document.getElementById('scout-cred').value,
+      parseInt(document.getElementById('scout-rel').value)||0,
+      scoutData.stats
+    );
+    if(labData) renderCards('lab-cards',
+      labData.items, true,
+      document.getElementById('lab-cat').value,
+      '',
+      parseInt(document.getElementById('lab-rel').value)||0,
+      labData.stats
+    );
+  }
+
+  function renderPipeline(){
+    const el = document.getElementById('re-pipeline');
+    const parts = [];
+    if(scoutData){
+      const s = scoutData.stats||{};
+      parts.push(`<span class="re-pip-item">Scout: <span class="re-pip-ok">${s.scored||0} scored</span> / ${s.total_raw||0} raw · ${s.skipped||0} skipped · ${fmtAge(scoutData.generated_at)}</span>`);
+    }
+    if(labData){
+      const s = labData.stats||{};
+      parts.push(`<span class="re-pip-item">Lab: <span class="re-pip-ok">${s.scored||0} scored</span> / ${s.total_raw||0} raw · ${s.skipped||0} skipped · ${fmtAge(labData.generated_at)}</span>`);
+    }
+    const valWarning = (scoutData?.stats?.rejected_by_validation||0)+(labData?.stats?.rejected_by_validation||0);
+    if(valWarning) parts.push(`<span class="re-pip-item re-pip-warn">⚠ ${valWarning} rejected by validation</span>`);
+    parts.push(`<span class="re-pip-item">Next run: <span>9:30 AM ET weekdays</span></span>`);
+    el.innerHTML = parts.join('');
+  }
+
+  // ── Try to find today's and yesterday's scored files ──────────────────────
+  async function findLatestFile(prefix){
+    const dates = [];
+    const d = new Date();
+    for(let i=0;i<3;i++){
+      const dt = new Date(d); dt.setDate(dt.getDate()-i);
+      dates.push(dt.toISOString().slice(0,10));
+    }
+    for(const date of dates){
+      const url = `data/research-scored/${prefix}-scored-${date}.json?t=${Date.now()}`;
+      try{
+        const r = await fetch(url);
+        if(r.ok) return r.json();
+      }catch(e){}
+    }
+    return null;
+  }
+
+  async function init(){
+    loadReviews();
+    try{ const saved=localStorage.getItem('re-actions'); if(saved) actions=JSON.parse(saved); }catch(e){}
+
+    const [scout, lab] = await Promise.all([
+      findLatestFile('scout'),
+      findLatestFile('lab'),
+    ]);
+    scoutData = scout;
+    labData   = lab;
+    applyFilters();
+    renderPipeline();
+
+    // Wire filters
+    ['scout-cat','scout-cred','lab-cat'].forEach(id=>{
+      document.getElementById(id)?.addEventListener('change', applyFilters);
+    });
+    ['scout-rel','lab-rel'].forEach(id=>{
+      const slider = document.getElementById(id);
+      const valEl  = document.getElementById(id+'-val');
+      slider?.addEventListener('input', ()=>{ if(valEl) valEl.textContent=slider.value+'%'; applyFilters(); });
+    });
+  }
+
+  init();
+  setInterval(async ()=>{ const scout=await findLatestFile('scout'); const lab=await findLatestFile('lab'); if(scout)scoutData=scout; if(lab)labData=lab; applyFilters(); renderPipeline(); }, 300000);
+  </script>
+</body>
+</html>
