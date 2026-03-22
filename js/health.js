@@ -389,6 +389,10 @@ const HealthCheck = (() => {
       var r = allResults.find(function(x){return x.key===k});
       if (r) cards.push(renderFeedCard(r));
     });
+    ['lgbm_prediction','trade_recs','overnight_scan','polymarket','dark_pool','morning_brief'].forEach(function(k) {
+      var r = allResults.find(function(x){return x.key===k});
+      if (r) cards.push(renderFeedCard(r));
+    });
 
     ['research_scout','research_lab'].forEach(function(k) {
       var r = allResults.find(function(x){return x.key===k});
