@@ -23,6 +23,12 @@ const HealthCheck = (() => {
     research_scout: { warn: 1500, err: 2900, label: 'Research Scout', emoji: '🔍' },
     research_lab:   { warn: 1500, err: 2900, label: 'Research Lab', emoji: '🧪' },
     pred_archive:   { warn: 1500, err: 2900, label: 'Prediction Archive', emoji: '📦' },
+    lgbm_prediction:{ warn: 1500, err: 2900, label: 'LightGBM Prediction', emoji: '🧠' },
+    trade_recs:     { warn: 1500, err: 2900, label: 'Trade Recommendations', emoji: '💰' },
+    overnight_scan: { warn: 800,  err: 1500, label: 'Overnight Scan', emoji: '🌙' },
+    polymarket:     { warn: 1500, err: 2900, label: 'Polymarket Macro', emoji: '🔮' },
+    dark_pool:      { warn: 1500, err: 2900, label: 'Dark Pool Data', emoji: '🏊' },
+    morning_brief:  { warn: 1500, err: 2900, label: 'Morning Brief', emoji: '☀️' },
   };
 
   const FEEDS = [
