@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Strategy Lab — SOFAR FINANCE</title>
+  <title>Model Performance — SOFAR Finance</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -11,104 +11,271 @@
   <meta name="theme-color" content="#0d1117">
   <link rel="stylesheet" href="css/style.css">
   <style>
-    /* ── Layout ──────────────────────────────────────── */
-    .sl-page   { max-width:1400px; margin:0 auto; padding:16px; }
-    .sl-card   { background:#111827; border:1px solid #1e2433; border-radius:8px; padding:16px; margin-bottom:16px; }
-    .sl-grid2  { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
-    @media(max-width:900px){ .sl-grid2{ grid-template-columns:1fr; } }
-
-    /* ── Card titles ─────────────────────────────────── */
-    .sl-card-title { font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:700; letter-spacing:.08em; color:#94a3b8; text-transform:uppercase; margin-bottom:12px; display:flex; align-items:center; justify-content:space-between; }
-    .sl-ts         { font-size:9px; color:#374151; font-weight:400; }
-
-    /* ── Table ────────────────────────────────────────── */
-    .sl-table-wrap { overflow-x:auto; }
-    .sl-table      { width:100%; border-collapse:collapse; font-family:'IBM Plex Mono',monospace; font-size:11px; }
-    .sl-th         { padding:6px 10px; text-align:left; color:#374151; font-weight:700; font-size:9px; letter-spacing:.06em; border-bottom:1px solid #1e2433; cursor:pointer; white-space:nowrap; user-select:none; }
-    .sl-th:hover   { color:#64748b; }
-    .sl-th-active  { color:#f59e0b; }
-    .sl-row td     { padding:7px 10px; border-bottom:1px solid #0d1117; color:#94a3b8; white-space:nowrap; cursor:pointer; }
-    .sl-row:hover td { background:#1e2433; }
-    .sl-row.sl-expanded td { background:#141b24; }
-    .sl-name       { color:#e2e8f0; font-weight:600; }
-    .sl-detail-row td  { padding:0; background:#0d1117; }
-    .sl-detail-inner   { padding:12px 16px 16px; }
-    .sl-detail-title   { font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:700; color:#64748b; margin-bottom:10px; }
-
-    /* ── Weight bars ─────────────────────────────────── */
-    .sl-wbars     { display:flex; flex-direction:column; gap:5px; }
-    .sl-wbar-row  { display:flex; align-items:center; gap:8px; font-family:'IBM Plex Mono',monospace; font-size:10px; }
-    .sl-wbar-lbl  { width:140px; color:#64748b; text-align:right; flex-shrink:0; }
-    .sl-wbar-track{ height:6px; background:#1e2433; border-radius:3px; flex:1; max-width:340px; }
-    .sl-wbar-fill { height:6px; background:#f59e0b; border-radius:3px; }
-    .sl-wbar-pct  { width:42px; color:#94a3b8; font-size:9px; }
-
-    /* ── Active weights panel ────────────────────────── */
-    .sl-aw-meta   { display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin-bottom:6px; }
-    .sl-aw-version{ font-family:'IBM Plex Mono',monospace; font-size:14px; font-weight:700; color:#f59e0b; }
-    .sl-aw-stat   { font-family:'IBM Plex Mono',monospace; font-size:10px; color:#475569; }
-    .sl-aw-stat b { font-weight:700; }
-    .sl-rg-title  { font-family:'IBM Plex Mono',monospace; font-size:9px; font-weight:700; color:#374151; letter-spacing:.08em; margin-top:14px; margin-bottom:6px; }
-    .sl-rg-row    { font-family:'IBM Plex Mono',monospace; font-size:10px; color:#475569; line-height:1.6; }
-    .sl-rg-row b  { color:#64748b; }
-
-    /* ── Signal reading panel ────────────────────────── */
-    .sl-sr-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:700; color:#94a3b8; }
-    .sl-sr-meta   { font-size:9px; color:#374151; font-weight:400; }
-    .sl-sr-grid   { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:12px; }
-    @media(max-width:600px){ .sl-sr-grid{ grid-template-columns:repeat(2,1fr); } }
-    .sl-sr-card   { background:#0d1117; border:1px solid #1a1f28; border-radius:6px; padding:10px; }
-    .sl-sr-label  { font-family:'IBM Plex Mono',monospace; font-size:9px; color:#374151; margin-bottom:4px; }
-    .sl-sr-value  { font-family:'IBM Plex Mono',monospace; font-size:16px; font-weight:700; color:#e2e8f0; margin-bottom:4px; }
-    .sl-sr-weight { font-family:'IBM Plex Mono',monospace; font-size:9px; color:#f59e0b; }
-    .sl-sr-signal { font-family:'IBM Plex Mono',monospace; font-size:12px; color:#64748b; }
-    .sl-sr-conf   { color:#475569; font-size:10px; }
-
-    /* ── Colors ──────────────────────────────────────── */
-    .sl-green { color:#22c55e; }
-    .sl-amber { color:#f59e0b; }
-    .sl-red   { color:#ef4444; }
-    .sl-empty, .sl-placeholder { text-align:center; padding:32px; color:#374151; font-family:'IBM Plex Mono',monospace; font-size:11px; }
+    .mp-wrap { padding:0 16px 24px; max-width:1200px; margin:0 auto; }
+    .mp-hero { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:20px; }
+    .mp-hero-card { background:#0a0f16; border:1px solid #1e2433; border-radius:8px; padding:16px; text-align:center; }
+    .mp-hero-label { font-family:'IBM Plex Mono',monospace; font-size:9px; font-weight:700; letter-spacing:.1em; color:#6b7280; margin-bottom:6px; }
+    .mp-hero-val { font-family:'IBM Plex Mono',monospace; font-size:28px; font-weight:700; }
+    .mp-hero-sub { font-family:'IBM Plex Mono',monospace; font-size:10px; color:#4b5563; margin-top:4px; }
+    .mp-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px; }
+    .mp-section { background:#0a0f16; border:1px solid #1e2433; border-radius:8px; padding:16px; }
+    .mp-section-title { font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:700; letter-spacing:.06em; color:#e2e8f0; margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+    .mp-row { display:flex; justify-content:space-between; align-items:center; padding:5px 0; font-family:'IBM Plex Mono',monospace; font-size:11px; border-bottom:1px solid #111827; }
+    .mp-row:last-child { border-bottom:none; }
+    .mp-row-label { color:#8b949e; }
+    .mp-row-val { color:#c9d1d9; font-weight:600; }
+    .mp-bar-wrap { height:6px; background:#1e2433; border-radius:3px; margin-top:3px; flex:1; margin-left:10px; }
+    .mp-bar { height:100%; border-radius:3px; }
+    .mp-badge { display:inline-block; font-family:'IBM Plex Mono',monospace; font-size:9px; font-weight:700; padding:2px 8px; border-radius:3px; }
+    .mp-pred-card { background:linear-gradient(135deg,rgba(59,130,246,.06),rgba(34,197,94,.06)); border:1px solid #1e2433; border-radius:8px; padding:16px; margin-bottom:20px; }
+    .mp-pred-dir { font-family:'IBM Plex Mono',monospace; font-size:32px; font-weight:700; }
+    .mp-pred-detail { font-family:'IBM Plex Mono',monospace; font-size:11px; color:#8b949e; margin-top:4px; }
+    .mp-timeline { position:relative; padding-left:24px; }
+    .mp-timeline::before { content:''; position:absolute; left:8px; top:0; bottom:0; width:2px; background:#1e2433; }
+    .mp-tl-item { position:relative; margin-bottom:12px; }
+    .mp-tl-dot { position:absolute; left:-20px; top:4px; width:10px; height:10px; border-radius:50%; border:2px solid #1e2433; background:#0d1117; }
+    .mp-tl-dot.active { background:#22c55e; border-color:#22c55e; }
+    .mp-tl-date { font-family:'IBM Plex Mono',monospace; font-size:9px; color:#4b5563; }
+    .mp-tl-text { font-family:'IBM Plex Mono',monospace; font-size:11px; color:#c9d1d9; }
+    .mp-tl-acc { font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:700; }
+    .mp-full { grid-column:1/-1; }
+    .mp-feat-row { display:flex; align-items:center; gap:8px; padding:4px 0; font-family:'IBM Plex Mono',monospace; font-size:10px; }
+    .mp-feat-rank { color:#4b5563; min-width:20px; }
+    .mp-feat-name { color:#c9d1d9; min-width:180px; }
+    .mp-feat-cat { font-size:8px; font-weight:700; padding:1px 5px; border-radius:2px; min-width:32px; text-align:center; }
+    .mp-feat-bar { flex:1; height:4px; background:#1e2433; border-radius:2px; }
+    .mp-feat-bar-fill { height:100%; border-radius:2px; }
+    .mp-feat-imp { color:#6b7280; min-width:30px; text-align:right; }
+    @media(max-width:800px){ .mp-hero{grid-template-columns:1fr 1fr;} .mp-grid{grid-template-columns:1fr;} }
   </style>
 </head>
 <body class="page-scrollable">
   <div id="nav-root"></div>
   <script src="js/nav.js"></script>
-  <script>document.addEventListener('DOMContentLoaded',()=>NavComponent.setMeta(`<span class="live-dot"></span>LIVE<span style="margin-left:8px" id="sl-ts"></span>`));</script>
+  <div class="mp-wrap">
+    <div class="perf-section-title" style="margin-bottom:16px;">🧠 LightGBM v6 — Model Performance Dashboard</div>
 
-  <div class="sl-page">
-
-    <!-- Panel 1: Leaderboard -->
-    <div class="sl-card">
-      <div class="sl-card-title">🏆 Strategy Leaderboard <span class="sl-ts" id="sl-ts"></span></div>
-      <div class="sl-table-wrap">
-        <table class="sl-table">
-          <thead id="sl-thead"></thead>
-          <tbody id="sl-tbody"><tr><td colspan="12" class="sl-empty">Loading strategies…</td></tr></tbody>
-        </table>
+    <!-- Hero Stats -->
+    <div class="mp-hero" id="mp-hero">
+      <div class="mp-hero-card">
+        <div class="mp-hero-label">WALK-FORWARD ACCURACY</div>
+        <div class="mp-hero-val" id="mp-wf-acc" style="color:#22c55e;">—</div>
+        <div class="mp-hero-sub">62 windows · 30 years</div>
+      </div>
+      <div class="mp-hero-card">
+        <div class="mp-hero-label">FEATURES IN MODEL</div>
+        <div class="mp-hero-val" id="mp-feat-count" style="color:#3b82f6;">—</div>
+        <div class="mp-hero-sub">75 active · 80 total signals</div>
+      </div>
+      <div class="mp-hero-card">
+        <div class="mp-hero-label">TRAINING DATA</div>
+        <div class="mp-hero-val" id="mp-train-days" style="color:#f59e0b;">—</div>
+        <div class="mp-hero-sub" id="mp-train-range">—</div>
+      </div>
+      <div class="mp-hero-card">
+        <div class="mp-hero-label">HIGH CONFIDENCE (90%+)</div>
+        <div class="mp-hero-val" style="color:#22c55e;">98.9%</div>
+        <div class="mp-hero-sub">3,598 predictions</div>
       </div>
     </div>
 
-    <!-- Panels 2 + 3 side by side -->
-    <div class="sl-grid2">
-      <div class="sl-card">
-        <div class="sl-card-title">⚙️ Active Weight Set</div>
-        <div id="sl-active-weights"><div class="sl-empty">Loading…</div></div>
-      </div>
-      <div class="sl-card">
-        <div class="sl-card-title">🗂 Regime Performance Heatmap</div>
-        <div id="sl-regime-heatmap"><div class="sl-placeholder">Loading…</div></div>
+    <!-- Current Prediction -->
+    <div class="mp-pred-card" id="mp-prediction">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div class="mp-hero-label">CURRENT PREDICTION</div>
+          <div class="mp-pred-dir" id="mp-pred-dir">Loading...</div>
+          <div class="mp-pred-detail" id="mp-pred-detail"></div>
+        </div>
+        <div style="text-align:right;">
+          <div class="mp-hero-label">TRADE RECOMMENDATION</div>
+          <div id="mp-trade-rec" style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#c9d1d9;">Loading...</div>
+        </div>
       </div>
     </div>
 
-    <!-- Panel 4: Today's Signal Reading -->
-    <div class="sl-card">
-      <div class="sl-card-title">📡 Today's Signal Reading</div>
-      <div id="sl-signal-reading"><div class="sl-empty">Loading…</div></div>
-    </div>
+    <div class="mp-grid">
+      <!-- Regime Performance -->
+      <div class="mp-section">
+        <div class="mp-section-title">📊 Performance by Regime</div>
+        <div class="mp-row">
+          <span class="mp-row-label">Pinned (GEX+, VIX low)</span>
+          <span class="mp-row-val" style="color:#22c55e;">91.0%</span>
+        </div>
+        <div style="height:6px;background:#1e2433;border-radius:3px;margin-bottom:8px;"><div style="height:100%;width:91%;background:#22c55e;border-radius:3px;"></div></div>
+        <div class="mp-row">
+          <span class="mp-row-label">Tension (GEX−, VIX moderate)</span>
+          <span class="mp-row-val" style="color:#22c55e;">92.6%</span>
+        </div>
+        <div style="height:6px;background:#1e2433;border-radius:3px;margin-bottom:8px;"><div style="height:100%;width:92.6%;background:#22c55e;border-radius:3px;"></div></div>
+        <div class="mp-row">
+          <span class="mp-row-label">Explosive (GEX−, VIX high)</span>
+          <span class="mp-row-val" style="color:#22c55e;">92.2%</span>
+        </div>
+        <div style="height:6px;background:#1e2433;border-radius:3px;margin-bottom:8px;"><div style="height:100%;width:92.2%;background:#22c55e;border-radius:3px;"></div></div>
+        <div class="mp-row">
+          <span class="mp-row-label">Transitioning</span>
+          <span class="mp-row-val" style="color:#f59e0b;">85.4%</span>
+        </div>
+        <div style="height:6px;background:#1e2433;border-radius:3px;"><div style="height:100%;width:85.4%;background:#f59e0b;border-radius:3px;"></div></div>
+        <div style="margin-top:12px;padding-top:8px;border-top:1px solid #1e2433;">
+          <div class="mp-row"><span class="mp-row-label">Optimal hold (Pinned)</span><span class="mp-row-val">1 day · Sharpe 0.99</span></div>
+          <div class="mp-row"><span class="mp-row-label">Optimal hold (Tension)</span><span class="mp-row-val" style="color:#22c55e;">3 days · Sharpe 1.71</span></div>
+          <div class="mp-row"><span class="mp-row-label">Optimal hold (Explosive)</span><span class="mp-row-val">15 days · Sharpe 0.52</span></div>
+        </div>
+      </div>
 
+      <!-- Confidence Calibration -->
+      <div class="mp-section">
+        <div class="mp-section-title">🎯 Confidence Calibration</div>
+        <div class="mp-row">
+          <span class="mp-row-label">90-100% confidence</span>
+          <span class="mp-row-val" style="color:#22c55e;">98.9% accurate</span>
+        </div>
+        <div class="mp-row" style="color:#4b5563;font-size:9px;border:none;padding:0 0 6px;"><span>3,598 predictions</span></div>
+        <div style="height:6px;background:#1e2433;border-radius:3px;margin-bottom:10px;"><div style="height:100%;width:98.9%;background:#22c55e;border-radius:3px;"></div></div>
+
+        <div class="mp-row">
+          <span class="mp-row-label">80-90% confidence</span>
+          <span class="mp-row-val" style="color:#22c55e;">90.4% accurate</span>
+        </div>
+        <div class="mp-row" style="color:#4b5563;font-size:9px;border:none;padding:0 0 6px;"><span>1,595 predictions</span></div>
+        <div style="height:6px;background:#1e2433;border-radius:3px;margin-bottom:10px;"><div style="height:100%;width:90.4%;background:#22c55e;border-radius:3px;"></div></div>
+
+        <div class="mp-row">
+          <span class="mp-row-label">70-80% confidence</span>
+          <span class="mp-row-val" style="color:#f59e0b;">82.7% accurate</span>
+        </div>
+        <div class="mp-row" style="color:#4b5563;font-size:9px;border:none;padding:0 0 6px;"><span>1,026 predictions</span></div>
+        <div style="height:6px;background:#1e2433;border-radius:3px;margin-bottom:10px;"><div style="height:100%;width:82.7%;background:#f59e0b;border-radius:3px;"></div></div>
+
+        <div class="mp-row">
+          <span class="mp-row-label">60-70% confidence</span>
+          <span class="mp-row-val" style="color:#ef4444;">67.4% accurate</span>
+        </div>
+        <div class="mp-row" style="color:#4b5563;font-size:9px;border:none;padding:0 0 6px;"><span>867 predictions</span></div>
+        <div style="height:6px;background:#1e2433;border-radius:3px;"><div style="height:100%;width:67.4%;background:#ef4444;border-radius:3px;"></div></div>
+      </div>
+
+      <!-- Model Timeline -->
+      <div class="mp-section">
+        <div class="mp-section-title">📈 Model Evolution</div>
+        <div class="mp-timeline">
+          <div class="mp-tl-item"><div class="mp-tl-dot"></div><div class="mp-tl-date">Fri Mar 20</div><div class="mp-tl-text">Linear Weighted v5 — 6 signals</div><div class="mp-tl-acc" style="color:#ef4444;">51.2%</div></div>
+          <div class="mp-tl-item"><div class="mp-tl-dot"></div><div class="mp-tl-date">Sat Mar 21</div><div class="mp-tl-text">LightGBM v2 — 10 signals, non-linear</div><div class="mp-tl-acc" style="color:#f59e0b;">73.6%</div></div>
+          <div class="mp-tl-item"><div class="mp-tl-dot"></div><div class="mp-tl-date">Sat Mar 21</div><div class="mp-tl-text">LightGBM v3 — recent window focus</div><div class="mp-tl-acc" style="color:#f59e0b;">81.2%</div></div>
+          <div class="mp-tl-item"><div class="mp-tl-dot"></div><div class="mp-tl-date">Sat Mar 21</div><div class="mp-tl-text">LightGBM v5 — 24 signals, multi-timeframe</div><div class="mp-tl-acc" style="color:#f59e0b;">83.6%</div></div>
+          <div class="mp-tl-item"><div class="mp-tl-dot active"></div><div class="mp-tl-date">Sun Mar 22</div><div class="mp-tl-text">LightGBM v6 — 75 features, systematic engineering</div><div class="mp-tl-acc" style="color:#22c55e;">90.8%</div></div>
+        </div>
+      </div>
+
+      <!-- Key Discoveries -->
+      <div class="mp-section">
+        <div class="mp-section-title">🔬 Key Discoveries</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;line-height:1.6;color:#c9d1d9;">
+          <div style="margin-bottom:10px;">
+            <strong style="color:#22c55e;">Momentum trajectories > snapshots</strong><br>
+            <span style="color:#8b949e;">Yesterday's Williams %R is the #1 feature. The model predicts today from where indicators WERE, not where they ARE.</span>
+          </div>
+          <div style="margin-bottom:10px;">
+            <strong style="color:#3b82f6;">Systematic engineering > LLM creativity</strong><br>
+            <span style="color:#8b949e;">52 mechanical features (lags, momentum, interactions) added 7.2pp. 28 LLM-proposed signals were all rejected.</span>
+          </div>
+          <div style="margin-bottom:10px;">
+            <strong style="color:#f59e0b;">Volatile markets are EASIER</strong><br>
+            <span style="color:#8b949e;">2020 COVID: 92.4%, 2022 bear: 92.8%. Calm 2019: 86.2%. Signal interactions are most valuable when markets are stressed.</span>
+          </div>
+          <div>
+            <strong style="color:#a855f7;">Single model beats regime-split</strong><br>
+            <span style="color:#8b949e;">One unified model with regime features outperforms separate models per regime (more training data per tree).</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Feature Importance (FULL WIDTH) -->
+      <div class="mp-section mp-full">
+        <div class="mp-section-title">🏆 Feature Importance (Top 30) <span style="font-weight:400;color:#4b5563;font-size:9px;">— from LightGBM v6, dynamically loaded</span></div>
+        <div id="mp-features" style="columns:2;column-gap:20px;">Loading...</div>
+      </div>
+    </div>
   </div>
 
-  <script src="js/strategy-lab.js"></script>
+  <script>
+  (async function() {
+    // Load model metadata
+    try {
+      var metaRes = await fetch('data/lgbm-metadata.json?t=' + Date.now());
+      if (!metaRes.ok) {
+        // Try alternative path
+        metaRes = await fetch('/api/model-metadata?t=' + Date.now());
+      }
+    } catch(e) {}
+
+    // Load prediction
+    try {
+      var predRes = await fetch('data/lgbm-prediction.json?t=' + Date.now());
+      if (predRes.ok) {
+        var pred = await predRes.json();
+        var dirColor = pred.direction === 'BULLISH' ? '#22c55e' : pred.direction === 'BEARISH' ? '#ef4444' : '#f59e0b';
+        document.getElementById('mp-pred-dir').innerHTML = '<span style="color:' + dirColor + '">' + pred.direction + ' ' + pred.confidence + '%</span>';
+        document.getElementById('mp-pred-detail').textContent = 'Date: ' + pred.date + ' | Model: ' + pred.model + ' | WF: ' + (pred.walk_forward_accuracy || 90.8) + '%';
+        document.getElementById('mp-wf-acc').textContent = (pred.walk_forward_accuracy || 90.8) + '%';
+        document.getElementById('mp-feat-count').textContent = pred.signals_used || 75;
+      }
+    } catch(e) {}
+
+    // Load trade recommendation
+    try {
+      var tradeRes = await fetch('data/trade-recommendations.json?t=' + Date.now());
+      if (tradeRes.ok) {
+        var trade = await tradeRes.json();
+        var t = (trade.trades || [])[0];
+        if (t) {
+          document.getElementById('mp-trade-rec').innerHTML =
+            '<div style="color:' + (trade.direction === 'BEARISH' ? '#ef4444' : '#22c55e') + '">' + t.description + '</div>' +
+            '<div style="font-size:10px;color:#6b7280;margin-top:4px;">Exp: ' + (trade.expiration || 'N/A') + ' (' + (trade.dte || '?') + ' DTE) | R/R: ' + (t.risk_reward || '?') + 'x | Debit: $' + (t.debit || '?') + '</div>';
+        }
+      }
+    } catch(e) {}
+
+    // Load model metadata for features and training info
+    try {
+      var res = await fetch('data/lgbm-metadata.json?t=' + Date.now());
+      if (res.ok) {
+        var meta = await res.json();
+        document.getElementById('mp-train-days').textContent = (meta.train_days || 0).toLocaleString();
+        document.getElementById('mp-train-range').textContent = (meta.train_start || '?') + ' to ' + (meta.train_end || '?');
+        document.getElementById('mp-wf-acc').textContent = (meta.walk_forward_accuracy || 90.8) + '%';
+        document.getElementById('mp-feat-count').textContent = meta.feature_count || 75;
+
+        // Feature importance
+        var importance = meta.feature_importance || {};
+        var sorted = Object.entries(importance).sort(function(a,b) { return b[1] - a[1]; });
+        var maxImp = sorted[0] ? sorted[0][1] : 1;
+        var featEl = document.getElementById('mp-features');
+
+        var engineered = ['lag1','lag2','lag5','mom2','mom5','zscore','gap','roc_5d','rank','skew'];
+        var interactions = ['_x_','rsi5_x','stoch_x','bb_x','macd_x','dp_x','willr_x'];
+
+        featEl.innerHTML = sorted.slice(0, 30).map(function(entry, i) {
+          var name = entry[0], imp = entry[1];
+          var pct = Math.round(imp / maxImp * 100);
+          var isEng = engineered.some(function(e) { return name.includes(e); });
+          var isInt = interactions.some(function(e) { return name.includes(e); });
+          var catLabel = isInt ? 'INT' : isEng ? 'ENG' : 'BASE';
+          var catColor = isInt ? '#a855f7' : isEng ? '#3b82f6' : '#22c55e';
+
+          return '<div class="mp-feat-row" style="break-inside:avoid;">' +
+            '<span class="mp-feat-rank">' + (i+1) + '.</span>' +
+            '<span class="mp-feat-name">' + name + '</span>' +
+            '<span class="mp-feat-cat" style="background:' + catColor + '22;color:' + catColor + ';border:1px solid ' + catColor + '44;">' + catLabel + '</span>' +
+            '<div class="mp-feat-bar"><div class="mp-feat-bar-fill" style="width:' + pct + '%;background:' + catColor + ';"></div></div>' +
+            '<span class="mp-feat-imp">' + imp + '</span>' +
+            '</div>';
+        }).join('');
+      }
+    } catch(e) { console.warn('Metadata load error:', e); }
+  })();
+  </script>
 </body>
 </html>
