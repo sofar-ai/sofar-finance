@@ -271,42 +271,66 @@
     }
   })();
 
-  // Thesis submission
+  // Thesis queue — loads from thesis-queue.json
+  var thesisData = [];
+  
+  async function loadTheses() {
+    try {
+      var res = await fetch('data/thesis-queue.json?t=' + Date.now());
+      if (res.ok) {
+        var data = await res.json();
+        thesisData = data.theses || [];
+      }
+    } catch(e) {}
+    // Merge any localStorage theses (user-submitted this session)
+    var local = JSON.parse(localStorage.getItem('sofar-theses') || '[]');
+    for (var lt of local) {
+      if (!thesisData.find(function(t) { return t.text === lt.text; })) {
+        thesisData.unshift(lt);
+      }
+    }
+    renderTheses();
+  }
+
   function submitThesis() {
     var input = document.getElementById('sd-thesis-input');
     var text = input.value.trim();
     if (!text) return;
-    
-    var theses = JSON.parse(localStorage.getItem('sofar-theses') || '[]');
-    theses.unshift({
-      id: Date.now(),
+    var thesis = {
+      id: 'thesis-' + Date.now(),
       text: text,
       status: 'pending',
-      submitted: new Date().toISOString()
-    });
-    localStorage.setItem('sofar-theses', JSON.stringify(theses));
+      submitted: new Date().toISOString(),
+      submitted_by: 'user'
+    };
+    thesisData.unshift(thesis);
+    // Save to localStorage for persistence until backend syncs
+    var local = JSON.parse(localStorage.getItem('sofar-theses') || '[]');
+    local.unshift(thesis);
+    localStorage.setItem('sofar-theses', JSON.stringify(local));
     input.value = '';
     renderTheses();
   }
 
   function renderTheses() {
-    var theses = JSON.parse(localStorage.getItem('sofar-theses') || '[]');
     var el = document.getElementById('sd-theses');
-    if (!theses.length) {
+    if (!thesisData.length) {
       el.innerHTML = '<div style="color:#4b5563;font-size:11px;font-family:var(--font-mono);padding:8px;">No theses queued. Submit one below.</div>';
       return;
     }
-    el.innerHTML = theses.slice(0, 10).map(function(t) {
+    el.innerHTML = thesisData.slice(0, 10).map(function(t) {
       var badge = t.status === 'pending' ? '<span class="sd-badge sd-badge-yellow">PENDING</span>' :
                   t.status === 'testing' ? '<span class="sd-badge sd-badge-blue">TESTING</span>' :
                   t.status === 'promoted' ? '<span class="sd-badge sd-badge-green">PROMOTED</span>' :
                   '<span class="sd-badge sd-badge-red">REJECTED</span>';
+      var notes = t.notes ? '<div class="sd-exp-detail" style="margin-top:2px;color:#4b5563;">' + t.notes + '</div>' : '';
       return '<div class="sd-exp-card">' +
         '<div class="sd-exp-title">' + badge + ' ' + t.text.substring(0, 80) + '</div>' +
-        '<div class="sd-exp-detail">' + new Date(t.submitted).toLocaleDateString() + '</div></div>';
+        '<div class="sd-exp-detail">' + (t.submitted_by || 'user') + ' · ' + new Date(t.submitted).toLocaleDateString() + '</div>' +
+        notes + '</div>';
     }).join('');
   }
-  renderTheses();
+  loadTheses();
   </script>
 </body>
 </html>
