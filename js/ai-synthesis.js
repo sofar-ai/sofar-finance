@@ -21,13 +21,22 @@ const AISynthesis = (() => {
   function freshness(dateStr) {
     if (!dateStr) return '<span style="color:#6b7280">No timestamp</span>';
     var d = new Date(dateStr);
+    var isDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(dateStr);
     if (isNaN(d.getTime())) {
-      // Try parsing YYYY-MM-DD format
       var parts = dateStr.split('-');
-      if (parts.length === 3) d = new Date(parts[0], parts[1]-1, parts[2]);
+      if (parts.length === 3) { d = new Date(parts[0], parts[1]-1, parts[2]); isDateOnly = true; }
       if (isNaN(d.getTime())) return '<span style="color:#6b7280">' + dateStr + '</span>';
     }
     var now = new Date();
+    if (isDateOnly) {
+      var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      var dDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      var diffDays = Math.round((today - dDate) / 86400000);
+      if (diffDays === 0) return '<span style="color:#22c55e">Today</span>';
+      if (diffDays === 1) return '<span style="color:#f59e0b">Yesterday</span>';
+      var color = diffDays <= 3 ? '#f59e0b' : '#ef4444';
+      return '<span style="color:' + color + '">' + diffDays + 'd ago</span>';
+    }
     var diffH = (now - d) / 3600000;
     var label = diffH < 1 ? Math.floor(diffH*60) + 'm ago' : diffH < 24 ? Math.floor(diffH) + 'h ago' : Math.floor(diffH/24) + 'd ago';
     var color = diffH < 4 ? '#22c55e' : diffH < 24 ? '#f59e0b' : '#ef4444';
