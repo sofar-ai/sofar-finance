@@ -356,6 +356,8 @@ const AISynthesis = (() => {
                 '<div class="ai-tc-hold">Hold ' + (tr.exit_rules ? tr.exit_rules.optimal_horizon : '?') + ' days | ' + (tr.exit_rules ? tr.exit_rules.exit_strategy.replace(/_/g,' ') : '') + '</div>' +
               '</div>';
             }).join('');
+            // Add freshness indicator
+            grid.innerHTML += '<div class="qc-stat qc-freshness" style="margin-top:8px"><span>Updated</span>' + freshness(tr.date) + '</div>';
           }
         }
       } catch(e) { console.warn('Trades load error:', e); }
