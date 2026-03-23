@@ -21,7 +21,7 @@ const AISynthesis = (() => {
 
   // Returns the next scheduled cron run time: :40 of 9,11,13,15 ET on weekdays
   function nextScheduledRun() {
-    const RUN_HOURS_ET = [9, 11, 13, 15]; // :40 past each
+    const RUN_HOURS_ET = [8, 10, 12, 14, 15, 17]; // synthesis times — must match cron
     const now = new Date();
     // Detect ET offset (EDT=UTC-4, EST=UTC-5) using DST heuristic
     const jan = new Date(now.getFullYear(), 0, 1).getTimezoneOffset();
@@ -693,9 +693,9 @@ const AISynthesis = (() => {
     if (!el) return;
     el.className = 'ai-schedule-sidebar';
 
-    const FLOW_HOURS = [9, 11, 13, 15];
-    const SYNTH_HOURS = [9, 11, 13, 15];
-    const BACKCHECK_HOURS = [11, 13, 15, 17];
+    const FLOW_HOURS = [9, 12, 14, 15]; // :50/:30 — must match cron
+    const SYNTH_HOURS = [8, 10, 12, 14, 15, 17]; // fixed+conditional — must match cron
+    const BACKCHECK_HOURS = [10, 12, 14, 16]; // :35 — must match cron
 
     // Get current ET time
     const nowET = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
@@ -726,8 +726,8 @@ const AISynthesis = (() => {
     }
 
     const rows = [
-      { label: 'Options Flow',  times: '9:30 · 11:30 · 13:30 · 15:30 ET', next: nextRun(FLOW_HOURS, 30),  soon: isNext(FLOW_HOURS, 30)  },
-      { label: 'AI Synthesis',  times: '9:40 · 11:40 · 13:40 · 15:40 ET', next: nextRun(SYNTH_HOURS, 40), soon: isNext(SYNTH_HOURS, 40) },
+      { label: 'Data Feeds',    times: '9:50 · 12:25 · 14:25 · 15:25 ET', next: nextRun(FLOW_HOURS, 50),  soon: isNext(FLOW_HOURS, 50)  },
+      { label: 'AI Synthesis',  times: '8:45 · 10:00 · 12:45 · 14:45 · 15:45 · 17:00', next: nextRun(SYNTH_HOURS, 45), soon: isNext(SYNTH_HOURS, 45) },
       { label: 'Backcheck',     times: '11:35 · 13:35 · 15:35 · 17:35 ET + 9:35 ET (next-day & 30d)', next: nextRun(BACKCHECK_HOURS, 35), soon: isNext(BACKCHECK_HOURS, 35) },
     ];
 
