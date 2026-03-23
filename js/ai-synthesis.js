@@ -693,9 +693,9 @@ const AISynthesis = (() => {
     if (!el) return;
     el.className = 'ai-schedule-sidebar';
 
-    const FLOW_HOURS = [9, 12, 14, 15]; // :50/:30 — must match cron
+    const FLOW_HOURS = [10, 12, 14, 15]; // :30 past each (9:50 is pre-open special case)
     const SYNTH_HOURS = [8, 10, 12, 14, 15, 17]; // fixed+conditional — must match cron
-    const BACKCHECK_HOURS = [10, 12, 14, 16]; // :35 — must match cron
+    const BACKCHECK_HOURS = [10, 12, 14, 16]; // :35 — must match cron (was 10,12,14,16)
 
     // Get current ET time
     const nowET = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
@@ -726,9 +726,9 @@ const AISynthesis = (() => {
     }
 
     const rows = [
-      { label: 'Data Feeds',    times: '9:50 · 12:25 · 14:25 · 15:25 ET', next: nextRun(FLOW_HOURS, 50),  soon: isNext(FLOW_HOURS, 50)  },
+      { label: 'Data Feeds',    times: '9:50 · 12:30 · 14:30 · 15:30 ET', next: nextRun(FLOW_HOURS, 30),  soon: isNext(FLOW_HOURS, 30)  },
       { label: 'AI Synthesis',  times: '8:45 · 10:00 · 12:45 · 14:45 · 15:45 · 17:00', next: nextRun(SYNTH_HOURS, 45), soon: isNext(SYNTH_HOURS, 45) },
-      { label: 'Backcheck',     times: '11:35 · 13:35 · 15:35 · 17:35 ET + 9:35 ET (next-day & 30d)', next: nextRun(BACKCHECK_HOURS, 35), soon: isNext(BACKCHECK_HOURS, 35) },
+      { label: 'Backcheck',     times: '9:35 · 10:35 · 12:35 · 14:35 · 16:01 ET', next: nextRun(BACKCHECK_HOURS, 35), soon: isNext(BACKCHECK_HOURS, 35) },
     ];
 
     el.innerHTML = rows.map(r => `
