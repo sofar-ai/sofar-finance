@@ -18,6 +18,22 @@ const AISynthesis = (() => {
     const h = Math.floor(m / 60);
     return `${h}h ${m % 60}m ago`;
   }
+  function freshness(dateStr) {
+    if (!dateStr) return '<span style="color:#6b7280">No timestamp</span>';
+    var d = new Date(dateStr);
+    if (isNaN(d.getTime())) {
+      // Try parsing YYYY-MM-DD format
+      var parts = dateStr.split('-');
+      if (parts.length === 3) d = new Date(parts[0], parts[1]-1, parts[2]);
+      if (isNaN(d.getTime())) return '<span style="color:#6b7280">' + dateStr + '</span>';
+    }
+    var now = new Date();
+    var diffH = (now - d) / 3600000;
+    var label = diffH < 1 ? Math.floor(diffH*60) + 'm ago' : diffH < 24 ? Math.floor(diffH) + 'h ago' : Math.floor(diffH/24) + 'd ago';
+    var color = diffH < 4 ? '#22c55e' : diffH < 24 ? '#f59e0b' : '#ef4444';
+    return '<span style="color:' + color + '">' + label + '</span>';
+  }
+
 
   // Returns the next scheduled cron run time: :40 of 9,11,13,15 ET on weekdays
   function nextScheduledRun() {
@@ -262,6 +278,7 @@ const AISynthesis = (() => {
               '<div class="qc-stat"><span>Term Structure</span><span class="qc-val">' + (inp.term_structure || '—') + '</span></div>',
               levels.put_wall ? '<div class="qc-stat"><span>Put Wall</span><span class="qc-val">$' + levels.put_wall + '</span></div>' : '',
               levels.call_wall ? '<div class="qc-stat"><span>Call Wall</span><span class="qc-val">$' + levels.call_wall + '</span></div>' : '',
+              '<div class="qc-stat qc-freshness"><span>Updated</span>' + freshness(regime.date || regime.computed_at || data.generated_at) + '</div>',
             ].filter(Boolean).join('');
           }
         }
@@ -282,6 +299,7 @@ const AISynthesis = (() => {
               '<div class="qc-stat"><span>Probability</span><span class="qc-val">' + ((lgbm.probability||0)*100).toFixed(1) + '%</span></div>',
               '<div class="qc-stat"><span>WF Accuracy</span><span class="qc-val">81.2% (recent)</span></div>',
               '<div class="qc-stat"><span>Data</span><span class="qc-val">' + (lgbm.date || '—') + '</span></div>',
+              '<div class="qc-stat qc-freshness"><span>Updated</span>' + freshness(lgbm.date) + '</div>',
             ].join('');
           }
         }
@@ -300,7 +318,7 @@ const AISynthesis = (() => {
               const c = item[1] > 0.55 ? 'color:#ef4444' : item[1] < 0.35 ? 'color:#22c55e' : '';
               return '<div class="qc-stat"><span>' + item[0] + '</span><span class="qc-val" style="' + c + '">' + (item[1]*100).toFixed(1) + '%</span></div>';
             }).join('');
-            detail.innerHTML = rows + '<div class="qc-stat"><span>Source</span><span class="qc-val">FINRA ADF</span></div>' + '<div class="qc-stat"><span>Updated</span><span class="qc-val">' + (dp.date || '—') + '</span></div>';
+            detail.innerHTML = rows + '<div class="qc-stat"><span>Source</span><span class="qc-val">FINRA ADF</span></div>' + '<div class="qc-stat qc-freshness"><span>Updated</span>' + freshness(dp.date) + '</div>';
           }
         }
       } catch(e) { console.warn('Dark pool load error:', e); }
@@ -365,6 +383,8 @@ const AISynthesis = (() => {
             mkts.innerHTML = pm.markets.slice(0, 6).map(function(m) {
               return '<div class="qc-stat"><span>' + (m.question || '').substring(0, 45) + '</span><span class="qc-val">' + m.probability + '%</span></div>';
             }).join('');
+            // Add freshness indicator
+            mkts.innerHTML += '<div class="qc-stat qc-freshness"><span>Updated</span>' + freshness(pm.date) + '</div>';
           }
         }
       } catch(e) { console.warn('Polymarket load error:', e); }
@@ -393,6 +413,8 @@ const AISynthesis = (() => {
               var chgColor = m.change_pct > 0 ? '#22c55e' : m.change_pct < 0 ? '#ef4444' : '#f59e0b';
               return '<div class="qc-stat"><span>' + m.name + '</span><span class="qc-val" style="color:' + chgColor + '">' + (m.change_pct > 0 ? '+' : '') + m.change_pct.toFixed(2) + '%</span></div>';
             }).join('');
+            // Add freshness indicator
+            mkts.innerHTML += '<div class="qc-stat qc-freshness"><span>Updated</span>' + freshness(on.scan_time) + '</div>';
           }
         }
       } catch(e) { console.warn('Overnight load error:', e); }
