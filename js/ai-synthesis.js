@@ -29,8 +29,10 @@ const AISynthesis = (() => {
     }
     var now = new Date();
     if (isDateOnly) {
+      // Parse YYYY-MM-DD as local date, not UTC
+      var parts2 = dateStr.match(/(\d{4})-(\d{2})-(\d{2})/);
       var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      var dDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      var dDate = parts2 ? new Date(parseInt(parts2[1]), parseInt(parts2[2])-1, parseInt(parts2[3])) : new Date(d.getFullYear(), d.getMonth(), d.getDate());
       var diffDays = Math.round((today - dDate) / 86400000);
       if (diffDays === 0) return '<span style="color:#22c55e">Today</span>';
       if (diffDays === 1) return '<span style="color:#f59e0b">Yesterday</span>';
