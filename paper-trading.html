@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Paper Trading — SOFAR FINANCE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .pt-page { padding: 16px; max-width: 1400px; margin: 0 auto; }
+
+    /* Goal banner */
+    .pt-goal-banner { display: flex; align-items: center; justify-content: space-between; background: linear-gradient(135deg, rgba(245,158,11,0.08), rgba(34,197,94,0.05)); border: 1px solid rgba(245,158,11,0.2); border-radius: 8px; padding: 14px 20px; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
+    .pt-goal-left { display: flex; align-items: center; gap: 16px; }
+    .pt-goal-label { font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #f59e0b; }
+    .pt-goal-val { font-family: var(--font-mono); font-size: 18px; font-weight: 700; color: #e2e8f0; }
+    .pt-goal-progress { flex: 1; min-width: 200px; max-width: 400px; }
+    .pt-goal-bar-track { height: 8px; background: #1e2433; border-radius: 4px; overflow: hidden; }
+    .pt-goal-bar-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, #f59e0b, #22c55e); transition: width 0.5s; }
+    .pt-goal-bar-label { font-size: 10px; color: #64748b; margin-top: 4px; text-align: right; font-family: var(--font-mono); }
+
+    /* Strategy tabs */
+    .pt-tabs { display: flex; gap: 0; margin-bottom: 16px; border-bottom: 1px solid #1e2433; }
+    .pt-tab { padding: 10px 20px; font-family: var(--font-mono); font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #4b5563; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; }
+    .pt-tab:hover { color: #94a3b8; }
+    .pt-tab.active { color: #f59e0b; border-bottom-color: #f59e0b; }
+
+    /* Summary cards */
+    .pt-summary { display: grid; grid-template-columns: repeat(auto-fill, minmax(155px, 1fr)); gap: 10px; margin-bottom: 16px; }
+    .pt-stat { background: #111827; border: 1px solid #1e2433; border-radius: 6px; padding: 12px; text-align: center; }
+    .pt-stat-val { font-family: var(--font-mono); font-size: 20px; font-weight: 700; color: #e2e8f0; }
+    .pt-stat-val.green { color: #22c55e; }
+    .pt-stat-val.red { color: #ef4444; }
+    .pt-stat-val.amber { color: #f59e0b; }
+    .pt-stat-label { font-size: 9px; color: #64748b; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.06em; font-family: var(--font-mono); }
+
+    /* Equity chart */
+    .pt-chart-wrap { background: #111827; border: 1px solid #1e2433; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+    .pt-chart-title { font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #64748b; margin-bottom: 12px; }
+    .pt-chart { width: 100%; height: 200px; position: relative; }
+    .pt-chart svg { width: 100%; height: 100%; }
+
+    /* Cards */
+    .pt-section { background: #111827; border: 1px solid #1e2433; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+    .pt-section-title { font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #64748b; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+    .pt-section-count { font-size: 10px; color: #4b5563; font-weight: 400; }
+
+    /* Position / trade rows */
+    .pt-pos { display: grid; grid-template-columns: 1fr auto; gap: 8px; padding: 10px 0; border-bottom: 1px solid rgba(30,36,51,0.6); }
+    .pt-pos:last-child { border-bottom: none; }
+    .pt-pos-desc { font-size: 12px; font-weight: 500; color: #cbd5e1; }
+    .pt-pos-meta { font-size: 10px; color: #64748b; margin-top: 2px; }
+    .pt-pos-pl { font-family: var(--font-mono); font-size: 13px; font-weight: 600; text-align: right; }
+    .pt-pos-pl.green { color: #22c55e; }
+    .pt-pos-pl.red { color: #ef4444; }
+    .pt-pos-pl-sub { font-size: 10px; color: #64748b; text-align: right; }
+
+    /* Trade log table */
+    .pt-log-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+    .pt-log-table th { text-align: left; font-weight: 600; color: #4b5563; font-size: 9px; text-transform: uppercase; letter-spacing: 0.06em; padding: 6px 8px; border-bottom: 1px solid #1e2433; }
+    .pt-log-table td { padding: 6px 8px; border-bottom: 1px solid rgba(30,36,51,0.4); color: #94a3b8; }
+    .pt-log-table tr:hover td { background: rgba(30,36,51,0.4); }
+
+    /* Empty state */
+    .pt-empty { text-align: center; padding: 32px; color: #374151; font-size: 12px; font-style: italic; }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .pt-summary { grid-template-columns: repeat(3, 1fr); }
+      .pt-goal-banner { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body class="page-scrollable">
+  <div id="nav-root"></div>
+  <script src="js/nav.js"></script>
+  <script>document.addEventListener('DOMContentLoaded',()=>{NavComponent.setMeta(`<span class="live-dot"></span>PAPER<span style="margin-left:8px" id="clock"></span>`);});</script>
+
+  <div class="pt-page">
+    <!-- Goal Banner -->
+    <div class="pt-goal-banner" id="pt-goal"></div>
+
+    <!-- Strategy Tabs -->
+    <div class="pt-tabs" id="pt-tabs"></div>
+
+    <!-- Summary Stats -->
+    <div class="pt-summary" id="pt-summary"></div>
+
+    <!-- Equity Chart -->
+    <div class="pt-chart-wrap">
+      <div class="pt-chart-title">Equity Curve</div>
+      <div class="pt-chart" id="pt-chart"></div>
+    </div>
+
+    <!-- Open Positions -->
+    <div class="pt-section" id="pt-positions-section">
+      <div class="pt-section-title"><span>📂 Open Positions</span><span class="pt-section-count" id="pt-pos-count"></span></div>
+      <div id="pt-positions"></div>
+    </div>
+
+    <!-- Trade History -->
+    <div class="pt-section" id="pt-trades-section">
+      <div class="pt-section-title"><span>📋 Trade History</span><span class="pt-section-count" id="pt-trade-count"></span></div>
+      <div id="pt-trades"></div>
+    </div>
+  </div>
+
+  <script>
+  (function() {
+    let data = null;
+    let activeStrategy = 'half-kelly';
+
+    async function load() {
+      try {
+        const res = await fetch('data/paper-portfolio.json?t=' + Date.now());
+        if (!res.ok) return;
+        data = await res.json();
+        render();
+      } catch(e) { console.warn('Paper portfolio load error:', e); }
+    }
+
+    function render() {
+      if (!data) return;
+      renderGoal();
+      renderTabs();
+      const strat = data.strategies.find(s => s.id === activeStrategy) || data.strategies[0];
+      renderSummary(strat);
+      renderChart(strat);
+      renderPositions(strat);
+      renderTrades(strat);
+    }
+
+    function renderGoal() {
+      const el = document.getElementById('pt-goal');
+      if (!el || !data.goal) { if(el) el.style.display='none'; return; }
+      const g = data.goal;
+      const strat = data.strategies.find(s => s.id === activeStrategy) || data.strategies[0];
+      const equity = getEquity(strat);
+      const progress = Math.min(100, Math.max(0, ((equity - data.starting_capital) / (g.target - data.starting_capital)) * 100));
+      const daysElapsed = Math.floor((Date.now() - new Date(data.created_at).getTime()) / 86400000);
+      const daysTotal = Math.floor((new Date(g.target_date).getTime() - new Date(data.created_at).getTime()) / 86400000);
+      const daysLeft = Math.max(0, daysTotal - daysElapsed);
+
+      el.innerHTML = `
+        <div class="pt-goal-left">
+          <div><div class="pt-goal-label">Goal</div><div class="pt-goal-val">$${fmt(g.target)}</div></div>
+          <div><div class="pt-goal-label">By</div><div class="pt-goal-val">${g.target_date}</div></div>
+          <div><div class="pt-goal-label">Days Left</div><div class="pt-goal-val">${daysLeft}</div></div>
+        </div>
+        <div class="pt-goal-progress">
+          <div class="pt-goal-bar-track"><div class="pt-goal-bar-fill" style="width:${progress.toFixed(1)}%"></div></div>
+          <div class="pt-goal-bar-label">${progress.toFixed(2)}% of goal · $${fmt(equity)} / $${fmt(g.target)}</div>
+        </div>`;
+    }
+
+    function renderTabs() {
+      const el = document.getElementById('pt-tabs');
+      if (!el) return;
+      el.innerHTML = data.strategies.map(s =>
+        `<div class="pt-tab${s.id === activeStrategy ? ' active' : ''}" data-id="${s.id}">${s.name}</div>`
+      ).join('');
+      el.querySelectorAll('.pt-tab').forEach(tab => {
+        tab.addEventListener('click', () => { activeStrategy = tab.dataset.id; render(); });
+      });
+    }
+
+    function renderSummary(strat) {
+      const el = document.getElementById('pt-summary');
+      if (!el) return;
+      const equity = getEquity(strat);
+      const totalPl = equity - data.starting_capital;
+      const totalPlPct = (totalPl / data.starting_capital * 100);
+      const stats = strat.stats;
+      const winRate = stats.total_trades > 0 ? (stats.wins / stats.total_trades * 100) : 0;
+      const avgWin = stats.wins > 0 ? strat.closed_trades.filter(t => t.realized_pl >= 0).reduce((s,t) => s + t.realized_pl, 0) / stats.wins : 0;
+      const avgLoss = stats.losses > 0 ? strat.closed_trades.filter(t => t.realized_pl < 0).reduce((s,t) => s + t.realized_pl, 0) / stats.losses : 0;
+
+      el.innerHTML = `
+        <div class="pt-stat"><div class="pt-stat-val ${totalPl >= 0 ? 'green' : 'red'}">$${fmt(equity)}</div><div class="pt-stat-label">Equity</div></div>
+        <div class="pt-stat"><div class="pt-stat-val ${totalPl >= 0 ? 'green' : 'red'}">${totalPl >= 0 ? '+' : ''}$${fmt(totalPl)}</div><div class="pt-stat-label">Total P&L</div></div>
+        <div class="pt-stat"><div class="pt-stat-val ${totalPlPct >= 0 ? 'green' : 'red'}">${totalPlPct >= 0 ? '+' : ''}${totalPlPct.toFixed(1)}%</div><div class="pt-stat-label">Return</div></div>
+        <div class="pt-stat"><div class="pt-stat-val amber">$${fmt(strat.cash)}</div><div class="pt-stat-label">Cash</div></div>
+        <div class="pt-stat"><div class="pt-stat-val">${stats.total_trades}</div><div class="pt-stat-label">Total Trades</div></div>
+        <div class="pt-stat"><div class="pt-stat-val ${winRate >= 50 ? 'green' : 'red'}">${winRate.toFixed(0)}%</div><div class="pt-stat-label">Win Rate</div></div>
+        <div class="pt-stat"><div class="pt-stat-val green">$${fmt(avgWin)}</div><div class="pt-stat-label">Avg Win</div></div>
+        <div class="pt-stat"><div class="pt-stat-val red">$${fmt(avgLoss)}</div><div class="pt-stat-label">Avg Loss</div></div>
+        <div class="pt-stat"><div class="pt-stat-val red">${stats.max_drawdown_pct.toFixed(1)}%</div><div class="pt-stat-label">Max Drawdown</div></div>`;
+    }
+
+    function renderChart(strat) {
+      const el = document.getElementById('pt-chart');
+      if (!el || !strat.equity_history.length) {
+        if(el) el.innerHTML = '<div class="pt-empty">No equity history yet</div>';
+        return;
+      }
+      const hist = strat.equity_history;
+      const W = el.clientWidth || 600;
+      const H = 200;
+      const PL = 50, PR = 16, PT = 16, PB = 24;
+      const cw = W - PL - PR, ch = H - PT - PB;
+
+      const vals = hist.map(h => h.value);
+      const minV = Math.min(...vals, data.starting_capital) * 0.995;
+      const maxV = Math.max(...vals, data.starting_capital) * 1.005;
+      const range = maxV - minV || 1;
+
+      const x = (i) => PL + (i / Math.max(1, hist.length - 1)) * cw;
+      const y = (v) => PT + ch - ((v - minV) / range) * ch;
+
+      // Build path
+      let path = `M ${x(0)} ${y(vals[0])}`;
+      for (let i = 1; i < vals.length; i++) {
+        path += ` L ${x(i)} ${y(vals[i])}`;
+      }
+
+      // Fill area
+      let area = path + ` L ${x(vals.length-1)} ${y(minV)} L ${x(0)} ${y(minV)} Z`;
+
+      // Starting capital line
+      const startY = y(data.starting_capital);
+
+      // Y axis labels
+      const steps = 4;
+      let yLabels = '';
+      for (let i = 0; i <= steps; i++) {
+        const v = minV + (range * i / steps);
+        const yy = y(v);
+        yLabels += `<text x="${PL-6}" y="${yy+3}" fill="#4b5563" font-size="9" text-anchor="end" font-family="IBM Plex Mono">$${(v/1000).toFixed(0)}k</text>`;
+        yLabels += `<line x1="${PL}" y1="${yy}" x2="${W-PR}" y2="${yy}" stroke="#1e2433" stroke-width="0.5"/>`;
+      }
+
+      // Date labels
+      let xLabels = '';
+      if (hist.length > 1) {
+        const labelInterval = Math.max(1, Math.floor(hist.length / 5));
+        for (let i = 0; i < hist.length; i += labelInterval) {
+          const d = hist[i].date.slice(5); // MM-DD
+          xLabels += `<text x="${x(i)}" y="${H-4}" fill="#4b5563" font-size="9" text-anchor="middle" font-family="IBM Plex Mono">${d}</text>`;
+        }
+      }
+
+      const lastVal = vals[vals.length - 1];
+      const lineColor = lastVal >= data.starting_capital ? '#22c55e' : '#ef4444';
+      const fillColor = lastVal >= data.starting_capital ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)';
+
+      el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+        ${yLabels}
+        ${xLabels}
+        <line x1="${PL}" y1="${startY}" x2="${W-PR}" y2="${startY}" stroke="#f59e0b" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
+        <path d="${area}" fill="${fillColor}"/>
+        <path d="${path}" fill="none" stroke="${lineColor}" stroke-width="2"/>
+        <circle cx="${x(vals.length-1)}" cy="${y(lastVal)}" r="3" fill="${lineColor}"/>
+      </svg>`;
+    }
+
+    function renderPositions(strat) {
+      const el = document.getElementById('pt-positions');
+      const countEl = document.getElementById('pt-pos-count');
+      if (!el) return;
+      if (countEl) countEl.textContent = `${strat.positions.length} open`;
+
+      if (!strat.positions.length) {
+        el.innerHTML = '<div class="pt-empty">No open positions</div>';
+        return;
+      }
+
+      el.innerHTML = strat.positions.map(pos => {
+        const pl = pos.unrealized_pl || 0;
+        const plPct = pos.unrealized_pl_pct || 0;
+        const plClass = pl >= 0 ? 'green' : 'red';
+        const daysHeld = Math.floor((Date.now() - new Date(pos.entry_date).getTime()) / 86400000);
+        const legs = pos.legs.map(l =>
+          `${l.action} $${l.strike} ${l.right} @ $${l.entry_price.toFixed(2)}`
+        ).join(' / ');
+
+        return `<div class="pt-pos">
+          <div>
+            <div class="pt-pos-desc">${pos.description}</div>
+            <div class="pt-pos-meta">${pos.num_contracts}x · ${legs} · ${pos.direction} ${pos.confidence}% · ${pos.regime}</div>
+            <div class="pt-pos-meta">Entered ${pos.entry_date} · ${daysHeld}d held · Exit target: ${pos.target_exit_date} · Exp: ${pos.expiration}</div>
+          </div>
+          <div>
+            <div class="pt-pos-pl ${plClass}">${pl >= 0 ? '+' : ''}$${Math.abs(pl).toFixed(2)}</div>
+            <div class="pt-pos-pl-sub">${plPct >= 0 ? '+' : ''}${plPct.toFixed(1)}% · Cost: $${pos.cost_basis.toFixed(2)}</div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function renderTrades(strat) {
+      const el = document.getElementById('pt-trades');
+      const countEl = document.getElementById('pt-trade-count');
+      if (!el) return;
+      if (countEl) countEl.textContent = `${strat.closed_trades.length} trades`;
+
+      if (!strat.closed_trades.length) {
+        el.innerHTML = '<div class="pt-empty">No closed trades yet — tracking starts with the next recommendation</div>';
+        return;
+      }
+
+      const trades = [...strat.closed_trades].reverse(); // newest first
+      el.innerHTML = `<table class="pt-log-table">
+        <thead><tr>
+          <th>Entry</th><th>Exit</th><th>Trade</th><th>Qty</th><th>Cost</th><th>P&L</th><th>%</th><th>Hold</th><th>Reason</th>
+        </tr></thead>
+        <tbody>${trades.map(t => {
+          const plClass = t.realized_pl >= 0 ? 'green' : 'red';
+          return `<tr>
+            <td>${t.entry_date}</td>
+            <td>${t.exit_date}</td>
+            <td>${t.description}</td>
+            <td>${t.num_contracts}x</td>
+            <td>$${t.cost_basis.toFixed(0)}</td>
+            <td style="color:${t.realized_pl >= 0 ? '#22c55e' : '#ef4444'};font-weight:600">${t.realized_pl >= 0 ? '+' : ''}$${t.realized_pl.toFixed(2)}</td>
+            <td style="color:${t.realized_pl_pct >= 0 ? '#22c55e' : '#ef4444'}">${t.realized_pl_pct >= 0 ? '+' : ''}${t.realized_pl_pct.toFixed(1)}%</td>
+            <td>${t.hold_days}d</td>
+            <td>${(t.exit_reason || '').replace(/_/g, ' ')}</td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>`;
+    }
+
+    function getEquity(strat) {
+      let eq = strat.cash;
+      for (const pos of strat.positions) {
+        eq += pos.current_value || pos.cost_basis || 0;
+      }
+      return Math.round(eq * 100) / 100;
+    }
+
+    function fmt(n) {
+      if (n === undefined || n === null) return '0';
+      return Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    }
+
+    // Clock
+    setInterval(() => {
+      const c = document.getElementById('clock');
+      if (c) c.textContent = new Date().toLocaleTimeString('en-US', { hour12: false });
+    }, 1000);
+
+    // Auto-refresh every 60s
+    load();
+    setInterval(load, 60000);
+  })();
+  </script>
+</body>
+</html>
