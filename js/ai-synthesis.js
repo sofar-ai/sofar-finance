@@ -781,9 +781,9 @@ const AISynthesis = (() => {
     try {
       const [data, stats, log, ci] = await Promise.allSettled([
         fetchJSON('/data/ai-synthesis.json?t=' + Date.now()),
-        fetchJSON('/data/accuracy-stats.json'),
-        fetchJSON('/data/accuracy-log.json'),
-        fetchJSON('/data/contrarian-ideas.json'),
+        fetchJSON('/data/accuracy-stats.json?t=' + Date.now()),
+        fetchJSON('/data/accuracy-log.json?t=' + Date.now()),
+        fetchJSON('/data/contrarian-ideas.json?t=' + Date.now()),
       ]).then(r => r.map(p => p.status === 'fulfilled' ? p.value : null));
 
       if (mode === 'strip') renderStrip(data, stats);
