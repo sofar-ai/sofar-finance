@@ -354,6 +354,7 @@ const AISynthesis = (() => {
               return '<div class="ai-trade-card ' + dirClass + '">' +
                 '<div class="ai-tc-type">' + (trade.type || '').replace(/_/g, ' ').toUpperCase() + '</div>' +
                 '<div class="ai-tc-desc">' + (trade.description || '') + '</div>' +
+                '<div style="font-size:11px;color:#f59e0b;margin:4px 0 8px;font-family:var(--font-mono)">' + (tr.expiration || '—') + ' (' + (tr.dte || '?') + ' DTE)</div>' +
                 '<div class="ai-tc-legs">' + legs + '</div>' +
                 '<div class="ai-tc-stats">' +
                   '<div class="ai-tc-stat"><span>Debit</span><span class="ai-tc-val">$' + trade.debit + '</span></div>' +
