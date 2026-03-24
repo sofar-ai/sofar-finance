@@ -780,7 +780,7 @@ const AISynthesis = (() => {
   async function load(mode) {
     try {
       const [data, stats, log, ci] = await Promise.allSettled([
-        fetchJSON('/data/ai-synthesis.json'),
+        fetchJSON('/data/ai-synthesis.json?t=' + Date.now()),
         fetchJSON('/data/accuracy-stats.json'),
         fetchJSON('/data/accuracy-log.json'),
         fetchJSON('/data/contrarian-ideas.json'),
