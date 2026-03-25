@@ -236,6 +236,5 @@ const DailySummary = (() => {
       '</div>';
   }
 
-  async function init() {
   return { init };
 })();
