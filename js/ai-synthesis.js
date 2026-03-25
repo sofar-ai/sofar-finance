@@ -177,7 +177,7 @@ const AISynthesis = (() => {
 
   // ── Full analysis page ─────────────────────────────────────────────
 
-  function renderPage(data, stats, log, ci, mb) {
+  function renderPage(data, stats, log, ci) {
     // api_error state — show clean unavailable message, never fake signals
     if (data?.status === 'api_error') {
       const body = document.getElementById('ai-page-body');
@@ -718,7 +718,6 @@ const AISynthesis = (() => {
         <pre class="ai-raw-prices">${pxLines}</pre>`;
     }
     renderDivergences(data);
-    renderMorningBrief(mb);
     renderContrarian(ci);
   }
 
@@ -780,100 +779,21 @@ const AISynthesis = (() => {
 
   async function load(mode) {
     try {
-      const [data, stats, log, ci, mb] = await Promise.allSettled([
+      const [data, stats, log, ci] = await Promise.allSettled([
         fetchJSON('/data/ai-synthesis.json?t=' + Date.now()),
         fetchJSON('/data/accuracy-stats.json?t=' + Date.now()),
         fetchJSON('/data/accuracy-log.json?t=' + Date.now()),
         fetchJSON('/data/contrarian-ideas.json?t=' + Date.now()),
-        fetchJSON('/data/morning-brief.json?t=' + Date.now()),
       ]).then(r => r.map(p => p.status === 'fulfilled' ? p.value : null));
 
       if (mode === 'strip') renderStrip(data, stats);
-      if (mode === 'page')  renderPage(data, stats, log, ci, mb);
+      if (mode === 'page')  renderPage(data, stats, log, ci);
     } catch {
       if (mode === 'strip') renderStrip(null, null);
       if (mode === 'page')  renderPage(null, null, null);
     }
   }
 
-
-  function renderMorningBrief(mb) {
-    const container = document.getElementById('ai-morning-brief');
-    if (!container) return;
-    if (!mb || !mb.brief) { container.style.display = 'none'; return; }
-    
-    // Only show if generated today
-    const genDate = (mb.generated_at || '').slice(0, 10);
-    const today = new Date().toISOString().slice(0, 10);
-    if (genDate !== today) { container.style.display = 'none'; return; }
-    
-    const prev = mb.previous_prediction || {};
-    const futures = mb.current_futures || {};
-    const es = futures['ES=F'] || {};
-    const nq = futures['NQ=F'] || {};
-    const vix = futures['^VIX'] || {};
-    
-    // Parse the brief text
-    const brief = mb.brief || '';
-    const thesis = brief.match(/THESIS STATUS:\s*(.+)/)?.[1] || '';
-    const confidence = brief.match(/ADJUSTED CONFIDENCE:\s*(\d+)%/)?.[1] || '';
-    const summary = brief.match(/OVERNIGHT SUMMARY:\s*([\s\S]*?)(?=KEY DEVELOPMENTS:|$)/)?.[1]?.trim() || '';
-    const developments = brief.match(/KEY DEVELOPMENTS:\s*([\s\S]*?)(?=TRADE RECOMMENDATION|$)/)?.[1]?.trim() || '';
-    const tradeStatus = brief.match(/TRADE RECOMMENDATION STATUS:\s*(.+)/)?.[1] || '';
-    const tradeNotes = brief.match(/TRADE NOTES:\s*([\s\S]*?)(?=DAY AHEAD RISKS:|$)/)?.[1]?.trim() || '';
-    const risks = brief.match(/DAY AHEAD RISKS:\s*([\s\S]*?)(?=DAY AHEAD OPPORTUNITIES:|$)/)?.[1]?.trim() || '';
-    const opps = brief.match(/DAY AHEAD OPPORTUNITIES:\s*([\s\S]*?)$/)?.[1]?.trim() || '';
-    
-    const thesisColor = thesis.includes('CONFIRMED') ? '#22c55e' : 
-                        thesis.includes('WEAKENED') ? '#f59e0b' : 
-                        thesis.includes('INVALIDATED') ? '#ef4444' : '#94a3b8';
-    
-    const fmtFuture = (label, data) => {
-      if (!data.price) return '';
-      const color = data.change_pct >= 0 ? '#22c55e' : '#ef4444';
-      const sign = data.change_pct >= 0 ? '+' : '';
-      return '<div class="mb-future"><span class="mb-future-label">' + label + '</span>' +
-             '<span class="mb-future-price">$' + data.price.toLocaleString() + '</span>' +
-             '<span class="mb-future-chg" style="color:' + color + '">' + sign + data.change_pct.toFixed(2) + '%</span></div>';
-    };
-    
-    const fmtBullets = (text) => {
-      if (!text) return '';
-      return text.split('\n').filter(l => l.trim()).map(l => 
-        '<div class="mb-bullet">' + l.replace(/^[•\-]\s*/, '') + '</div>'
-      ).join('');
-    };
-
-    const since = timeSince(mb.generated_at);
-    
-    container.style.display = 'block';
-    container.innerHTML = 
-      '<div class="mb-header">' +
-        '<div class="mb-title">☀️ Morning Brief</div>' +
-        '<div class="mb-time">Generated ' + since + '</div>' +
-      '</div>' +
-      '<div class="mb-thesis-row">' +
-        '<div class="mb-thesis">' +
-          '<span class="mb-thesis-label">Thesis:</span> ' +
-          '<span class="mb-thesis-status" style="color:' + thesisColor + '">' + thesis + '</span>' +
-          (confidence ? ' <span class="mb-thesis-conf">(' + confidence + '% confidence)</span>' : '') +
-        '</div>' +
-        '<div class="mb-prev-pred">' +
-          'Previous: <span style="color:' + (prev.direction === 'BEARISH' ? '#ef4444' : '#22c55e') + '">' + 
-          (prev.direction || '—') + ' ' + (prev.confidence || '') + '%</span>' +
-        '</div>' +
-      '</div>' +
-      '<div class="mb-futures">' +
-        fmtFuture('ES', es) + fmtFuture('NQ', nq) + fmtFuture('VIX', vix) +
-      '</div>' +
-      (summary ? '<div class="mb-summary">' + summary + '</div>' : '') +
-      (developments ? '<div class="mb-section"><div class="mb-section-title">Key Developments</div>' + fmtBullets(developments) + '</div>' : '') +
-      (tradeNotes ? '<div class="mb-section"><div class="mb-section-title">Trade Notes — <span style="color:' + thesisColor + '">' + tradeStatus + '</span></div><div class="mb-notes">' + tradeNotes + '</div></div>' : '') +
-      '<div class="mb-two-col">' +
-        (risks ? '<div class="mb-col"><div class="mb-section-title">⚠️ Risks</div>' + fmtBullets(risks) + '</div>' : '') +
-        (opps ? '<div class="mb-col"><div class="mb-section-title">💡 Opportunities</div>' + fmtBullets(opps) + '</div>' : '') +
-      '</div>';
-  }
 
   function renderContrarian(ci) {
     const ideas   = (ci && ci.ideas) ? ci.ideas : [];
