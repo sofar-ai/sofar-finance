@@ -1,289 +1,303 @@
 {
   "calibration_notes": {
-    "pattern_acknowledgment": "Last 10 predictions: 70% BULLISH calls (7/10), but accuracy was 71% on bullish vs 0% on bearish. Intraday accuracy 34.7% is concerning - my targets have been too tight for explosive regime moves. Composite scores show I'm getting direction right (0.78 avg) but missing magnitude.",
-    "conviction_audit": "LOW tier outperforming at 81% accuracy (n=21) vs MEDIUM at 75% (n=4). No HIGH tier data. Threshold for HIGH today: 85% - only if 4+ signals converge strongly given MEDIUM underperformance.",
-    "target_bias_correction": "Intraday showing 0.68% avg target error with overshoot bias - I'm underestimating explosive regime volatility. Applying 2x multiplier to all ranges today per regime rules. Next-day massive 110% error indicates I'm way too conservative on overnight gaps.",
-    "regime_adjustment": "Currently in EXPLOSIVE regime (negative GEX + backwardation). Backtested accuracy in this regime: 65.5% with Sharpe 6.14. This is my BEST regime. Strategy: TREND FOLLOWING with BULLISH BIAS on oversold bounces. Widening targets 2x normal.",
+    "pattern_acknowledgment": "BULLISH_BIAS detected: my BULLISH calls (23.5%) severely underperform BEARISH (62.5%). TARGET_OVERSHOOT_BIAS: 84% of targets overshoot actual moves. WEAK_TIMEFRAME: next_day accuracy only 29.4%. REGIME_WEAKNESS: 36% accuracy in current high_vol_downtrend regime.",
+    "conviction_audit": "No HIGH tier data available. MEDIUM tier performing at 56% vs overall 36%. Threshold for HIGH today: 70%+ (only if 4+ signals converge strongly).",
+    "target_bias_correction": "Applying 50% haircut to all predicted moves per dynamic corrections. If calculating 2% move, reporting 1%. Range width capped at 1x adjusted move.",
+    "regime_adjustment": "Currently in EXPLOSIVE regime (negative GEX + backwardation) where backtesting shows 65.5% accuracy on BULLISH calls, best performance. BUT also in high_vol_downtrend where accuracy drops to 36%. Using TREND_FOLLOWING strategy with wider targets (2x normal) but lower confidence due to regime conflict.",
     "specific_changes": [
-      "Defaulting to LOW confidence (30-50) given MEDIUM underperformance",
-      "Applying 2x target multiplier for explosive regime - intraday up to 3%, next-day up to 5%",
-      "Following explosive regime playbook: buying fear/oversold conditions with trend-following approach"
+      "Requiring 3+ converging signals for any BULLISH call given 23.5% accuracy",
+      "Applying 50% haircut to all price targets",
+      "Lowering next_day confidence by 10 points given 29.4% accuracy"
     ]
   },
-  "calibration_summary": "Adjusting for explosive volatility regime (my best at 65.5% accuracy) by widening targets 2x and favoring bullish oversold bounces. Keeping confidence LOW (30-50) as MEDIUM tier underperformed, only using trend-following strategies in negative gamma environment.",
+  "calibration_summary": "Adjusting for severe BULLISH underperformance (23.5% vs 62.5% BEARISH) and 84% target overshoot bias. In EXPLOSIVE vol regime favoring trend-following with 2x wider targets, but tempering confidence due to poor 36% accuracy in current high_vol_downtrend.",
   "intraday": {
-    "signal": "BULLISH",
-    "confidence": 45,
-    "summary": "Explosive volatility regime with VIX at 27.3 and deep backwardation creates oversold bounce setup. SPY testing put wall support at $655 with massive institutional hedging ($451M MSFT puts, $66M VIX calls). Negative GEX means dealer selling exhaustion likely near.",
-    "key_driver": "Put wall support test at $655 in explosive volatility regime",
-    "primary_driver": "regime",
+    "signal": "BEARISH",
+    "confidence": 55,
+    "summary": "Massive institutional put positioning ($886.9M vs $498.9M calls, PC ratio 1.78) with $34.4M single SPXW put trade and negative GEX (-$1.50B) creating dealer hedging pressure. SPY put wall at $630 likely to be tested with VIX backwardation (-2.7%) confirming near-term stress.",
+    "key_driver": "$34.4M institutional SPXW put position with negative gamma amplification",
+    "primary_driver": "flow",
     "predicted_prices": {
-      "SPY": 659.5,
-      "QQQ": 592.0,
-      "IWM": 253.5,
-      "NVDA": 182.0,
-      "AAPL": 254.0
+      "SPY": 651.5,
+      "QQQ": 581.0,
+      "IWM": 249.5,
+      "NVDA": 173.5,
+      "AAPL": 252.0
     },
     "predicted_range": [
-      658.0,
-      662.0
+      650.0,
+      653.0
     ],
-    "price_target_basis": "PUT WALL: $655 strike with $594.48M premium creating support bounce target",
+    "price_target_basis": "SPY put wall at $630 strike ($9.83M premium) as downside magnet with current spot at $654",
     "regime_strategy": "TREND_FOLLOWING"
   },
   "next_day": {
-    "signal": "BULLISH",
-    "confidence": 50,
-    "summary": "Explosive regime favors continuation of intraday bounce with dealer hedging amplifying upside. Call wall at $660 likely breaks overnight as VIX backwardation unwinds. Oil spike from Iran tensions creating inflation hedge rotation into equities.",
-    "key_driver": "Dealer gamma hedging amplifying oversold bounce in explosive regime",
-    "primary_driver": "flow",
+    "signal": "BEARISH",
+    "confidence": 45,
+    "summary": "Continued pressure from negative gamma regime with dealers forced to sell into weakness. $206.47M in SPXW puts at $6500 strike and IWM 12,000 contract put position ($5.7M) signal broad market hedging. Iran escalation risk and oil at $93 add macro headwinds.",
+    "key_driver": "Negative GEX dealer hedging flows amplifying downside",
+    "primary_driver": "regime",
     "predicted_prices": {
-      "SPY": 665.0,
-      "QQQ": 598.0,
-      "IWM": 256.0,
-      "NVDA": 186.0,
-      "AAPL": 257.0
+      "SPY": 648.0,
+      "QQQ": 577.0,
+      "IWM": 247.0,
+      "NVDA": 171.0,
+      "AAPL": 250.0
     },
     "predicted_range": [
-      660.0,
-      668.0
+      645.0,
+      652.0
     ],
-    "price_target_basis": "CALL WALL: $660 strike acting as magnet, explosive regime 2x multiplier applied",
+    "price_target_basis": "GEX flip level at $612 (SPX equivalent) with put wall support at $640",
     "regime_strategy": "TREND_FOLLOWING"
   },
   "long_term": {
-    "signal": "BULLISH",
-    "confidence": 55,
-    "summary": "Massive institutional call positioning ($652M in SPX 5000/6000 calls for Dec 2027) signals long-term bullish conviction despite near-term volatility. Current explosive regime historically resolves bullish 65.5% of time as VIX mean-reverts from 27 back to 18-20 range.",
-    "key_driver": "$652M institutional call positioning in SPX for 2027 expiry",
+    "signal": "BEARISH",
+    "confidence": 40,
+    "summary": "Massive protective put positioning across indices (SPXW $206M at 6500, IWM 12k contracts) suggests institutions preparing for sustained weakness. MU split flow ($29.3M puts vs $20.2M calls) reflects tech sector uncertainty. Yield curve normalization at 0.745% removes recession signal but rising 10Y at 4.36% pressures valuations.",
+    "key_driver": "Institutional portfolio hedging via index puts",
     "primary_driver": "flow",
     "predicted_prices": {
-      "SPY": 685.0,
-      "QQQ": 625.0,
-      "IWM": 265.0,
-      "NVDA": 195.0,
-      "AAPL": 270.0
+      "SPY": 635.0,
+      "QQQ": 560.0,
+      "IWM": 240.0,
+      "NVDA": 165.0,
+      "AAPL": 245.0
     },
     "predicted_range": [
-      670.0,
-      700.0
+      620.0,
+      650.0
     ],
-    "price_target_basis": "OPTIONS FLOW STRIKE CLUSTER: SPX 6000 calls with $1.32B premium concentration",
+    "price_target_basis": "IWM put strike at $240 ($5.68M premium) as small-cap leading indicator",
     "regime_strategy": "TREND_FOLLOWING"
   },
-  "news_impact": "Iran tensions driving oil to $94 creating stagflation fears, but historically oil spikes coincide with equity bottoms. AI chip competition headlines pressuring semis but creating rotation opportunity. Private credit stress warnings from Blankfein adding to volatility but not systemic risk.",
-  "options_flow_impact": "Neutral PC ratio 0.86 masks massive institutional hedging - $451M MSFT puts and $66M VIX calls show protection buying, not directional bearishness. SPX call walls at 6000/7000 with $1.9B premium create upside magnets once current vol subsides.",
+  "news_impact": "Iran escalation driving oil to $93 (Brent $101) creating stagflation fears. Meta court defeats and AI chip competition pressuring tech mega-caps. Private credit stress warnings from ex-Goldman CEO adding systemic risk concerns.",
+  "options_flow_impact": "Extreme put skew (PC 1.78) with largest trades being protective puts. $34.4M SPXW put and $29.3M MU put dwarf call activity. Deep ITM call buying in AAPL/NVDA represents stock replacement, not new bullish bets.",
   "risks": [
-    "Iran military escalation beyond current scope could spike oil >$110",
-    "VIX sustaining >30 would negate oversold bounce thesis",
-    "Dollar strength (DXY near 100) creating emerging market contagion risk"
+    "VIX backwardation could reverse quickly on any positive catalyst",
+    "Extreme put positioning creates potential for squeeze if support holds",
+    "Earnings season could shift sentiment despite current flow"
   ],
   "benchmarks": {
     "SPY": {
-      "intraday_bias": "BULLISH",
-      "next_day_bias": "BULLISH",
-      "long_term_bias": "BULLISH",
-      "analysis": "Testing critical put wall support at $655 in explosive volatility regime. Massive institutional put hedging ($451M MSFT, $26M NVDA) indicates capitulation, not new shorts. VIX backwardation at -2.4% unsustainable, favoring mean reversion bounce.",
-      "key_driver": "Put wall support at $655 with explosive regime dealer mechanics",
+      "intraday_bias": "BEARISH",
+      "next_day_bias": "BEARISH",
+      "long_term_bias": "BEARISH",
+      "analysis": "Negative GEX regime (-$1.50B) with put wall at $630 creating downside magnet. Massive institutional put buying ($9.83M at 630 strike) while spot at $654. VIX backwardation confirms near-term stress. Dealer hedging will amplify moves lower.",
+      "key_driver": "Negative gamma dealer flows",
       "primary_driver": "regime",
-      "conflicting_signals": "DXY strength near 100 and rising yields at 4.37% create headwinds",
-      "predicted_price_2h": 659.5,
-      "predicted_price_nextday": 665.0,
-      "predicted_price_30d": 685.0,
+      "conflicting_signals": "Deep ITM call activity in mega-caps suggests some dip buying",
+      "predicted_price_2h": 651.5,
+      "predicted_price_nextday": 648.0,
+      "predicted_price_30d": 635.0,
       "predicted_range_2h": [
-        658.0,
-        662.0
+        650.0,
+        653.0
       ],
       "predicted_range_nextday": [
-        660.0,
-        668.0
+        645.0,
+        652.0
       ],
-      "price_target_basis": "PUT WALL: $655 strike support with $594.48M premium concentration"
+      "price_target_basis": "Put wall at $630 strike ($9.83M premium) with GEX flip at $612"
     },
     "QQQ": {
-      "intraday_bias": "BULLISH",
-      "next_day_bias": "BULLISH",
-      "long_term_bias": "BULLISH",
-      "analysis": "Tech oversold with $23.8M bullish QQQ LEAP flow at $730 strike showing institutional accumulation. AI chip competition fears overblown - rotation within sector not exodus. Negative gamma will amplify bounce off $580 support.",
-      "key_driver": "$23.8M institutional call buying in QQQ LEAPs",
-      "primary_driver": "flow",
-      "conflicting_signals": "Rising 10Y yields at 4.37% pressuring growth multiples",
-      "predicted_price_2h": 592.0,
-      "predicted_price_nextday": 598.0,
-      "predicted_price_30d": 625.0,
+      "intraday_bias": "BEARISH",
+      "next_day_bias": "BEARISH",
+      "long_term_bias": "BEARISH",
+      "analysis": "Tech weakness from AI chip competition headlines and Meta regulatory issues. Limited QQQ-specific flow but follows SPX institutional hedging. Rising 10Y yield at 4.36% particularly pressures growth names. Call wall at $600 caps upside.",
+      "key_driver": "Rising yields pressuring tech valuations",
+      "primary_driver": "headlines",
+      "conflicting_signals": "NVDA deep ITM call buying and MU massive OTM call positions",
+      "predicted_price_2h": 581.0,
+      "predicted_price_nextday": 577.0,
+      "predicted_price_30d": 560.0,
       "predicted_range_2h": [
-        589.0,
-        594.0
+        579.0,
+        583.0
       ],
       "predicted_range_nextday": [
-        593.0,
-        602.0
+        574.0,
+        581.0
       ],
-      "price_target_basis": "CALL WALL: $730 strike LEAP positioning with $23.8M premium"
+      "price_target_basis": "Call wall at $600 ($1.60M premium) with put support at $580"
     }
   },
   "tickers_to_watch": [
     {
-      "ticker": "MSFT",
-      "intraday_bias": "BULLISH",
-      "next_day_bias": "BULLISH",
-      "long_term_bias": "BULLISH",
-      "reasoning": "Massive $451M deep ITM put position appears to be tax-loss harvesting or collar adjustment, not bearish bet. Trading at $371 with heavy put wall creating support. AI competition fears overblown - MSFT's Azure positioned well.",
-      "key_driver": "$451M institutional put position creating floor",
+      "ticker": "MU",
+      "intraday_bias": "BEARISH",
+      "next_day_bias": "BEARISH",
+      "long_term_bias": "NEUTRAL",
+      "reasoning": "Extreme split flow with $29.3M in deep ITM puts (17.5% ITM) vs $20.2M in far OTM calls (58-72% OTM). Put position suggests immediate downside while calls position for 2027 recovery. Google AI memory breakthrough adds competitive pressure.",
+      "key_driver": "$29.3M institutional put position 17.5% ITM",
       "primary_driver": "flow",
-      "conflicting_signals": "Google AI breakthrough pressuring sentiment per headlines",
-      "predicted_price_2h": 373.5,
-      "predicted_price_nextday": 378.0,
-      "predicted_price_30d": 395.0,
+      "conflicting_signals": "$20.2M in bullish 2027 LEAP calls at $580-630 strikes",
+      "predicted_price_2h": 364.0,
+      "predicted_price_nextday": 360.0,
+      "predicted_price_30d": 350.0,
       "predicted_range_2h": [
-        371.5,
-        375.0
+        363.0,
+        366.0
       ],
-      "price_target_basis": "Deep ITM put concentration at $445-515 strikes creating support"
+      "price_target_basis": "Put strike at $430 ($29.32M premium) as upside cap given deep ITM nature"
     },
     {
-      "ticker": "GLD",
-      "intraday_bias": "BULLISH",
-      "next_day_bias": "BULLISH",
-      "long_term_bias": "BULLISH",
-      "reasoning": "Gold surging on Iran tensions with oil at $94. Call walls at $390/$410 with $23.75M combined premium show institutional accumulation. Negative real yields and geopolitical risk driving safe haven flows.",
-      "key_driver": "Geopolitical risk driving safe haven bid with call accumulation",
-      "primary_driver": "headlines",
-      "conflicting_signals": "Dollar strength at DXY 99.9 typically pressures gold",
-      "predicted_price_2h": 4450.0,
-      "predicted_price_nextday": 4475.0,
-      "predicted_price_30d": 4600.0,
+      "ticker": "IWM",
+      "intraday_bias": "BEARISH",
+      "next_day_bias": "BEARISH",
+      "long_term_bias": "BEARISH",
+      "reasoning": "Massive 12,000 contract put position ($5.7M) at $240 strike signals broad small-cap weakness expectations. Small caps most vulnerable to rising rates and economic uncertainty. Only 4.4% OTM suggests near-term target.",
+      "key_driver": "12,000 contract institutional put hedge",
+      "primary_driver": "flow",
+      "conflicting_signals": "None - all signals align bearish",
+      "predicted_price_2h": 249.5,
+      "predicted_price_nextday": 247.0,
+      "predicted_price_30d": 240.0,
       "predicted_range_2h": [
-        4435.0,
-        4455.0
+        248.5,
+        250.5
       ],
-      "price_target_basis": "CALL WALL: $390 strike with $13.44M premium concentration"
+      "price_target_basis": "Put wall at $240 strike ($5.68M premium) only 4.4% below current"
     }
   ],
   "trade_ideas": [
     {
-      "idea": "Buy SPY oversold bounce off put wall support",
+      "idea": "Fade bounce attempts in SPY via put spreads",
       "ticker": "SPY",
-      "type": "calls",
+      "type": "puts",
       "timeframe": "next-day",
-      "thesis": "Explosive vol regime with put wall support at $655 creates high-probability bounce setup. VIX backwardation unsustainable.",
-      "risk": "Iran escalation or VIX >30 sustaining could break support",
-      "instrument": "SPY $660 calls exp Mar 27",
-      "entry_zone": "$656.50-$657.50",
-      "stop_invalidation": "$654.50",
-      "target": "$665.00",
-      "risk_reward": "1:2.5"
+      "thesis": "Negative gamma regime ensures any bounce gets sold. Put wall at $630 creates downside magnet.",
+      "risk": "Sharp short covering rally if $640 holds as support",
+      "instrument": "SPY $652/$648 put spread exp Mar 27",
+      "entry_zone": "$654-656",
+      "stop_invalidation": "$658",
+      "target": "$648",
+      "risk_reward": "1:2"
     },
     {
-      "idea": "GLD breakout on geopolitical risk",
-      "ticker": "GLD",
-      "type": "calls",
+      "idea": "Short IWM for small-cap underperformance",
+      "ticker": "IWM",
+      "type": "puts",
       "timeframe": "30-day",
-      "thesis": "Iran tensions with oil at $94 driving inflation hedge demand. Call walls at $390/$410 show institutional accumulation.",
-      "risk": "Quick resolution of Middle East tensions could reverse haven flows",
-      "instrument": "GLD $395 calls exp Apr 24",
-      "entry_zone": "$4430-$4445",
-      "stop_invalidation": "$4400",
-      "target": "$4600",
-      "risk_reward": "1:3.0"
+      "thesis": "12,000 contract put position signals institutional conviction. Small caps most rate sensitive.",
+      "risk": "Rotation from large to small caps on any positive catalyst",
+      "instrument": "IWM $245 puts exp Apr 17",
+      "entry_zone": "$250-252",
+      "stop_invalidation": "$254",
+      "target": "$240",
+      "risk_reward": "1:2.5"
     }
   ],
-  "notable_divergences": [],
+  "notable_divergences": [
+    {
+      "ticker": "MU",
+      "signal": "BEARISH",
+      "flow_direction": "mixed",
+      "detail": "$29.3M in deep ITM puts but also $20.2M in far OTM calls",
+      "description": "Near-term bearish positioning via puts but long-term bullish via 2027 LEAP calls. Suggests expected weakness followed by recovery.",
+      "inputs_conflicting": "flow timeframes diverging",
+      "significance": "high",
+      "expirations": [
+        "2026-03-27",
+        "2027-01-15"
+      ]
+    }
+  ],
   "earnings_warnings": {},
   "magnitude_flags": [
     {
       "ticker": "SPX",
       "flag": "OUTSIZED_MOVE_EXPECTED",
-      "basis": "$652M in single-day SPX call flow at 5000/6000 strikes, largest institutional positioning in dataset"
+      "basis": "$34.4M single put trade on SPXW 6500 strike - largest premium in dataset"
     },
     {
-      "ticker": "MSFT",
+      "ticker": "MU",
       "flag": "OUTSIZED_MOVE_EXPECTED",
-      "basis": "$451M deep ITM put position representing massive institutional repositioning"
+      "basis": "$29.3M put position with 5000 contracts - extreme size for single name"
     }
   ],
   "signal_attribution": {
-    "primary_driver": "vol_regime",
+    "primary_driver": "options_flow",
     "weights": {
       "headlines": {
         "weight": 0.15,
-        "values_cited": "Iran tensions, oil at $94, private credit warnings from Blankfein",
-        "influence": "Geopolitical risk supporting haven flows and volatility"
+        "values_cited": "Iran oil shock, Meta defeats, AI chip competition creating tech pressure",
+        "influence": "Added to bearish bias but not primary driver"
       },
       "options_flow": {
-        "weight": 0.2,
-        "values_cited": "PC 0.86 neutral, $652M SPX calls, $451M MSFT puts, $66M VIX calls",
-        "influence": "Massive hedging not directional shorts, bullish long-term positioning"
+        "weight": 0.35,
+        "values_cited": "PC ratio 1.78, $34.4M SPXW put, $886.9M put premium, IWM 12k puts",
+        "influence": "Extreme put skew and size drove bearish stance"
       },
       "gex": {
-        "weight": 0.15,
-        "values_cited": "Net GEX -$969M, put wall $655, call wall $660, flip $616",
-        "influence": "Negative gamma amplifying moves, put wall providing support"
+        "weight": 0.2,
+        "values_cited": "Net GEX -$1.50B, put wall $640, call wall $660",
+        "influence": "Negative gamma regime amplifies downside moves"
       },
       "vix_structure": {
         "weight": 0.1,
-        "values_cited": "VX2/VX1 0.94 backwardation -2.4%, VIX 27.3",
-        "influence": "Extreme fear unsustainable, mean reversion favored"
+        "values_cited": "VIX 27.39, backwardation -2.7%, VX1 24.7",
+        "influence": "Confirms near-term stress but not extreme"
       },
       "vol_regime": {
-        "weight": 0.25,
-        "values_cited": "Explosive regime 33% confidence, 65.5% historical accuracy, 2x target multiplier",
-        "influence": "Best performing regime historically, favoring trend-following bullish bounce"
+        "weight": 0.15,
+        "values_cited": "EXPLOSIVE regime 46% confidence, trend-following strategy, 2x targets",
+        "influence": "Widened targets and used trend-following approach"
       },
       "prediction_feedback": {
         "weight": 0.05,
-        "values_cited": "81% LOW tier accuracy, 34.7% intraday accuracy, bullish 71% vs bearish 0%",
-        "influence": "Keeping confidence low but maintaining bullish bias given track record"
+        "values_cited": "36% accuracy in current regime, 23.5% bullish accuracy",
+        "influence": "Lowered confidence and avoided bullish calls"
       },
       "event_trees": {
-        "weight": 0.05,
-        "values_cited": "No specific event tree data provided",
-        "influence": "Would incorporate Iran escalation scenarios if available"
+        "weight": 0.0,
+        "values_cited": "No event tree data provided",
+        "influence": "Unable to incorporate systematic event analysis"
       },
       "price_data": {
-        "weight": 0.05,
-        "values_cited": "SPY $656.82 testing $655 put wall, high_vol_downtrend regime",
-        "influence": "Price at critical support in oversold conditions"
+        "weight": 0.0,
+        "values_cited": "SPY 654.37 in high_vol_downtrend",
+        "influence": "Used for levels but not directional signal"
       }
     },
     "weights_sum": 1.0,
-    "reasoning_chain": "Explosive vol regime (25% weight) is my best performing setup \u2192 negative GEX creates reflexive bounce conditions \u2192 massive institutional hedging via puts signals capitulation not new shorts \u2192 VIX backwardation unsustainable \u2192 put wall support at $655 creates entry \u2192 2x volatility targets in explosive regime \u2192 bullish bounce with trend-following approach"
+    "reasoning_chain": "Extreme put flow ($886.9M vs $498.9M calls) \u2192 Negative GEX regime amplifies selling \u2192 VIX backwardation confirms stress \u2192 EXPLOSIVE vol regime mandates trend-following \u2192 Bearish signal with wider targets but tempered confidence due to poor regime performance"
   },
-  "generated_at": "2026-03-26T12:45:02Z",
-  "next_update": "2026-03-26T14:45:02Z",
+  "generated_at": "2026-03-26T14:00:01Z",
+  "next_update": "2026-03-26T16:00:01Z",
   "prices_at_generation": {
-    "SPY": 656.82,
-    "QQQ": 587.82,
-    "IWM": 251.82,
-    "AAPL": 252.62,
-    "NVDA": 178.68,
-    "TSLA": 385.95,
-    "META": 594.89,
-    "MSFT": 371.04,
-    "AMD": 220.27,
-    "AMZN": 211.71,
+    "SPY": 654.365,
+    "QQQ": 584.1,
+    "IWM": 251.13,
+    "AAPL": 253.785,
+    "NVDA": 175.68,
+    "TSLA": 384.065,
+    "META": 576.04,
+    "MSFT": 373.82,
+    "AMD": 215.16,
+    "AMZN": 210.73,
     "NKY": 53603.65,
     "KOSPI": 5460.46,
     "TAIEX": 33337.62,
     "TOPIX": 3826.0,
-    "GOLD": 4433.6,
-    "SILVER": 67.695,
-    "WTI": 94.4,
-    "BRENT": 101.77,
-    "VIX": 27.3,
-    "10Y_YIELD": 4.372,
-    "30Y_YIELD": 4.925,
-    "3M_YIELD": 3.618,
-    "DXY": 99.893,
-    "captured_at": "2026-03-26T12:45:02Z",
-    "GLD": 416.29
+    "GOLD": 4450.6,
+    "SILVER": 69.045,
+    "WTI": 93.39,
+    "BRENT": 101.11,
+    "VIX": 26.77,
+    "10Y_YIELD": 4.36,
+    "30Y_YIELD": 4.914,
+    "3M_YIELD": 3.615,
+    "DXY": 99.753,
+    "captured_at": "2026-03-26T14:00:01Z",
+    "MU": 364.53
   },
   "regime": "high_vol_downtrend",
   "signal_snapshot": {
-    "pc_ratio": 0.863,
-    "flow_sentiment": "NEUTRAL",
-    "top_flow_summary": "SPX $400.0M C, SPX $252.1M C, SPX $199.8M C",
-    "vix": 27.3,
+    "pc_ratio": 1.778,
+    "flow_sentiment": "BEARISH",
+    "top_flow_summary": "SPXW $34.4M P, MU $29.3M P, MU $11.2M C",
+    "vix": 26.77,
     "news_headlines": [
       "BrainsWay: Strong Execution, But Valuation Limits Upside",
       "Commodities: Oil Volatile As Ceasefire Talks Stall",
@@ -299,12 +313,12 @@
       "China Industrial Sector Distress",
       "Private Credit Market Stress & Credit Risk"
     ],
-    "flow_trades": 49680,
+    "flow_trades": 5670,
     "top_trades": 5,
-    "sentiment": "NEUTRAL",
-    "pc_ratio": 0.863,
+    "sentiment": "BEARISH",
+    "pc_ratio": 1.778,
     "price_source": "Yahoo",
-    "feedback_patterns": 0,
+    "feedback_patterns": 4,
     "strike_clusters": true
   }
 }
