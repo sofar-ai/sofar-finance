@@ -1,181 +1,145 @@
 {
   "calibration_notes": {
-    "pattern_acknowledgment": "Weak timeframes: intraday 42.1% and next_day 16.7% accuracy in recent samples. Current regime (high_vol_choppy) shows 38.1% accuracy. Recent 10 predictions show improvement to 48.2% overall, with successful directional calls when composite scores were high (>0.9).",
-    "conviction_audit": "MEDIUM tier (20% accuracy) severely underperforms LOW tier (40%). Setting HIGH threshold at 80%+ based on no HIGH tier data. Defaulting to LOW (30-35) unless 3+ signals strongly converge.",
-    "target_bias_correction": "Overshoot bias detected: 1.08% intraday, 2.48% next-day. Tightening targets by ~20% from initial estimates. Recent successful predictions had <0.3% target error.",
-    "regime_adjustment": "Currently in EXPLOSIVE regime (negative GEX + backwardation) which backtests at 65.5% accuracy with BULLISH bias. This conflicts with market regime label 'high_vol_choppy' at 38.1% accuracy. Following EXPLOSIVE rules: trend following, bullish preferred, wide targets.",
+    "pattern_acknowledgment": "BEARISH_BIAS detected: BEARISH calls only 6.7% accurate vs BULLISH 90.0%. WEAK_TIMEFRAME warnings on both intraday (36.4%) and next_day (42.9%). Must raise bar significantly for bearish calls and lower confidence by 10 points on intraday predictions.",
+    "conviction_audit": "No HIGH tier data yet. Given overall 48.8% accuracy, threshold for HIGH confidence today: 75% minimum, only when 4+ signals converge",
+    "target_bias_correction": "Intraday showing 1.06% overshoot bias, next_day showing 4.62% undershoot bias. Correcting by widening intraday ranges slightly and setting next_day targets more aggressively",
+    "regime_adjustment": "Currently in PINNED regime (positive GEX + contango). Backtested accuracy 63.0% in this regime with MEAN REVERSION strategy. Will favor bullish (63.4% accurate) over bearish (61.5%) and use tight price targets",
     "specific_changes": [
-      "Using EXPLOSIVE regime 2x target multiplier despite high_vol_choppy label",
-      "Lowering all confidence by 10 points for weak next_day timeframe",
-      "Weighting options flow higher due to massive SPX positioning"
+      "Require 3+ converging signals for any BEARISH call given 6.7% accuracy",
+      "Lower all intraday confidence by 10 points per weak timeframe warning",
+      "Use MEAN REVERSION strategy with tight targets in PINNED regime"
     ]
   },
-  "calibration_summary": "Operating in EXPLOSIVE volatility regime (65.5% backtest accuracy) despite high_vol_choppy market label. Defaulting to LOW confidence (30-35) given MEDIUM tier's 20% failure rate. Applying 2x target width multiplier and bullish bias per regime rules.",
+  "calibration_summary": "Addressing severe bearish bias (6.7% vs 90% bullish accuracy) by raising bearish signal threshold. In PINNED regime favoring mean reversion with tight targets and bullish lean per 63% backtested accuracy.",
   "intraday": {
     "signal": "BULLISH",
-    "confidence": 35,
-    "summary": "Iran ceasefire driving relief rally with oil plunging $4+ to $93. Negative GEX (-$1.05B) will amplify upside momentum. SPY call wall at $670 provides target with $6.44M premium concentration.",
-    "key_driver": "Iran ceasefire news + oil price collapse",
+    "confidence": 45,
+    "summary": "SPY likely to test $676-677 resistance in next 2 hours. Iran ceasefire driving oil crash (-3%) and risk-on sentiment. Positive GEX ($1.5B) will dampen moves but call wall at $680 provides upside target",
+    "key_driver": "Iran ceasefire oil crash creating risk-on rotation",
     "primary_driver": "headlines",
     "predicted_prices": {
-      "SPY": 665.0,
-      "QQQ": 594.5,
-      "IWM": 256.0,
-      "NVDA": 181.5,
-      "AAPL": 256.0
+      "SPY": 676.5,
+      "QQQ": 607.8,
+      "IWM": 262.0,
+      "NVDA": 184.0,
+      "AAPL": 259.5
     },
     "predicted_range": [
-      663.0,
-      667.0
+      675.5,
+      677.0
     ],
-    "price_target_basis": "SPY call wall at $670 strike ($6.44M premium) adjusted down for resistance",
-    "regime_strategy": "TREND_FOLLOWING"
+    "price_target_basis": "SPY call wall at $675 strike ($7.64M premium) with resistance at $680 GEX call wall",
+    "regime_strategy": "MEAN_REVERSION"
   },
   "next_day": {
     "signal": "BULLISH",
-    "confidence": 25,
-    "summary": "Ceasefire momentum likely continues but reduced confidence due to 16.7% next-day accuracy. Energy sector drag from oil collapse may weigh on broader indices.",
-    "key_driver": "Sustained geopolitical relief",
-    "primary_driver": "regime",
+    "confidence": 55,
+    "summary": "Continuation higher expected as ceasefire de-risks portfolios. SPY targeting $678-680 zone tomorrow. Bullish PC ratio 0.464 and $2B call premium support upside",
+    "key_driver": "De-escalation driving hedge unwinding",
+    "primary_driver": "flow",
     "predicted_prices": {
-      "SPY": 668.0,
-      "QQQ": 598.0,
-      "IWM": 258.0,
-      "NVDA": 183.0,
-      "AAPL": 258.0
+      "SPY": 679.0,
+      "QQQ": 610.0,
+      "IWM": 264.0,
+      "NVDA": 186.0,
+      "AAPL": 261.0
     },
     "predicted_range": [
-      660.0,
-      672.0
+      676.0,
+      680.0
     ],
-    "price_target_basis": "SPY $675 call cluster ($7.07M premium) as upper boundary",
-    "regime_strategy": "TREND_FOLLOWING"
+    "price_target_basis": "SPX call wall at $6900 ($59.77M premium) equivalent to SPY $690 adjusted for 10x",
+    "regime_strategy": "MEAN_REVERSION"
   },
   "long_term": {
     "signal": "BULLISH",
-    "confidence": 45,
-    "summary": "Massive SPX June 2026 put positioning ($581M at 7600 strike) suggests institutions hedging long exposure, not directional bearish bets. Ceasefire removes major tail risk.",
-    "key_driver": "Institutional hedging indicates underlying bullishness",
+    "confidence": 65,
+    "summary": "30-day target SPY $695-700. Massive SPY put positioning ($22M at 530/580 strikes) represents hedges that will unwind on continued stability. Base rate 74% monthly positive supports bullish lean",
+    "key_driver": "Massive put hedge unwind potential",
     "primary_driver": "flow",
     "predicted_prices": {
-      "SPY": 685.0,
-      "QQQ": 615.0,
-      "IWM": 265.0,
+      "SPY": 698.0,
+      "QQQ": 625.0,
+      "IWM": 275.0,
       "NVDA": 195.0,
       "AAPL": 270.0
     },
     "predicted_range": [
-      665.0,
-      695.0
+      685.0,
+      705.0
     ],
-    "price_target_basis": "Historical regime analog: explosive regime 30-day median move +4.1%",
-    "regime_strategy": "TREND_FOLLOWING"
+    "price_target_basis": "SPX put wall at $6800 ($65.25M premium) provides support, call clusters at $7000-7500 suggest upside targets",
+    "regime_strategy": "MEAN_REVERSION"
   },
-  "news_impact": "Iran ceasefire is the dominant catalyst - removes immediate war premium and crashes oil $4+ to $93. Trump tariff threats (50% on Iran weapon suppliers) create secondary uncertainty but are future-dated. Delta earnings beat but growth cut shows mixed corporate picture. Relief rally likely dominates near-term.",
-  "options_flow_impact": "Neutral P/C ratio (0.994) masks massive institutional hedging. $581M SPX June 2026 puts and $246M deep ITM calls show institutions positioning for upside while hedging tail risk. SPY put walls at $641-650 provide support levels. Heavy TSLA/MSFT put flow suggests sector rotation.",
+  "news_impact": "Iran ceasefire is the dominant catalyst - oil crashing 3% below $95, removing major inflation/recession concern. Delta earnings showing travel strength. Tech earnings optimism building (TSLA, GOOGL positive coverage). Mortgage demand weakness only minor negative",
+  "options_flow_impact": "Extremely bullish PC ratio 0.464 with $2B call premium vs $912M puts. Massive SPY put positions ($22M at 530/580) are likely portfolio hedges, not directional bets. Deep ITM call activity in META ($25.7M), AMD ($6.9M) shows institutional accumulation",
   "risks": [
-    "Trump tariff escalation could reignite volatility",
-    "Oil sector earnings impact from price collapse",
-    "Next-day timeframe showing only 16.7% accuracy recently"
+    "Trump trade policy uncertainty could resurface",
+    "Mortgage demand weakness signals economic slowdown",
+    "VIX at 20.45 still elevated despite ceasefire"
   ],
   "benchmarks": {
     "SPY": {
       "intraday_bias": "BULLISH",
       "next_day_bias": "BULLISH",
       "long_term_bias": "BULLISH",
-      "analysis": "Ceasefire relief rally supported by negative GEX amplification. Put walls at $641 and $650 provide strong support. Call resistance at $670-675.",
-      "key_driver": "Iran ceasefire removing tail risk",
+      "analysis": "Iran ceasefire removing tail risk, positive GEX dampening volatility but supporting grind higher. Call wall at $680 is near-term target with massive hedges to unwind",
+      "key_driver": "Geopolitical de-escalation",
       "primary_driver": "headlines",
-      "conflicting_signals": "Energy sector weakness from oil collapse may limit upside",
-      "predicted_price_2h": 665.0,
-      "predicted_price_nextday": 668.0,
-      "predicted_price_30d": 685.0,
+      "conflicting_signals": "Large put positions at 530/580 strikes, but these appear to be hedges not directional bets given bullish PC ratio",
+      "predicted_price_2h": 676.5,
+      "predicted_price_nextday": 679.0,
+      "predicted_price_30d": 698.0,
       "predicted_range_2h": [
-        663.0,
-        667.0
+        675.5,
+        677.0
       ],
       "predicted_range_nextday": [
-        660.0,
-        672.0
+        676.0,
+        680.0
       ],
-      "price_target_basis": "SPY $670 call wall ($6.44M premium) for intraday, $675 cluster ($7.07M) for next-day"
+      "price_target_basis": "SPY call wall at $675 strike ($7.64M premium) with GEX call wall resistance at $680"
     },
     "QQQ": {
       "intraday_bias": "BULLISH",
       "next_day_bias": "BULLISH",
       "long_term_bias": "BULLISH",
-      "analysis": "Tech should outperform on risk-on sentiment. AI bottleneck concerns from Taiwan dependency are longer-term issues. Near-term relief rally dominates.",
-      "key_driver": "Risk-on rotation back to growth",
+      "analysis": "Tech benefiting from rates stability (10Y at 4.26%). Deep ITM call flow in mega-caps (META, AMD) supporting. AI narrative intact per Taiwan Semi preview",
+      "key_driver": "Rate stability enabling tech rally",
       "primary_driver": "regime",
-      "conflicting_signals": "10Y yield at 4.24% remains elevated for growth stocks",
-      "predicted_price_2h": 594.5,
-      "predicted_price_nextday": 598.0,
-      "predicted_price_30d": 615.0,
+      "conflicting_signals": "Broadcom downgrade is isolated concern, not broad tech weakness",
+      "predicted_price_2h": 607.8,
+      "predicted_price_nextday": 610.0,
+      "predicted_price_30d": 625.0,
       "predicted_range_2h": [
-        592.0,
-        597.0
+        606.5,
+        608.5
       ],
       "predicted_range_nextday": [
-        590.0,
-        602.0
+        607.0,
+        612.0
       ],
-      "price_target_basis": "1% outperformance vs SPY based on explosive regime growth bias"
+      "price_target_basis": "NDXP call clusters at $24700 ($3.65M premium) suggest NDX 24700 equivalent to QQQ $610 area"
     }
   },
   "tickers_to_watch": [
     {
-      "ticker": "MSTR",
+      "ticker": "MU",
       "intraday_bias": "BULLISH",
       "next_day_bias": "BULLISH",
       "long_term_bias": "BULLISH",
-      "reasoning": "$31.7M call flow at $125 strike (2.1% OTM) with 20,175 contracts shows massive bullish positioning. Risk-on sentiment should boost crypto-correlated names.",
-      "key_driver": "Massive call flow concentration",
+      "reasoning": "Massive $7.6M deep ITM call position at $250 strike shows institutional accumulation. Currently at $408, far above strike indicating strong confidence",
+      "key_driver": "$7.6M institutional call buying",
       "primary_driver": "flow",
-      "conflicting_signals": "Crypto volatility remains elevated independent of equity markets",
-      "predicted_price_2h": 125.5,
-      "predicted_price_nextday": 128.0,
-      "predicted_price_30d": 140.0,
+      "conflicting_signals": "Extended from 200-day MA, but flow overwhelms technical concern",
+      "predicted_price_2h": 410.0,
+      "predicted_price_nextday": 415.0,
+      "predicted_price_30d": 430.0,
       "predicted_range_2h": [
-        123.5,
-        127.0
+        406.0,
+        412.0
       ],
-      "price_target_basis": "MSTR $125 call wall ($31.67M premium) as magnet"
-    },
-    {
-      "ticker": "IWM",
-      "intraday_bias": "BULLISH",
-      "next_day_bias": "BULLISH",
-      "long_term_bias": "BULLISH",
-      "reasoning": "Small caps typically outperform in risk-on relief rallies. Put walls at $225-250 provide strong support. Domestic focus benefits from de-escalation.",
-      "key_driver": "Risk-on rotation to small caps",
-      "primary_driver": "regime",
-      "conflicting_signals": "Rising yields typically pressure small cap borrowing costs",
-      "predicted_price_2h": 256.0,
-      "predicted_price_nextday": 258.0,
-      "predicted_price_30d": 265.0,
-      "predicted_range_2h": [
-        254.0,
-        257.5
-      ],
-      "price_target_basis": "IWM $260 call cluster ($6.41M premium) as resistance"
-    },
-    {
-      "ticker": "TSLA",
-      "intraday_bias": "BEARISH",
-      "next_day_bias": "BEARISH",
-      "long_term_bias": "BEARISH",
-      "reasoning": "$65.4M in deep ITM puts including $27.6M at $500 strike shows major institutional hedging or outright shorts. Energy transition narrative weakened by oil collapse.",
-      "key_driver": "Massive put positioning",
-      "primary_driver": "flow",
-      "conflicting_signals": "$11.1M in deep ITM calls shows some bullish positioning",
-      "predicted_price_2h": 343.0,
-      "predicted_price_nextday": 338.0,
-      "predicted_price_30d": 320.0,
-      "predicted_range_2h": [
-        341.0,
-        346.0
-      ],
-      "price_target_basis": "Heavy put flow centered around $375-500 strikes creating downward pressure"
+      "price_target_basis": "MU call wall at $250 strike ($7.64M premium) with additional cluster at $265"
     }
   ],
   "trade_ideas": [
@@ -183,50 +147,36 @@
       "idea": "Buy SPY calls for ceasefire relief rally",
       "ticker": "SPY",
       "type": "calls",
-      "timeframe": "intraday",
-      "thesis": "Iran ceasefire removes tail risk, negative GEX will amplify upside momentum to $670 call wall",
-      "risk": "Energy sector drag from oil collapse could limit broad market gains",
-      "instrument": "SPY $665 calls exp Apr 10",
-      "entry_zone": "$659-661",
-      "stop_invalidation": "$657",
-      "target": "$668",
-      "risk_reward": "1:2.5"
-    },
-    {
-      "idea": "Long MSTR for crypto sympathy rally",
-      "ticker": "MSTR",
-      "type": "stock",
       "timeframe": "next-day",
-      "thesis": "$31.7M call flow at $125 shows institutional accumulation, risk-on should boost crypto proxies",
-      "risk": "Bitcoin decorrelation or crypto-specific negative news",
-      "instrument": "MSTR shares",
-      "entry_zone": "$122-124",
-      "stop_invalidation": "$120",
-      "target": "$128",
-      "risk_reward": "1:2"
+      "thesis": "Iran ceasefire removing tail risk, massive put hedges to unwind driving squeeze higher",
+      "risk": "News could be sell-the-news event if already priced in",
+      "instrument": "SPY $678 calls exp Apr 10",
+      "entry_zone": "$674-675",
+      "stop_invalidation": "$672",
+      "target": "$679-680",
+      "risk_reward": "1:2.5"
     }
   ],
   "notable_divergences": [
     {
-      "ticker": "TSLA",
-      "signal": "BEARISH",
-      "flow_direction": "mixed",
-      "detail": "$65.4M in puts vs $11.1M in calls shows 6:1 bearish skew despite market rally setup",
-      "description": "Heavy institutional put buying on TSLA diverges from broader bullish market setup post-ceasefire. Either specific TSLA concerns or portfolio hedging.",
-      "inputs_conflicting": "flow vs regime",
-      "significance": "high",
+      "ticker": "SPY",
+      "signal": "BULLISH",
+      "flow_direction": "bearish",
+      "detail": "$22M in SPY puts at 530/580 strikes despite bullish signal",
+      "description": "Massive put positions likely portfolio hedges not directional bets given 0.464 PC ratio and $2B call premium",
+      "inputs_conflicting": "flow vs sentiment",
+      "significance": "medium",
       "expirations": [
-        "2026-04-17",
-        "2026-06-18"
+        "2026-05-15"
       ]
     }
   ],
   "earnings_warnings": {},
   "magnitude_flags": [
     {
-      "ticker": "SPX",
+      "ticker": "SPY",
       "flag": "OUTSIZED_MOVE_EXPECTED",
-      "basis": "$581M premium on 6,000 June 2026 puts at 7600 strike - largest single trade in flow"
+      "basis": "$22M in put premium at 530/580 strikes suggests hedging for significant move"
     }
   ],
   "signal_attribution": {
@@ -234,102 +184,102 @@
     "weights": {
       "headlines": {
         "weight": 0.35,
-        "values_cited": "Iran ceasefire agreement, oil plunge from $97 to $93, safe passage through Strait of Hormuz",
-        "influence": "Ceasefire is primary catalyst removing tail risk and driving relief rally thesis"
+        "values_cited": "Iran ceasefire, oil crash to $92.53 (-3%), Delta strong earnings",
+        "influence": "Ceasefire removing major tail risk, driving risk-on rotation"
       },
       "options_flow": {
         "weight": 0.25,
-        "values_cited": "Neutral P/C 0.994, $581M SPX put hedge, $31.7M MSTR calls, SPY put walls $641-650",
-        "influence": "Massive hedging confirms institutions are long, put walls provide support levels"
+        "values_cited": "PC ratio 0.464, $2B calls vs $912M puts, SPY put hedges $22M",
+        "influence": "Extreme bullish skew, large hedges suggest unwind potential"
       },
       "gex": {
         "weight": 0.15,
-        "values_cited": "Net GEX -$1.05B, put wall $640, call wall $658, GEX flip $615",
-        "influence": "Negative gamma will amplify directional moves, supporting trend following approach"
+        "values_cited": "Net GEX $1.50B positive, call wall $680, put wall $670",
+        "influence": "Positive gamma will dampen vol but support mean reversion to $680"
       },
       "vix_structure": {
         "weight": 0.1,
-        "values_cited": "Backwardation -4.9% VX2/VX1, VIX 26.61 elevated",
-        "influence": "Confirms explosive regime but ceasefire should compress vol"
+        "values_cited": "VIX 20.14, contango +1.4% VX2/VX1",
+        "influence": "Contango confirms reduced fear, supportive for equities"
       },
       "vol_regime": {
         "weight": 0.1,
-        "values_cited": "EXPLOSIVE regime 65.5% accuracy, 41% confidence, bullish bias in backtest",
-        "influence": "Regime rules mandate trend following with wide targets and bullish bias"
+        "values_cited": "PINNED regime 63% accuracy, mean reversion strategy",
+        "influence": "Regime favors bullish mean reversion with tight targets"
       },
       "prediction_feedback": {
         "weight": 0.05,
-        "values_cited": "Recent 48.2% accuracy, weak next-day 16.7%, successful when composite >0.9",
-        "influence": "Lowered confidence especially on next-day timeframe"
+        "values_cited": "Bullish 90% accuracy vs bearish 6.7%, overall 48.8%",
+        "influence": "Strong bullish bias in successful calls supports bullish lean"
       },
       "event_trees": {
         "weight": 0.0,
         "values_cited": "No event tree data provided",
-        "influence": "No influence without data"
+        "influence": "No influence on current prediction"
       },
       "price_data": {
         "weight": 0.0,
-        "values_cited": "SPY $659.22, QQQ $588.59 current levels",
-        "influence": "Used for calculating targets but not driving direction"
+        "values_cited": "SPY $674.65, high_vol_uptrend regime",
+        "influence": "Already incorporated in other factors"
       }
     },
     "weights_sum": 1.0,
-    "reasoning_chain": "Iran ceasefire headline removes major tail risk \u2192 oil price collapse confirms de-escalation \u2192 neutral options P/C with massive put hedging shows institutions protecting longs not betting bearish \u2192 negative GEX regime will amplify the relief rally \u2192 explosive volatility regime historically favors bullish trend following \u2192 low confidence due to poor recent performance but directional call is clear"
+    "reasoning_chain": "Iran ceasefire headline removes tail risk \u2192 oil crash confirms de-escalation \u2192 bullish flow (0.464 PC) aligns with relief rally \u2192 positive GEX supports but caps upside at $680 \u2192 PINNED regime history favors bullish mean reversion \u2192 high confidence bullish with tight $680 target"
   },
-  "generated_at": "2026-04-08T12:45:01Z",
-  "next_update": "2026-04-08T14:45:01Z",
+  "generated_at": "2026-04-08T14:00:01Z",
+  "next_update": "2026-04-08T16:00:01Z",
   "prices_at_generation": {
-    "SPY": 659.22,
-    "QQQ": 588.59,
-    "IWM": 252.91,
-    "AAPL": 253.5,
-    "NVDA": 178.1,
-    "TSLA": 346.65,
-    "META": 575.05,
-    "MSFT": 372.29,
-    "AMD": 221.53,
-    "AMZN": 213.77,
+    "SPY": 674.65,
+    "QQQ": 605.77,
+    "IWM": 260.88,
+    "AAPL": 258.37,
+    "NVDA": 182.61,
+    "TSLA": 353.06,
+    "META": 600.15,
+    "MSFT": 379.31,
+    "AMD": 228.84,
+    "AMZN": 219.885,
     "NKY": 56308.42,
     "KOSPI": 5872.34,
     "TAIEX": 34761.38,
     "TOPIX": 400.4,
-    "GOLD": 4820.2,
-    "SILVER": 77.42,
-    "WTI": 93.22,
-    "BRENT": 92.03,
-    "VIX": 20.65,
-    "10Y_YIELD": 4.24,
-    "30Y_YIELD": 4.843,
-    "3M_YIELD": 3.603,
-    "DXY": 98.659,
-    "captured_at": "2026-04-08T12:45:01Z",
-    "MSTR": 123.72
+    "GOLD": 4815.2,
+    "SILVER": 76.87,
+    "WTI": 92.53,
+    "BRENT": 91.51,
+    "VIX": 20.45,
+    "10Y_YIELD": 4.26,
+    "30Y_YIELD": 4.86,
+    "3M_YIELD": 3.598,
+    "DXY": 98.734,
+    "captured_at": "2026-04-08T14:00:01Z",
+    "MU": 407.55
   },
-  "regime": "high_vol_choppy",
+  "regime": "high_vol_uptrend",
   "signal_snapshot": {
-    "pc_ratio": 0.994,
-    "flow_sentiment": "NEUTRAL",
-    "top_flow_summary": "SPX $581.2M P, SPX $246.0M C, AVGO $108.8M C",
-    "vix": 20.65,
+    "pc_ratio": 0.464,
+    "flow_sentiment": "BULLISH",
+    "top_flow_summary": "SPY $10.9M P, SPY $11.0M P, SPY $4.5M C",
+    "vix": 20.45,
     "news_headlines": [
-      "The Iran War - Crisis Averted, But Inflationary Pressures Remain",
-      "Investor Demand Trends For Alternative Investment Strategies In 2026",
-      "Ray Dalio: Trump-Xi meeting to focus on trade, capital flows"
+      "Kinder Morgan: The Rally Makes Sense But So Does More Upside",
+      "What the market is pricing for Fed and global central-bank interest rates after the cease-fire",
+      "Tesla Won't Crash Anytime Soon"
     ],
-    "regime": "high_vol_choppy"
+    "regime": "high_vol_uptrend"
   },
   "data_sources": {
     "headlines_count": 25,
     "trends_count": 12,
     "trends_sample": [
-      "Iran Ceasefire & Oil Price Collapse",
-      "Trump Trade War & Tariff Threats",
-      "Energy Sector Production Hits & Oil Majors"
+      "Iran Ceasefire & Middle East De-escalation",
+      "Oil Price Crash & Energy Markets",
+      "S&P 500 Rally Near Record Highs"
     ],
-    "flow_trades": 47350,
+    "flow_trades": 15760,
     "top_trades": 5,
-    "sentiment": "NEUTRAL",
-    "pc_ratio": 0.994,
+    "sentiment": "BULLISH",
+    "pc_ratio": 0.464,
     "price_source": "Yahoo",
     "feedback_patterns": 3,
     "strike_clusters": true
