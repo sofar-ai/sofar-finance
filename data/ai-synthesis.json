@@ -1,293 +1,287 @@
 {
   "calibration_notes": {
-    "pattern_acknowledgment": "Recent scoring shows 76% directional accuracy with BULLISH calls at 79.2% vs BEARISH at 0% (no successful bearish calls in sample). My LOW tier (30-50%) is performing at 76% accuracy which exceeds my overall 49.3% rate significantly. Intraday 72.2% and next-day 85.7% are both strong timeframes.",
-    "conviction_audit": "No HIGH tier data yet. Setting threshold at 80% convergence across signals for HIGH today since my LOW tier already achieves 76%. MEDIUM tier has no data - will use cautiously when 3+ signals align.",
-    "target_bias_correction": "Intraday shows 0.90% average error (balanced), next-day shows 2.87% error with undershoot bias. Applying wider ranges for next-day targets and centering intraday targets more precisely.",
-    "regime_adjustment": "Current PINNED regime with $967M positive GEX. Backtested shows 63% accuracy in pinned, favoring mean reversion with tight ranges. Will use \u22640.5% intraday, \u22641.0% next-day ranges. Bullish preferred (63.4% vs 61.5% bearish in this regime).",
+    "pattern_acknowledgment": "Recent feedback shows: 1) TARGET_OVERSHOOT_BIAS at 80% requiring 40% haircut on all moves, 2) WEAK_TIMEFRAME with next_day at 21% accuracy, 3) REGIME_WEAKNESS at 28% in high_vol_uptrend, 4) Last 10 predictions all BULLISH (directional rut warning)",
+    "conviction_audit": "No HIGH tier data available. MEDIUM underperforms LOW (20% vs 30%). Threshold for HIGH today: 75% - only use if 4+ signals converge strongly",
+    "target_bias_correction": "80% overshoot rate detected. Applying mandatory 40% haircut: if raw calc shows 1.0% move, reporting 0.6%. Range width capped at 1.2x adjusted move",
+    "regime_adjustment": "Currently PINNED regime (positive GEX + contango) with 63% backtest accuracy. Prior high_vol_uptrend showed 28% accuracy. Switching to MEAN REVERSION strategy with tighter targets",
     "specific_changes": [
-      "Requiring 4+ converging signals for any BEARISH call given 0% bearish accuracy",
-      "Tightening intraday ranges to \u22640.5% given pinned GEX regime",
-      "Defaulting to BULLISH or NEUTRAL only unless overwhelming bearish evidence"
+      "Defaulting to LOW confidence (30-50) unless 3+ signals converge",
+      "Applying 40% haircut to all price targets per overshoot correction",
+      "Using mean reversion bias in PINNED regime vs trend following"
     ]
   },
-  "calibration_summary": "Operating in PINNED regime ($967M positive GEX) which historically yields 63% accuracy with mean reversion. Given my 79.2% bullish vs 0% bearish accuracy and strong recent performance in LOW tier (76%), I'm favoring bullish setups with tight ranges while requiring extreme evidence for any bearish calls.",
+  "calibration_summary": "Applying 40% target haircut due to 80% overshoot history. In PINNED regime (63% accuracy) using mean reversion with LOW confidence defaults given MEDIUM tier underperformance.",
   "intraday": {
     "signal": "BULLISH",
-    "confidence": 45,
-    "summary": "Positive gamma regime ($967M) will dampen moves with dealers buying dips. SPY near put wall $660 support with massive institutional hedging visible. Bull-deluded CAG (0.55) suggests contrarian bullish edge as crowd remains fearful despite structural support.",
-    "key_driver": "Positive GEX creating dealer support near $660 put wall",
+    "confidence": 42,
+    "summary": "Positive gamma ($621M) and VIX contango (+1.5%) create mean-reversion environment. SPX at 6779 between put wall 6750 and call wall 6800. Bullish flow (0.551 P/C) with $628M calls vs $346M puts supports modest upside within range",
+    "key_driver": "Positive GEX regime suppressing volatility with dealer hedging flows",
     "primary_driver": "regime",
     "predicted_prices": {
-      "SPY": 677.5,
-      "QQQ": 607.5,
-      "IWM": 261.2,
-      "NVDA": 183.5,
-      "AAPL": 259.8
+      "SPY": 676.4,
+      "QQQ": 606.2,
+      "IWM": 260.8,
+      "NVDA": 182.5,
+      "AAPL": 256.8
     },
     "predicted_range": [
-      676.5,
-      678.0
+      675.8,
+      677.0
     ],
-    "price_target_basis": "SPY put wall at $660 strike ($32.1M premium) providing support, call cluster at $677 ($15.27M premium)",
+    "price_target_basis": "SPX call wall $6800 ($17.53M premium) implies SPY ~$680 resistance",
     "regime_strategy": "MEAN_REVERSION"
   },
   "next_day": {
-    "signal": "BULLISH",
-    "confidence": 50,
-    "summary": "Pinned regime persistence expected with VIX contango (+0.6%) indicating low stress. Oil stabilizing below $100 removes macro headwind. Massive SPX call positioning at $6000-7000 strikes shows institutional bullish positioning.",
-    "key_driver": "VIX contango and massive SPX call positioning",
-    "primary_driver": "flow",
+    "signal": "BEARISH",
+    "confidence": 35,
+    "summary": "Iran ceasefire fragility and Hormuz access concerns create geopolitical overhang. Sticky 3% PCE inflation before conflict adds pressure. Mean reversion suggests pullback after today's expected bounce, especially with earnings void",
+    "key_driver": "Geopolitical uncertainty from shaky Iran ceasefire",
+    "primary_driver": "headlines",
     "predicted_prices": {
-      "SPY": 679.0,
-      "QQQ": 609.0,
-      "IWM": 262.5,
-      "NVDA": 185.0,
-      "AAPL": 261.0
+      "SPY": 673.5,
+      "QQQ": 602.0,
+      "IWM": 258.5,
+      "NVDA": 179.0,
+      "AAPL": 254.5
     },
     "predicted_range": [
-      675.0,
-      681.0
+      672.0,
+      675.0
     ],
-    "price_target_basis": "SPX call wall cluster at $6800 ($111.41M premium) equivalent to SPY ~$680",
+    "price_target_basis": "SPX put wall $6750 ($37.17M premium) implies SPY ~$675 support",
     "regime_strategy": "MEAN_REVERSION"
   },
   "long_term": {
     "signal": "BULLISH",
-    "confidence": 65,
-    "summary": "Massive institutional call positioning ($828M at SPX $6000, $179M at $6300) signals strong 30-day upside conviction. AI infrastructure spend commitments (META +$21B) support tech leadership. Base rate favors ~74% monthly positive returns.",
-    "key_driver": "$1B+ in SPX call positioning for mid-2026",
+    "confidence": 48,
+    "summary": "Massive institutional LEAPS buying ($25M TSLA, $17.8M SPX hedges, $3.8M MSTR) signals long-term bullish positioning. AI capex commitments ($21B META) and earnings boom narrative support 30-day upside despite near-term volatility",
+    "key_driver": "Institutional LEAPS accumulation and AI investment cycle",
     "primary_driver": "flow",
     "predicted_prices": {
       "SPY": 695.0,
       "QQQ": 625.0,
       "IWM": 268.0,
       "NVDA": 195.0,
-      "AAPL": 268.0
+      "AAPL": 265.0
     },
     "predicted_range": [
-      670.0,
-      705.0
+      680.0,
+      710.0
     ],
-    "price_target_basis": "SPX call wall at $7000 ($65.90M premium) equivalent to SPY ~$700",
-    "regime_strategy": "TREND_FOLLOWING"
+    "price_target_basis": "Historical PINNED regime 30-day median move +2.8% (with 40% haircut applied)",
+    "regime_strategy": "MEAN_REVERSION"
   },
-  "news_impact": "Headlines dominated by Iran tensions and oil prices, but market showing resilience with oil failing to hold $100. AI infrastructure spending (META +$21B with CoreWeave) overwhelms OpenAI UK project halt. Weak dollar narrative contradicts actual DXY strength at 98.97, creating confusion but not directional conviction.",
-  "options_flow_impact": "Exceptionally bullish with 0.611 put/call ratio and $13.5B in call premium vs $8.2B puts. Massive SPX institutional call buying ($533M at $6000-6300 strikes) overwhelms hedging activity. RKLB's $53.8M call position at $85 strike shows extreme conviction in space sector.",
+  "news_impact": "Iran ceasefire uncertainty and Hormuz control issues create near-term volatility. Sticky 3% inflation adds Fed uncertainty. However, AI capex acceleration (META $21B, AMZN $200B commitments) provides structural support",
+  "options_flow_impact": "Bullish flow (0.551 P/C) with massive LEAPS positions in TSLA/MSTR/AMZN signals institutional accumulation. SPX put wall at 6750 provides support while call wall at 6800 caps immediate upside",
   "risks": [
-    "Iran cease-fire breakdown could spike oil/VIX rapidly",
-    "DXY approaching 99 resistance could pressure equities if breached",
-    "Concentrated AI spending creating sector vulnerability"
+    "Iran ceasefire breakdown could spike oil/VIX",
+    "Sticky 3% inflation may delay Fed pivot expectations",
+    "Positive gamma regime change below SPX 6450 would amplify selloff"
   ],
   "benchmarks": {
     "SPY": {
       "intraday_bias": "BULLISH",
-      "next_day_bias": "BULLISH",
+      "next_day_bias": "BEARISH",
       "long_term_bias": "BULLISH",
-      "analysis": "Massive put hedging at $660 and $585 strikes creates strong support floors while positive GEX dampens volatility. Bull-deluded CAG suggests crowd too fearful. Technical support at 50-day MA near $670.",
-      "key_driver": "$32.1M put wall at $660 providing institutional support",
-      "primary_driver": "flow",
-      "conflicting_signals": "DXY strength at 98.97 and elevated VIX at 21.31 suggest caution",
-      "predicted_price_2h": 677.5,
-      "predicted_price_nextday": 679.0,
+      "analysis": "Pinned between SPX 6750 put wall and 6800 call wall in positive gamma regime. Mean reversion favors bounce today, but geopolitical overhang suggests pullback tomorrow. Long-term institutional positioning remains bullish",
+      "key_driver": "Positive GEX creating range-bound conditions",
+      "primary_driver": "regime",
+      "conflicting_signals": "Iran tensions and sticky inflation create headline risk",
+      "predicted_price_2h": 676.4,
+      "predicted_price_nextday": 673.5,
       "predicted_price_30d": 695.0,
       "predicted_range_2h": [
-        676.5,
-        678.0
+        675.8,
+        677.0
       ],
       "predicted_range_nextday": [
-        675.0,
-        681.0
+        672.0,
+        675.0
       ],
-      "price_target_basis": "Put wall at $660 strike ($32.1M premium) with call resistance at $677 ($15.27M)"
+      "price_target_basis": "SPX call wall $6800 ($17.53M premium) and put wall $6750 ($37.17M premium)"
     },
     "QQQ": {
       "intraday_bias": "BULLISH",
-      "next_day_bias": "BULLISH",
+      "next_day_bias": "BEARISH",
       "long_term_bias": "BULLISH",
-      "analysis": "AI infrastructure spending surge (META +$21B) supports tech leadership. Call clustering at $610 with minimal put interest. Rate sensitivity remains but 10Y stable at 4.29%.",
-      "key_driver": "AI infrastructure spending commitments",
+      "analysis": "Tech showing relative strength with QQQ call wall at $635. AI capex commitments from META/AMZN support sector. Mean reversion in positive gamma suggests modest bounce today before consolidation",
+      "key_driver": "AI investment cycle momentum",
       "primary_driver": "headlines",
-      "conflicting_signals": "OpenAI UK halt and AI monetization concerns creating some uncertainty",
-      "predicted_price_2h": 607.5,
-      "predicted_price_nextday": 609.0,
+      "conflicting_signals": "Rising yields (10Y at 4.295%) typically pressure growth stocks",
+      "predicted_price_2h": 606.2,
+      "predicted_price_nextday": 602.0,
       "predicted_price_30d": 625.0,
       "predicted_range_2h": [
-        606.0,
-        608.0
+        604.5,
+        607.0
       ],
       "predicted_range_nextday": [
-        605.0,
-        611.0
+        600.0,
+        605.0
       ],
-      "price_target_basis": "Call wall at $610 strike ($17.16M premium) with support at $605 calls"
+      "price_target_basis": "QQQ call wall $635 ($1.52M premium) with $665 resistance ($1.37M premium)"
     }
   },
   "tickers_to_watch": [
     {
-      "ticker": "RKLB",
+      "ticker": "TSLA",
       "intraday_bias": "BULLISH",
-      "next_day_bias": "BULLISH",
+      "next_day_bias": "NEUTRAL",
       "long_term_bias": "BULLISH",
-      "reasoning": "Massive $53.8M call position at $85 strike (23.7% OTM) with 21,000 contracts shows extreme institutional conviction. Space sector momentum continuing post-successful launches.",
-      "key_driver": "$53.8M institutional call position",
+      "reasoning": "Massive $25.1M institutional LEAPS buying at $290 strike (14.6% ITM) signals high conviction long positioning. $49.44M total deep ITM call flow suggests accumulation",
+      "key_driver": "$25M single LEAPS trade showing institutional conviction",
       "primary_driver": "flow",
-      "conflicting_signals": "High volatility stock prone to sharp reversals, RSI approaching overbought",
-      "predicted_price_2h": 69.2,
-      "predicted_price_nextday": 70.5,
-      "predicted_price_30d": 75.0,
+      "conflicting_signals": "High beta name vulnerable to broad market volatility",
+      "predicted_price_2h": 340.5,
+      "predicted_price_nextday": 339.0,
+      "predicted_price_30d": 355.0,
       "predicted_range_2h": [
-        68.5,
-        69.5
+        338.0,
+        342.0
       ],
-      "price_target_basis": "Put support at $60 strike ($123.95M premium) with call target $85 ($155.88M)"
+      "price_target_basis": "Deep ITM flow cluster at $290-300 strikes with massive premium commitment"
     },
     {
-      "ticker": "IWM",
+      "ticker": "META",
       "intraday_bias": "BULLISH",
       "next_day_bias": "BULLISH",
       "long_term_bias": "BULLISH",
-      "reasoning": "Small caps showing relative strength with put support at $250. Domestic focus benefits from weak China data and potential dollar weakness. Call interest at $267 shows upside targets.",
-      "key_driver": "Put support floor at $250 with call targets above",
-      "primary_driver": "flow",
-      "conflicting_signals": "Higher rates typically pressure small caps more than large caps",
-      "predicted_price_2h": 261.2,
-      "predicted_price_nextday": 262.5,
-      "predicted_price_30d": 268.0,
+      "reasoning": "$21B CoreWeave AI commitment and new AI model launch drive momentum. $9.42M deep ITM call flow and call wall at $700 show bullish positioning. Trading below technical resistance",
+      "key_driver": "$21B AI infrastructure investment announcement",
+      "primary_driver": "headlines",
+      "conflicting_signals": "Valuation stretched at current levels near $625",
+      "predicted_price_2h": 627.0,
+      "predicted_price_nextday": 630.0,
+      "predicted_price_30d": 665.0,
       "predicted_range_2h": [
-        260.0,
-        261.5
+        623.0,
+        629.0
       ],
-      "price_target_basis": "Put wall at $250 strike ($16.88M premium) with call target at $267 ($10.81M)"
+      "price_target_basis": "Call wall at $700 strike ($3.73M premium) with $650 intermediate resistance ($1.90M)"
     }
   ],
   "trade_ideas": [
     {
-      "idea": "SPY call spread capturing pinned regime grind higher",
+      "idea": "SPY mean reversion long for intraday bounce",
       "ticker": "SPY",
       "type": "calls",
-      "timeframe": "next-day",
-      "thesis": "Positive GEX will compress volatility while put walls provide support. Bull-deluded CAG suggests upside surprise potential.",
-      "risk": "Iran headlines could spike volatility beyond GEX dampening ability",
-      "instrument": "SPY $677/$680 call spread exp Apr 10",
-      "entry_zone": "$676-677",
-      "stop_invalidation": "SPY below $674",
-      "target": "$679-680",
-      "risk_reward": "1:2.5"
+      "timeframe": "intraday",
+      "thesis": "Positive gamma regime with SPX at 6779 between put support 6750 and call resistance 6800. Dealer hedging flows support bounce within range",
+      "risk": "Iran headline risk could break support",
+      "instrument": "SPY $676 calls exp Apr 10",
+      "entry_zone": "$675.00-675.50",
+      "stop_invalidation": "$674.00",
+      "target": "$677.00",
+      "risk_reward": "1:2"
     },
     {
-      "idea": "RKLB momentum continuation with defined risk",
-      "ticker": "RKLB",
+      "idea": "META AI momentum continuation",
+      "ticker": "META",
       "type": "calls",
-      "timeframe": "30-day",
-      "thesis": "Massive institutional call buying at $85 strike signals continued upside. Space momentum intact.",
-      "risk": "High beta name vulnerable to broad market selloffs",
-      "instrument": "RKLB $72.50 calls exp May 15",
-      "entry_zone": "$68-70",
-      "stop_invalidation": "RKLB below $65",
-      "target": "$75-78",
-      "risk_reward": "1:2.0"
+      "timeframe": "next-day",
+      "thesis": "$21B AI investment and model launch with $9.42M institutional call flow. Below $650 technical resistance with room to $700 call wall",
+      "risk": "Broad market weakness from geopolitical tensions",
+      "instrument": "META $630 calls exp Apr 17",
+      "entry_zone": "$624-626",
+      "stop_invalidation": "$620",
+      "target": "$635",
+      "risk_reward": "1:2.5"
     }
   ],
   "notable_divergences": [],
   "earnings_warnings": {},
   "magnitude_flags": [
     {
-      "ticker": "SPX",
+      "ticker": "TSLA",
       "flag": "OUTSIZED_MOVE_EXPECTED",
-      "basis": "$533M in combined call premium at 6000-6300 strikes signals major upside conviction"
-    },
-    {
-      "ticker": "RKLB",
-      "flag": "OUTSIZED_MOVE_EXPECTED",
-      "basis": "$53.8M single call position requiring 23.7% move higher"
+      "basis": "$25.1M single LEAPS trade with 2000 contracts at $290 strike plus $49.44M total deep ITM flow"
     }
   ],
   "signal_attribution": {
-    "primary_driver": "options_flow",
+    "primary_driver": "vol_regime",
     "weights": {
       "headlines": {
-        "weight": 0.15,
-        "values_cited": "25 headlines, Iran oil <$100, META +$21B AI spend, weak dollar narrative",
-        "influence": "AI spending bullish but Iran/oil concerns balance it to modest positive"
+        "weight": 0.2,
+        "values_cited": "Iran ceasefire fragility, Hormuz control, 3% sticky PCE, $21B META AI spend",
+        "influence": "Created near-term uncertainty but long-term AI bullishness"
       },
       "options_flow": {
-        "weight": 0.35,
-        "values_cited": "PC ratio 0.611, SPX calls $533M at 6000-6300, RKLB $53.8M calls, SPY put wall $660",
-        "influence": "Massive bullish positioning with strong support levels drives bullish conviction"
+        "weight": 0.25,
+        "values_cited": "0.551 P/C ratio, $628M calls vs $346M puts, $25M TSLA LEAPS",
+        "influence": "Strong bullish institutional positioning especially in LEAPS"
       },
       "gex": {
         "weight": 0.2,
-        "values_cited": "Net GEX $967M positive, call wall 6775, put wall 6700, spot 6761.76",
-        "influence": "Pinned regime dampens volatility and supports mean reversion bullish"
+        "values_cited": "$621M positive GEX, flip at 6450, spot 6779",
+        "influence": "Defined range-bound mean reversion environment"
       },
       "vix_structure": {
         "weight": 0.1,
-        "values_cited": "VIX 21.5, contango +0.6% VX2/VX1",
-        "influence": "Contango confirms low stress despite elevated absolute VIX level"
+        "values_cited": "VIX 20.98, contango +1.5% VX2/VX1",
+        "influence": "Confirmed low-fear environment supporting dip buying"
       },
       "vol_regime": {
-        "weight": 0.1,
-        "values_cited": "PINNED regime 26% confidence, mean reversion strategy, 63% historical accuracy",
-        "influence": "Regime supports tight range bullish grind with compressed targets"
+        "weight": 0.25,
+        "values_cited": "PINNED regime (21% confidence), 63% backtest accuracy",
+        "influence": "Dictated mean reversion strategy with tight targets"
       },
       "prediction_feedback": {
-        "weight": 0.05,
-        "values_cited": "76% recent accuracy, 79.2% bullish vs 0% bearish success, LOW tier performing",
-        "influence": "Strong bullish track record increases conviction on bullish calls"
+        "weight": 0.0,
+        "values_cited": "28% accuracy in current regime, 80% overshoot bias",
+        "influence": "Forced 40% target haircut and LOW confidence defaults"
       },
       "event_trees": {
         "weight": 0.0,
         "values_cited": "No event tree data provided",
-        "influence": "Unable to assess without data"
+        "influence": "No influence on this analysis"
       },
       "price_data": {
-        "weight": 0.05,
-        "values_cited": "SPY 676.01, QQQ 606.09, high_vol_uptrend regime, yields stable",
-        "influence": "Uptrend intact despite volatility, supports continuation"
+        "weight": 0.0,
+        "values_cited": "SPY 675.27, high_vol_uptrend regime",
+        "influence": "Used for levels but not primary driver"
       }
     },
     "weights_sum": 1.0,
-    "reasoning_chain": "Options flow shows massive bullish positioning ($533M SPX calls) \u2192 Positive GEX regime ($967M) dampens volatility and creates mean reversion \u2192 VIX contango confirms low institutional stress \u2192 Strong put support walls provide downside cushion \u2192 Historical 79.2% bullish accuracy in similar setups \u2192 BULLISH conviction with tight pinned-regime targets"
+    "reasoning_chain": "PINNED vol regime (positive GEX + contango) creates mean reversion environment \u2192 Options flow shows bullish positioning \u2192 GEX walls define range \u2192 Apply 40% target haircut from feedback \u2192 Result: Modest bullish intraday within tight range"
   },
-  "generated_at": "2026-04-09T12:45:01Z",
-  "next_update": "2026-04-09T14:45:01Z",
+  "generated_at": "2026-04-09T14:00:01Z",
+  "next_update": "2026-04-09T16:00:01Z",
   "prices_at_generation": {
-    "SPY": 676.01,
-    "QQQ": 606.09,
-    "IWM": 260.47,
-    "AAPL": 258.9,
-    "NVDA": 182.08,
-    "TSLA": 343.25,
-    "META": 612.42,
-    "MSFT": 374.33,
-    "AMD": 231.82,
-    "AMZN": 221.25,
+    "SPY": 675.27,
+    "QQQ": 604.81,
+    "IWM": 260.35,
+    "AAPL": 256.185,
+    "NVDA": 181.49,
+    "TSLA": 338.81,
+    "META": 625.207,
+    "MSFT": 368.33,
+    "AMD": 233.43,
+    "AMZN": 225.21,
     "NKY": 55895.32,
     "KOSPI": 5778.01,
     "TAIEX": 34861.16,
     "TOPIX": 396.7,
-    "GOLD": 4768.0,
-    "SILVER": 74.355,
-    "WTI": 99.2,
-    "BRENT": 98.21,
-    "VIX": 21.31,
-    "10Y_YIELD": 4.293,
-    "30Y_YIELD": 4.885,
+    "GOLD": 4796.8,
+    "SILVER": 75.435,
+    "WTI": 100.02,
+    "BRENT": 98.23,
+    "VIX": 20.86,
+    "10Y_YIELD": 4.295,
+    "30Y_YIELD": 4.891,
     "3M_YIELD": 3.59,
-    "DXY": 98.966,
-    "captured_at": "2026-04-09T12:45:01Z",
-    "RKLB": 69.08
+    "DXY": 98.863,
+    "captured_at": "2026-04-09T14:00:01Z"
   },
   "regime": "high_vol_uptrend",
   "signal_snapshot": {
-    "pc_ratio": 0.611,
+    "pc_ratio": 0.551,
     "flow_sentiment": "BULLISH",
-    "top_flow_summary": "SPX $354.4M C, SPX $178.6M C, RKLB $53.8M C",
-    "vix": 21.31,
+    "top_flow_summary": "TSLA $25.1M C, SPX $17.8M P, AMZN $1.7M C",
+    "vix": 20.86,
     "news_headlines": [
-      "Still haven\u2019t filed your taxes? Here\u2019s a $350 reason to stop procrastinating.",
-      "Bed Bath & Beyond Is Recovering, But Not Enough For An Upgrade",
-      "EUR Money Markets: Stirred, Not Shaken"
+      "Palantir: This Could End Badly",
+      "Meta's long-awaited AI model is finally here. But can it make money?",
+      "Meta commits to spending additional $21 billion with CoreWeave as AI costs keep rising"
     ],
     "regime": "high_vol_uptrend"
   },
@@ -295,16 +289,16 @@
     "headlines_count": 25,
     "trends_count": 12,
     "trends_sample": [
-      "Iran Cease-Fire & Strait of Hormuz Blockade",
-      "Oil Market Volatility & Pricing Pressure",
-      "AI Infrastructure Investment Surge"
+      "Iran Ceasefire Fragility & Hormuz Blockade",
+      "PCE Inflation Sticky at 3.0% Core",
+      "Mega-Cap AI Capex Arms Race Intensifies"
     ],
-    "flow_trades": 84030,
+    "flow_trades": 5160,
     "top_trades": 5,
     "sentiment": "BULLISH",
-    "pc_ratio": 0.611,
+    "pc_ratio": 0.551,
     "price_source": "Yahoo",
-    "feedback_patterns": 0,
+    "feedback_patterns": 3,
     "strike_clusters": true
   }
 }
