@@ -1,0 +1,178 @@
+{
+  "generated_at": "2026-04-10T07:00:45Z",
+  "agent_model": "claude-haiku-4-5-20251001",
+  "raw_source": "data/research-raw/lab-raw-2026-04-10.json",
+  "items": [
+    {
+      "raw_id": "lab-0000",
+      "skip": false,
+      "skip_reason": "",
+      "type": "algo_improvement",
+      "title": "Strategy-Decay Risk & Minimum Regime Performance Framework",
+      "source_summary": "Research introduces Minimum Regime Performance (MRP) as a quantitative framework to measure how systematically-managed strategies deteriorate across different market regimes, revealing structural fragility missed by traditional volatility/drawdown metrics. MRP establishes a lower bound on robustness by tracking risk-adjusted returns across historical regime transitions.",
+      "has_gap": true,
+      "sofar_gap_analysis": "SOFAR's prediction pipeline lacks regime-aware strategy robustness scoring. Current prediction_score.py and backtest_validator.py evaluate strategies against aggregate historical performance without partitioning by market regime (low-vol, high-vol, crisis, recovery). MRP methodology would enhance sofar_config.yaml's risk_framework by adding a 'regime_performance_floor' metric. The AI synthesis layer (ai_synthesis.py) currently treats all prediction contexts equally; MRP would enable regime-conditional confidence adjustment.",
+      "proposed_change": {
+        "target_component": "prediction_score.py, backtest_validator.py, sofar_config.yaml",
+        "change_description": "Add regime-partitioned backtest evaluation: (1) segment historical data into market regimes using volatility regimes or regime-switching model; (2) calculate risk-adjusted return floor (MRP) for each strategy across regimes; (3) incorporate MRP as a penalizing factor in prediction_score confidence\u2014predictions from strategies with poor MRP scores receive lower trust weighting; (4) update sofar_config.yaml with 'regime_robustness_threshold' parameter.",
+        "implementation_complexity": "medium",
+        "estimated_effort": "4-6 hours"
+      },
+      "evidence_strength": "high",
+      "evidence_basis": "Academic paper demonstrates empirical vulnerability in systematic strategies; MRP metric directly addresses blind spot in current scoring logic\u2014strategies may appear robust in-sample but fail systematically in underrepresented regimes.",
+      "relevance_score": 0.82,
+      "tickers": [],
+      "category": "backtesting",
+      "credibility": "high",
+      "credibility_basis": "Peer-reviewed arXiv preprint by Fabozzi (established quant researcher); addresses known problem in strategy evaluation.",
+      "actionable": true,
+      "url": "https://arxiv.org/abs/2604.08356v1",
+      "timestamp": "2026-04-09T15:21:07Z",
+      "source": "arXiv",
+      "author": "Nolan Alexander, Frank Fabozzi",
+      "fetch_verified": true
+    },
+    {
+      "raw_id": "lab-0002",
+      "skip": false,
+      "skip_reason": "",
+      "type": "algo_improvement",
+      "title": "Corporate Bond Factor Replication Crisis & Measurement Bias",
+      "source_summary": "Study identifies pervasive replication failure across 108 corporate bond factors, tracing it to two systematic biases: transaction price measurement error (contaminating both sorting signals and returns) and ex-post return filtering (embedding forward-looking information). After correction, most documented factors lose statistical significance.",
+      "has_gap": true,
+      "sofar_gap_analysis": "SOFAR's factor backtesting suite (backtest_validator.py, factor_screening.py) lacks explicit measurement-error correction and lookahead bias detection specific to bond data. If SOFAR ingests corporate bond signals (via data_ingestion.py), these biases propagate into prediction_score.py, inflating confidence in bond-related factor strategies. The open-source OBAP framework provides error-corrected TRACE data and bias-correction methodology directly applicable.",
+      "proposed_change": {
+        "target_component": "factor_screening.py, data_ingestion.py, backtest_validator.py",
+        "change_description": "(1) Implement measurement-error correction in factor_screening.py for bond factors: apply errors-in-variables bias adjustment (reference OBAP framework) to any signal derived from transaction prices; (2) enhance backtest_validator.py to detect lookahead bias\u2014enforce strict information barrier (no future returns used in signal construction); (3) integrate OBAP's error-corrected TRACE dataset as alternative to raw price feeds in data_ingestion.py; (4) flag bond-factor predictions with 'measurement_bias_risk' tag in prediction output.",
+        "implementation_complexity": "medium",
+        "estimated_effort": "3-5 hours"
+      },
+      "evidence_strength": "high",
+      "evidence_basis": "Quantified replication crisis affecting 82% of a large factor zoo; direct empirical demonstration that standard backtesting inflates factor significance; peer-reviewed methodology provides ready-made correction framework.",
+      "relevance_score": 0.76,
+      "tickers": [],
+      "category": "backtesting",
+      "credibility": "high",
+      "credibility_basis": "Academic research with open-source reproducible framework (OBAP); systematic bias documented across multiple factor categories.",
+      "actionable": true,
+      "url": "https://arxiv.org/abs/2604.07880v1",
+      "timestamp": "2026-04-09T06:50:49Z",
+      "source": "arXiv",
+      "author": "Alexander Dickerson, Cesare Robotti, Giulio Rossetti",
+      "fetch_verified": true
+    },
+    {
+      "raw_id": "lab-0003",
+      "skip": false,
+      "skip_reason": "",
+      "type": "algo_improvement",
+      "title": "Skewness Dispersion as Equity Market Return Predictor",
+      "source_summary": "Cross-sectional dispersion in firm-level realized skewness predicts future broad market returns, with predictive power concentrated around monetary policy announcements. The signal is robust out-of-sample and incremental to existing macro predictors, suggesting it captures gradual incorporation of macro news via heterogeneous risk sensitivity.",
+      "has_gap": true,
+      "sofar_gap_analysis": "SOFAR's signal_library.py currently lacks dispersion-of-moments (skewness/kurtosis dispersion) as a macro regime indicator. sentiment_analyzer.py infers macro expectations from text; skewness dispersion would provide complementary market-based macro signal. The policy_calendar integration in event_analyzer.py could trigger heightened weighting of this signal during FOMC/CB announcement windows. This represents a novel, documented alpha source not yet in SOFAR's systematic signal suite.",
+      "proposed_change": {
+        "target_component": "signal_library.py, macro_indicators.py, event_analyzer.py",
+        "change_description": "(1) Add skewness_dispersion_signal to signal_library.py: compute cross-sectional standard deviation of rolling realized skewness across S&P 500 constituents (30-day window); (2) register signal in macro_indicators.py with negative sign (dispersion \u2192 future returns); (3) integrate policy_calendar weighting in event_analyzer.py\u2014increase signal weight/confidence in 10-day window around FOMC, ECB, BoE announcements; (4) backtest signal independently and as ensemble component; (5) add to prediction_context for equity market return forecasts.",
+        "implementation_complexity": "low",
+        "estimated_effort": "2-3 hours"
+      },
+      "evidence_strength": "high",
+      "evidence_basis": "Published research demonstrating out-of-sample robustness, incremental predictive power vs. known alternatives, and identified economic mechanism (macro news incorporation).",
+      "relevance_score": 0.78,
+      "tickers": [
+        "SPY",
+        "QQQ"
+      ],
+      "category": "new_signal",
+      "credibility": "high",
+      "credibility_basis": "Peer-reviewed arXiv paper; signal exhibits documented out-of-sample stability and policy-event concentration.",
+      "actionable": true,
+      "url": "https://arxiv.org/abs/2604.07870v1",
+      "timestamp": "2026-04-09T06:33:53Z",
+      "source": "arXiv",
+      "author": "Mykola Babiak, Jozef Barunik, Josef Kurka",
+      "fetch_verified": true
+    },
+    {
+      "raw_id": "lab-0005",
+      "skip": false,
+      "skip_reason": "",
+      "type": "algo_improvement",
+      "title": "SBBTS: Unified Diffusion Framework for Synthetic Time Series",
+      "source_summary": "Introduces Schr\u00f6dinger-Bass Bridge for Time Series (SBBTS), a diffusion-based method that jointly calibrates drift and stochastic volatility in synthetic financial data generation, addressing a known failure mode of existing methods (diffusion models fix volatility; martingale transport ignores drift).",
+      "has_gap": true,
+      "sofar_gap_analysis": "SOFAR's backtesting suite (scenario_simulator.py, backtest_validator.py) relies on historical resampling and basic Monte Carlo for path generation. When backtesting against rare regimes or extrapolating beyond observed data, synthetic time series generation is crude. SBBTS would improve scenario_analyzer.py's tail-risk simulation: better joint drift-volatility calibration \u2192 more realistic scenario paths for GEX calculation and tail-event stress testing. This enhances both robustness validation and rare-event prediction confidence.",
+      "proposed_change": {
+        "target_component": "scenario_simulator.py, scenario_analyzer.py, backtest_validator.py",
+        "change_description": "(1) Integrate SBBTS or SBBTS-inspired diffusion calibration into scenario_simulator.py: replace current simple Geometric Brownian Motion with conditional transport-based drift-volatility joint estimation; (2) use SBBTS decomposition for efficient learning of regime-conditional diffusion parameters; (3) in scenario_analyzer.py, generate stress-test paths using SBBTS-calibrated process rather than historical block bootstrap\u2014improves realism of tail scenarios; (4) validate synthetic path distributions vs. empirical marginals and autocorrelations in backtest_validator.py; (5) document synthetic data quality metrics in backtesting reports.",
+        "implementation_complexity": "high",
+        "estimated_effort": "6-8 hours"
+      },
+      "evidence_strength": "medium",
+      "evidence_basis": "Academic paper addresses known gap in synthetic data generation (joint drift-volatility modeling); improvement is mathematically principled but requires nontrivial integration and validation effort.",
+      "relevance_score": 0.63,
+      "tickers": [],
+      "category": "methodology",
+      "credibility": "high",
+      "credibility_basis": "Novel mathematical framework with peer-reviewed publication; addresses documented failure mode of diffusion-based methods.",
+      "actionable": true,
+      "url": "https://arxiv.org/abs/2604.07159v1",
+      "timestamp": "2026-04-08T14:49:08Z",
+      "source": "arXiv",
+      "author": "Alexandre Alouadi, Gr\u00e9goire Loeper, C\u00e9lian Marsala, Othmane Mazhar, Huy\u00ean Pham",
+      "fetch_verified": true
+    },
+    {
+      "raw_id": "lab-0026",
+      "skip": false,
+      "skip_reason": "",
+      "type": "algo_improvement",
+      "title": "Options-Driven Realized Volatility Forecasting via Rough Volatility",
+      "source_summary": "Demonstrates that spot volatility estimators extracted from options panels using rough stochastic volatility models improve HAR-based realized volatility forecasts. Deep learning surrogate accelerates estimation; augmented HAR-RV-RHeston model outperforms traditional SV models and VIX index benchmarks.",
+      "has_gap": true,
+      "sofar_gap_analysis": "SOFAR's VIX prediction and volatility forecasting (vix_term_structure.py, gex_calculator.py) currently relies on VIX spot/term structure and realized volatility (HAR model). The pipeline does not extract or use inferred spot volatility from options implied vol surfaces. This is a direct, documented gap: rough volatility model applied to options panels provides incremental forecasting edge. The deep learning surrogate enables efficient implementation at scale.",
+      "proposed_change": {
+        "target_component": "vix_term_structure.py, volatility_forecaster.py, gex_calculator.py",
+        "change_description": "(1) Add options-based spot volatility inference to vix_term_structure.py: implement rough Heston model calibration to implied vol surface using iterative two-step approach from Andersen et al. (2015a); deploy deep learning surrogate (pre-trained or lightweight LSTM) to accelerate parameter estimation from large options panels; (2) augment volatility_forecaster.py HAR model with inferred spot vol feature\u2014construct HAR-RV-RHeston variant; (3) in gex_calculator.py, use rough-volatility-informed spot vol estimates for delta and vega hedging flow calculations; (4) benchmark augmented model vs. VIX-only forecasts in backtest_validator.py; (5) update prediction_score.py to weight volatility predictions incorporating this model variant.",
+        "implementation_complexity": "high",
+        "estimated_effort": "7-10 hours"
+      },
+      "evidence_strength": "high",
+      "evidence_basis": "Published research demonstrating empirical improvements in daily realized volatility forecasting over multiple benchmark models (Heston, Bates, SVCJ, VIX); methodology is concrete and reproducible.",
+      "relevance_score": 0.85,
+      "tickers": [
+        "VIX"
+      ],
+      "category": "vix",
+      "credibility": "high",
+      "credibility_basis": "Peer-reviewed arXiv paper; benchmark comparison against established volatility models; direct relevance to VIX/volatility forecasting pipeline.",
+      "actionable": true,
+      "url": "https://arxiv.org/abs/2604.02743v2",
+      "timestamp": "2026-04-03T05:31:00Z",
+      "source": "arXiv",
+      "author": "Zheqi Fan, Meng Melody Wang, Yifan Ye",
+      "fetch_verified": true
+    }
+  ],
+  "stats": {
+    "total_raw": 8,
+    "scored": 5,
+    "skipped": 3,
+    "rejected_by_validation": 0,
+    "corrections_applied": 0,
+    "has_gap_count": 5,
+    "avg_relevance": 0.768,
+    "tokens_used": 7387,
+    "cost_usd": 0.02
+  },
+  "token_usage_by_batch": [
+    {
+      "batch": 1,
+      "input": 2989,
+      "output": 4398,
+      "cache_read": 0,
+      "cache_write": 0,
+      "cost_usd": 0.01998
+    }
+  ]
+}
