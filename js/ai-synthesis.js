@@ -294,28 +294,34 @@ const AISynthesis = (() => {
           }
         }
       } catch(e) { console.warn('Regime load error:', e); }
-      try {
-        const lgbmRes = await fetch('data/lgbm-prediction.json?t=' + Date.now());
-        if (lgbmRes.ok) {
-          const lgbm = await lgbmRes.json();
-          const sig = document.getElementById('ai-lgbm-signal');
-          const detail = document.getElementById('ai-lgbm-detail');
-          if (sig && lgbm.direction) {
-            const colors = {BULLISH:'#22c55e',BEARISH:'#ef4444',NEUTRAL:'#f59e0b'};
-            const emojis = {BULLISH:'\u{1F7E2}',BEARISH:'\u{1F534}',NEUTRAL:'\u{1F7E1}'};
-            sig.innerHTML = '<span style="color:' + (colors[lgbm.direction]||'#f59e0b') + '">' + (emojis[lgbm.direction]||'') + ' ' + lgbm.direction + ' (' + lgbm.confidence + '%)</span>';
-            detail.innerHTML = [
-              '<div class="qc-stat"><span>Model</span><span class="qc-val">' + (lgbm.model || 'lgbm') + '</span></div>',
-              '<div class="qc-stat"><span>Signals</span><span class="qc-val">' + (lgbm.signals_used || '—') + ' features</span></div>',
-              '<div class="qc-stat"><span>Probability</span><span class="qc-val">' + ((lgbm.probability||0)*100).toFixed(1) + '%</span></div>',
-              '<div class="qc-stat"><span>WF Accuracy</span><span class="qc-val">81.2% (recent)</span></div>',
-              '<div class="qc-stat"><span>Data</span><span class="qc-val">' + (lgbm.date || '—') + '</span></div>',
-              '<div class="qc-stat qc-freshness"><span>Updated</span>' + freshness(lgbm.date) + '</div>',
-            ].join('');
+      // Load all 3 LightGBM models
+      const modelConfigs = [
+        { file: 'data/lgbm-prediction.json', sigId: 'ai-lgbm-7d-signal', detId: 'ai-lgbm-7d-detail' },
+        { file: 'data/lgbm-prediction-14d.json', sigId: 'ai-lgbm-14d-signal', detId: 'ai-lgbm-14d-detail' },
+        { file: 'data/lgbm-prediction-21d.json', sigId: 'ai-lgbm-21d-signal', detId: 'ai-lgbm-21d-detail' },
+      ];
+      const mColors = {BULLISH:'#22c55e',BEARISH:'#ef4444',NEUTRAL:'#f59e0b'};
+      const mEmojis = {BULLISH:'\u{1F7E2}',BEARISH:'\u{1F534}',NEUTRAL:'\u{1F7E1}'};
+      for (const mc of modelConfigs) {
+        try {
+          const r = await fetch(mc.file + '?t=' + Date.now());
+          if (r.ok) {
+            const m = await r.json();
+            const sig = document.getElementById(mc.sigId);
+            const det = document.getElementById(mc.detId);
+            if (sig && m.direction) {
+              sig.innerHTML = '<span style="color:' + (mColors[m.direction]||'#f59e0b') + '">' + (mEmojis[m.direction]||'') + ' ' + m.direction + ' (' + m.confidence + '%)</span>';
+              det.innerHTML = [
+                '<div class="qc-stat"><span>Horizon</span><span class="qc-val">' + (m.horizon || 'unknown') + '</span></div>',
+                '<div class="qc-stat"><span>Features</span><span class="qc-val">' + (m.signals_used || 0) + '</span></div>',
+                '<div class="qc-stat"><span>Probability</span><span class="qc-val">' + ((m.probability||0)*100).toFixed(1) + '%</span></div>',
+                '<div class="qc-stat"><span>Data</span><span class="qc-val">' + (m.date || 'n/a') + '</span></div>',
+                '<div class="qc-stat qc-freshness"><span>Updated</span>' + freshness(m.date) + '</div>',
+              ].join('');
+            }
           }
-        }
-      } catch(e) { console.warn('LightGBM load error:', e); }
-      try {
+        } catch(e) { console.warn('Model load error:', mc.file, e); }
+      }
         const dpRes = await fetch('data/dark-pool.json?t=' + Date.now());
         if (dpRes.ok) {
           const dp = await dpRes.json();
