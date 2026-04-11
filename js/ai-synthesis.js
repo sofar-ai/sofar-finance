@@ -322,6 +322,7 @@ const AISynthesis = (() => {
           }
         } catch(e) { console.warn('Model load error:', mc.file, e); }
       }
+      try {
         const dpRes = await fetch('data/dark-pool.json?t=' + Date.now());
         if (dpRes.ok) {
           const dp = await dpRes.json();
