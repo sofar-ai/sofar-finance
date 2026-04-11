@@ -102,6 +102,7 @@
     .be-title { font:700 9px var(--fm); color:rgba(139,92,246,.8); letter-spacing:.1em; text-transform:uppercase; margin-bottom:4px; }
     .be-row { display:flex; justify-content:space-between; font:11px var(--fm); color:var(--c-mut); padding:1px 0; }
     .be-val { color:var(--c-txt); }
+    .loading { text-align:center; padding:20px; color:var(--c-dim); font:11px var(--fm); }
     @media(max-width:768px) { .sg{grid-template-columns:repeat(3,1fr);} .pos-g{grid-template-columns:repeat(2,1fr);} .mods{grid-template-columns:1fr;} .fr{grid-template-columns:1fr;} .leg-row{grid-template-columns:1fr 1fr;} }
   </style>
 </head>
@@ -111,8 +112,8 @@
   <script>document.addEventListener('DOMContentLoaded',()=>{NavComponent.setMeta(`<span class="live-dot"></span>POSITIONS<span style="margin-left:8px" id="clock"></span>`);});</script>
   <div class="pm">
     <div class="card"><div class="capbar">
-      <div><div class="caplbl">Portfolio Capital</div><span class="capval" id="cap-disp">$100,000</span><input class="capinp" id="cap-inp"><button class="capbtn" id="cap-btn" onclick="capToggle()">EDIT</button></div>
-      <div><div class="caplbl">Exposure</div><div class="capsub" id="cap-exp">$0 (0%)</div></div>
+      <div><div class="caplbl">Portfolio Capital</div><span class="capval" id="cap-disp">Loading...</span><input class="capinp" id="cap-inp"><button class="capbtn" id="cap-btn" onclick="capToggle()">EDIT</button></div>
+      <div><div class="caplbl">Exposure</div><div class="capsub" id="cap-exp">—</div></div>
       <div><div class="caplbl">Unrealized P&L</div><div class="capsub" id="cap-unr">—</div></div>
     </div></div>
     <div class="mods">
@@ -121,10 +122,10 @@
     </div>
     <div id="mod-agree-wrap"></div>
     <div class="sg">
-      <div class="si"><div class="sv" id="s-open">0</div><div class="sl">Open</div></div>
+      <div class="si"><div class="sv" id="s-open">—</div><div class="sl">Open</div></div>
       <div class="si"><div class="sv" id="s-wr">—</div><div class="sl">Win Rate</div></div>
-      <div class="si"><div class="sv" id="s-pnl">$0</div><div class="sl">Realized P&L</div></div>
-      <div class="si"><div class="sv" id="s-trades">0</div><div class="sl">Trades</div></div>
+      <div class="si"><div class="sv" id="s-pnl">—</div><div class="sl">Realized P&L</div></div>
+      <div class="si"><div class="sv" id="s-trades">—</div><div class="sl">Trades</div></div>
       <div class="si"><div class="sv" id="s-pf">—</div><div class="sl">Profit Factor</div></div>
       <div class="si"><div class="sv" id="s-hold">—</div><div class="sl">Avg Hold</div></div>
     </div>
@@ -163,9 +164,9 @@
           <div class="fbtns"><button class="btn btn-p" onclick="submitOptions()">Enter Position</button><button class="btn btn-g" onclick="formToggle()">Cancel</button><button class="btn btn-g" onclick="loadRec()">Load Recommendation</button></div>
         </div>
       </div>
-      <div id="pos-list"></div>
+      <div id="pos-list"><div class="loading">Loading positions...</div></div>
     </div>
-    <div class="card"><div class="card-hdr"><div class="card-title">Trade History</div><span class="badge badge-m" id="hist-cnt">0</span></div><div id="hist"></div></div>
+    <div class="card"><div class="card-hdr"><div class="card-title">Trade History</div><span class="badge badge-m" id="hist-cnt">0</span></div><div id="hist"><div class="loading">Loading...</div></div></div>
   </div>
   <nav class="mobile-bottom-nav">
     <a href="index.html" class="mbn-item"><span class="mbn-icon">📈</span><span class="mbn-label">Market</span></a>
@@ -174,153 +175,228 @@
     <a href="paper-trading.html" class="mbn-item active"><span class="mbn-icon">💼</span><span class="mbn-label">Positions</span></a>
   </nav>
 <script>
-const LS='sofar-pm-v3'; let S=load();
-function load(){try{const s=localStorage.getItem(LS);if(s)return JSON.parse(s);}catch(e){}return{capital:100000,positions:[],closed:[]};}
-function save(){try{localStorage.setItem(LS,JSON.stringify(S));}catch(e){}}
+/* ── State from DB ── */
+let S = { capital: 100000, positions: [], closed: [] };
+const API = '/api/positions';
 
-let capE=false;
-function capToggle(){const d=document.getElementById('cap-disp'),i=document.getElementById('cap-inp'),b=document.getElementById('cap-btn');
-  if(!capE){d.style.display='none';i.style.display='inline-block';i.value=S.capital;i.focus();b.textContent='SAVE';}
-  else{const v=parseFloat(i.value);if(v>0){S.capital=v;save();}d.style.display='';i.style.display='none';b.textContent='EDIT';render();}capE=!capE;}
+async function loadFromDB() {
+  try {
+    const [posRes, closedRes] = await Promise.all([
+      fetch(API), fetch(API + '?action=closed')
+    ]);
+    if (posRes.ok) {
+      const d = await posRes.json();
+      S.positions = d.positions || [];
+      S.capital = parseFloat(d.capital) || 100000;
+    }
+    if (closedRes.ok) {
+      const d = await closedRes.json();
+      S.closed = d.closed || [];
+    }
+  } catch (e) { console.error('DB load failed:', e); }
+}
 
-let fType='options';
-function setType(t){fType=t;document.querySelectorAll('.type-tab').forEach(e=>e.classList.toggle('active',e.dataset.type===t));
-  document.getElementById('form-stock').style.display=t==='stock'?'':'none';document.getElementById('form-options').style.display=t==='options'?'':'none';}
-function formToggle(){const f=document.getElementById('entry-form');f.classList.toggle('vis');
-  if(f.classList.contains('vis')){const t=new Date().toISOString().split('T')[0];document.getElementById('fo-dt').value=t;document.getElementById('fs-dt').value=t;if(!document.getElementById('legs-c').children.length)addLeg();}}
+/* ── Capital ── */
+let capE = false;
+async function capToggle() {
+  const d = document.getElementById('cap-disp'), i = document.getElementById('cap-inp'), b = document.getElementById('cap-btn');
+  if (!capE) { d.style.display = 'none'; i.style.display = 'inline-block'; i.value = S.capital; i.focus(); b.textContent = 'SAVE'; }
+  else {
+    const v = parseFloat(i.value);
+    if (v > 0) {
+      await fetch(API + '?action=capital', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ value: v }) });
+      S.capital = v;
+    }
+    d.style.display = ''; i.style.display = 'none'; b.textContent = 'EDIT'; render();
+  }
+  capE = !capE;
+}
 
-let lc=0;
-function addLeg(){const c=document.getElementById('legs-c'),id=lc++,r=document.createElement('div');r.className='leg-row';r.id='lg-'+id;
-  r.innerHTML=`<select id="la-${id}" onchange="calc()"><option value="BUY">BUY</option><option value="SELL">SELL</option></select>
+/* ── Form ── */
+let fType = 'options';
+function setType(t) { fType = t; document.querySelectorAll('.type-tab').forEach(e => e.classList.toggle('active', e.dataset.type === t));
+  document.getElementById('form-stock').style.display = t === 'stock' ? '' : 'none'; document.getElementById('form-options').style.display = t === 'options' ? '' : 'none'; }
+function formToggle() { const f = document.getElementById('entry-form'); f.classList.toggle('vis');
+  if (f.classList.contains('vis')) { const t = new Date().toISOString().split('T')[0]; document.getElementById('fo-dt').value = t; document.getElementById('fs-dt').value = t; if (!document.getElementById('legs-c').children.length) addLeg(); } }
+
+/* ── Legs ── */
+let lc = 0;
+function addLeg() { const c = document.getElementById('legs-c'), id = lc++, r = document.createElement('div'); r.className = 'leg-row'; r.id = 'lg-' + id;
+  r.innerHTML = `<select id="la-${id}" onchange="calc()"><option value="BUY">BUY</option><option value="SELL">SELL</option></select>
     <select id="lt-${id}" onchange="calc()"><option value="CALL">CALL</option><option value="PUT">PUT</option></select>
     <input type="number" id="lk-${id}" step="0.5" placeholder="Strike" oninput="calc()">
     <input type="number" id="lp-${id}" step="0.01" placeholder="Premium" oninput="calc()">
-    <button class="leg-remove" onclick="remLeg(${id})">×</button>`;c.appendChild(r);}
-function remLeg(id){const e=document.getElementById('lg-'+id);if(e)e.remove();calc();}
-function getLegs(){const legs=[];document.querySelectorAll('#legs-c .leg-row').forEach(r=>{const id=r.id.replace('lg-','');
-  const a=document.getElementById('la-'+id)?.value,t=document.getElementById('lt-'+id)?.value,k=parseFloat(document.getElementById('lk-'+id)?.value),p=parseFloat(document.getElementById('lp-'+id)?.value);
-  if(a&&t&&!isNaN(k)&&!isNaN(p))legs.push({action:a,type:t,strike:k,premium:p});});return legs;}
+    <button class="leg-remove" onclick="remLeg(${id})">×</button>`; c.appendChild(r); }
+function remLeg(id) { const e = document.getElementById('lg-' + id); if (e) e.remove(); calc(); }
+function getLegs() { const legs = []; document.querySelectorAll('#legs-c .leg-row').forEach(r => { const id = r.id.replace('lg-', '');
+  const a = document.getElementById('la-' + id)?.value, t = document.getElementById('lt-' + id)?.value, k = parseFloat(document.getElementById('lk-' + id)?.value), p = parseFloat(document.getElementById('lp-' + id)?.value);
+  if (a && t && !isNaN(k) && !isNaN(p)) legs.push({ action: a, type: t, strike: k, premium: p }); }); return legs; }
 
-function calc(){const legs=getLegs(),cv=document.getElementById('fo-calc');if(!legs.length){cv.style.display='none';return;}cv.style.display='';
-  const con=parseInt(document.getElementById('fo-con').value)||1;let net=0;legs.forEach(l=>{net+=l.action==='BUY'?-l.premium:l.premium;});
-  const calls=legs.filter(l=>l.type==='CALL'),puts=legs.filter(l=>l.type==='PUT'),buys=legs.filter(l=>l.action==='BUY'),sells=legs.filter(l=>l.action==='SELL');
-  let st='Custom';
-  if(legs.length===1)st=legs[0].action==='BUY'?`Long ${legs[0].type}`:`Short ${legs[0].type}`;
-  else if(legs.length===2){if(calls.length===2&&buys.length===1&&sells.length===1){const b=calls.find(l=>l.action==='BUY'),s=calls.find(l=>l.action==='SELL');st=b.strike<s.strike?'Bull Call Spread':'Bear Call Spread';}
-    else if(puts.length===2&&buys.length===1&&sells.length===1){const b=puts.find(l=>l.action==='BUY'),s=puts.find(l=>l.action==='SELL');st=b.strike>s.strike?'Bear Put Spread':'Bull Put Spread';}
-    else if(calls.length===1&&puts.length===1){st=buys.length===2?(calls[0].strike===puts[0].strike?'Long Straddle':'Long Strangle'):'Short Straddle/Strangle';}}
-  else if(legs.length===4&&calls.length===2&&puts.length===2)st='Iron Condor';
-  let mp=null,ml=null,be=null;
-  if(legs.length===2&&(calls.length===2||puts.length===2)){const ks=legs.map(l=>l.strike).sort((a,b)=>a-b),w=ks[1]-ks[0];
-    if(net<0){ml=Math.abs(net);mp=w-ml;be=calls.length===2?ks[0]+ml:ks[1]-ml;}else{mp=net;ml=w-mp;be=puts.length===2?ks[1]-mp:ks[0]+mp;}}
-  else if(legs.length===1&&legs[0].action==='BUY'){ml=legs[0].premium;if(legs[0].type==='PUT'){mp=legs[0].strike-legs[0].premium;be=legs[0].strike-legs[0].premium;}else be=legs[0].strike+legs[0].premium;}
-  else if(legs.length===1&&legs[0].action==='SELL'){mp=legs[0].premium;}
-  document.getElementById('fo-strat').textContent=st;
-  const ne=document.getElementById('fo-net');ne.textContent=(net>=0?'Credit ':'Debit ')+'$'+Math.abs(net).toFixed(2);ne.style.color=net>=0?'var(--c-grn)':'var(--c-red)';
-  document.getElementById('fo-maxp').textContent=mp!==null?'$'+mp.toFixed(2):'Unlimited';
-  document.getElementById('fo-maxl').textContent=ml!==null?'$'+ml.toFixed(2):'Undefined';
-  document.getElementById('fo-be').textContent=be!==null?'$'+be.toFixed(2):'—';
-  document.getElementById('fo-rr').textContent=(mp&&ml&&ml>0)?(mp/ml).toFixed(2)+':1':'—';
-  document.getElementById('fo-pct').textContent=S.capital>0?(Math.abs(net)*con*100/S.capital*100).toFixed(1)+'%':'—';}
+/* ── Auto-calc ── */
+function calc() { const legs = getLegs(), cv = document.getElementById('fo-calc'); if (!legs.length) { cv.style.display = 'none'; return; } cv.style.display = '';
+  const con = parseInt(document.getElementById('fo-con').value) || 1; let net = 0; legs.forEach(l => { net += l.action === 'BUY' ? -l.premium : l.premium; });
+  const calls = legs.filter(l => l.type === 'CALL'), puts = legs.filter(l => l.type === 'PUT'), buys = legs.filter(l => l.action === 'BUY'), sells = legs.filter(l => l.action === 'SELL');
+  let st = 'Custom';
+  if (legs.length === 1) st = legs[0].action === 'BUY' ? `Long ${legs[0].type}` : `Short ${legs[0].type}`;
+  else if (legs.length === 2) { if (calls.length === 2 && buys.length === 1 && sells.length === 1) { const b = calls.find(l => l.action === 'BUY'), s = calls.find(l => l.action === 'SELL'); st = b.strike < s.strike ? 'Bull Call Spread' : 'Bear Call Spread'; }
+    else if (puts.length === 2 && buys.length === 1 && sells.length === 1) { const b = puts.find(l => l.action === 'BUY'), s = puts.find(l => l.action === 'SELL'); st = b.strike > s.strike ? 'Bear Put Spread' : 'Bull Put Spread'; }
+    else if (calls.length === 1 && puts.length === 1) { st = buys.length === 2 ? (calls[0].strike === puts[0].strike ? 'Long Straddle' : 'Long Strangle') : 'Short Straddle/Strangle'; } }
+  else if (legs.length === 4 && calls.length === 2 && puts.length === 2) st = 'Iron Condor';
+  let mp = null, ml = null, be = null;
+  if (legs.length === 2 && (calls.length === 2 || puts.length === 2)) { const ks = legs.map(l => l.strike).sort((a, b) => a - b), w = ks[1] - ks[0];
+    if (net < 0) { ml = Math.abs(net); mp = w - ml; be = calls.length === 2 ? ks[0] + ml : ks[1] - ml; } else { mp = net; ml = w - mp; be = puts.length === 2 ? ks[1] - mp : ks[0] + mp; } }
+  else if (legs.length === 1 && legs[0].action === 'BUY') { ml = legs[0].premium; if (legs[0].type === 'PUT') { mp = legs[0].strike - legs[0].premium; be = legs[0].strike - legs[0].premium; } else be = legs[0].strike + legs[0].premium; }
+  else if (legs.length === 1 && legs[0].action === 'SELL') { mp = legs[0].premium; }
+  document.getElementById('fo-strat').textContent = st;
+  const ne = document.getElementById('fo-net'); ne.textContent = (net >= 0 ? 'Credit ' : 'Debit ') + '$' + Math.abs(net).toFixed(2); ne.style.color = net >= 0 ? 'var(--c-grn)' : 'var(--c-red)';
+  document.getElementById('fo-maxp').textContent = mp !== null ? '$' + mp.toFixed(2) : 'Unlimited';
+  document.getElementById('fo-maxl').textContent = ml !== null ? '$' + ml.toFixed(2) : 'Undefined';
+  document.getElementById('fo-be').textContent = be !== null ? '$' + be.toFixed(2) : '—';
+  document.getElementById('fo-rr').textContent = (mp && ml && ml > 0) ? (mp / ml).toFixed(2) + ':1' : '—';
+  document.getElementById('fo-pct').textContent = S.capital > 0 ? (Math.abs(net) * con * 100 / S.capital * 100).toFixed(1) + '%' : '—'; }
 
-document.addEventListener('input',e=>{if(['fs-sh','fs-pr'].includes(e.target?.id)){const sh=parseInt(document.getElementById('fs-sh').value)||0,pr=parseFloat(document.getElementById('fs-pr').value)||0;
-  if(sh&&pr){document.getElementById('fs-cost').textContent='$'+(sh*pr).toLocaleString();document.getElementById('fs-pct').textContent=S.capital>0?((sh*pr)/S.capital*100).toFixed(1)+'%':'—';document.getElementById('fs-calc').style.display='';}}});
+document.addEventListener('input', e => { if (['fs-sh', 'fs-pr'].includes(e.target?.id)) { const sh = parseInt(document.getElementById('fs-sh').value) || 0, pr = parseFloat(document.getElementById('fs-pr').value) || 0;
+  if (sh && pr) { document.getElementById('fs-cost').textContent = '$' + (sh * pr).toLocaleString(); document.getElementById('fs-pct').textContent = S.capital > 0 ? ((sh * pr) / S.capital * 100).toFixed(1) + '%' : '—'; document.getElementById('fs-calc').style.display = ''; } } });
 
-function submitStock(){const tk=document.getElementById('fs-tk').value.trim().toUpperCase(),dt=document.getElementById('fs-dt').value,sh=parseInt(document.getElementById('fs-sh').value),pr=parseFloat(document.getElementById('fs-pr').value),dir=document.getElementById('fs-dir').value;
-  if(!tk||!sh||!pr)return alert('Fill in ticker, shares, and price');
-  const id='S'+String(S.positions.length+S.closed.length+1).padStart(4,'0');
-  S.positions.push({id,type:'stock',entry_date:dt||new Date().toISOString().split('T')[0],ticker:tk,direction:dir,shares:sh,entry_price:pr,description:`${dir} ${sh} ${tk} @ $${pr.toFixed(2)}`,total_cost:sh*pr,horizon_days:0});
-  save();formToggle();render();}
+/* ── Submit Stock → DB ── */
+async function submitStock() {
+  const tk = document.getElementById('fs-tk').value.trim().toUpperCase(), dt = document.getElementById('fs-dt').value, sh = parseInt(document.getElementById('fs-sh').value), pr = parseFloat(document.getElementById('fs-pr').value), dir = document.getElementById('fs-dir').value;
+  if (!tk || !sh || !pr) return alert('Fill in ticker, shares, and price');
+  const id = 'S' + Date.now().toString(36);
+  const pos = { id, type: 'stock', entry_date: dt || new Date().toISOString().split('T')[0], ticker: tk, direction: dir, shares: sh, entry_price: pr, description: `${dir} ${sh} ${tk} @ $${pr.toFixed(2)}`, total_cost: sh * pr, horizon_days: 0 };
+  const res = await fetch(API + '?action=enter', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(pos) });
+  const d = await res.json();
+  if (d.error) return alert(d.error);
+  await loadFromDB(); formToggle(); render();
+}
 
-function submitOptions(){const tk=document.getElementById('fo-tk').value.trim().toUpperCase(),dt=document.getElementById('fo-dt').value,exp=document.getElementById('fo-exp').value,con=parseInt(document.getElementById('fo-con').value)||1,legs=getLegs();
-  if(!tk)return alert('Enter a ticker');if(!legs.length)return alert('Add at least one leg');if(!exp)return alert('Enter expiration');
-  let net=0;legs.forEach(l=>{net+=l.action==='BUY'?-l.premium:l.premium;});
-  const desc=legs.map(l=>`${l.action} ${tk} $${l.strike} ${l.type} @ $${l.premium.toFixed(2)}`).join(' / ');
-  let mp=0,ml=0;if(legs.length===2){const ks=legs.map(l=>l.strike).sort((a,b)=>a-b),w=ks[1]-ks[0];if(net<0){ml=Math.abs(net);mp=w-ml;}else{mp=net;ml=w-mp;}}
-  else if(legs.length===1){if(legs[0].action==='BUY')ml=legs[0].premium;else mp=legs[0].premium;}
-  const id='O'+String(S.positions.length+S.closed.length+1).padStart(4,'0');
-  S.positions.push({id,type:'options',entry_date:dt||new Date().toISOString().split('T')[0],ticker:tk,expiration:exp,contracts:con,legs,description:desc,
-    direction:net<0?'DEBIT':'CREDIT',debit:Math.abs(net),max_profit:mp,max_loss:ml,net_premium:net,horizon_days:7,total_cost:Math.abs(net)*con*100});
-  save();formToggle();render();document.getElementById('legs-c').innerHTML='';lc=0;}
+/* ── Submit Options → DB ── */
+async function submitOptions() {
+  const tk = document.getElementById('fo-tk').value.trim().toUpperCase(), dt = document.getElementById('fo-dt').value, exp = document.getElementById('fo-exp').value, con = parseInt(document.getElementById('fo-con').value) || 1, legs = getLegs();
+  if (!tk) return alert('Enter a ticker'); if (!legs.length) return alert('Add at least one leg'); if (!exp) return alert('Enter expiration');
+  let net = 0; legs.forEach(l => { net += l.action === 'BUY' ? -l.premium : l.premium; });
+  const desc = legs.map(l => `${l.action} ${tk} $${l.strike} ${l.type} @ $${l.premium.toFixed(2)}`).join(' / ');
+  let mp = 0, ml = 0; if (legs.length === 2) { const ks = legs.map(l => l.strike).sort((a, b) => a - b), w = ks[1] - ks[0]; if (net < 0) { ml = Math.abs(net); mp = w - ml; } else { mp = net; ml = w - mp; } }
+  else if (legs.length === 1) { if (legs[0].action === 'BUY') ml = legs[0].premium; else mp = legs[0].premium; }
+  const id = 'O' + Date.now().toString(36);
+  const pos = { id, type: 'options', entry_date: dt || new Date().toISOString().split('T')[0], ticker: tk, expiration: exp, contracts: con, legs, description: desc,
+    direction: net < 0 ? 'DEBIT' : 'CREDIT', net_premium: net, max_profit: mp, max_loss: ml, horizon_days: 7, total_cost: Math.abs(net) * con * 100 };
+  const res = await fetch(API + '?action=enter', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(pos) });
+  const d = await res.json();
+  if (d.error) return alert(d.error);
+  await loadFromDB(); formToggle(); render(); document.getElementById('legs-c').innerHTML = ''; lc = 0;
+}
 
-async function loadRec(){try{const r=await fetch('data/trade-recommendations.json?t='+Date.now());if(!r.ok)return alert('No recommendations');
-  const d=await r.json();if(d.direction==='NEUTRAL'||!d.trades?.length)return alert('Model is NEUTRAL — no trade');const t=d.trades[0];
-  document.getElementById('fo-tk').value=d.ticker||'SPY';document.getElementById('fo-exp').value=d.expiration||'';document.getElementById('fo-dt').value=new Date().toISOString().split('T')[0];
-  document.getElementById('legs-c').innerHTML='';lc=0;if(t.legs)t.legs.forEach(l=>{addLeg();const id=lc-1;document.getElementById('la-'+id).value=l.action;document.getElementById('lt-'+id).value=l.right;document.getElementById('lk-'+id).value=l.strike;document.getElementById('lp-'+id).value=l.premium;});
-  calc();document.getElementById('entry-form').classList.add('vis');setType('options');}catch(e){alert('Failed: '+e);}}
+/* ── Load Recommendation ── */
+async function loadRec() { try { const r = await fetch('data/trade-recommendations.json?t=' + Date.now()); if (!r.ok) return alert('No recommendations');
+  const d = await r.json(); if (d.direction === 'NEUTRAL' || !d.trades?.length) return alert('Model is NEUTRAL — no trade'); const t = d.trades[0];
+  document.getElementById('fo-tk').value = d.ticker || 'SPY'; document.getElementById('fo-exp').value = d.expiration || ''; document.getElementById('fo-dt').value = new Date().toISOString().split('T')[0];
+  document.getElementById('legs-c').innerHTML = ''; lc = 0; if (t.legs) t.legs.forEach(l => { addLeg(); const id = lc - 1; document.getElementById('la-' + id).value = l.action; document.getElementById('lt-' + id).value = l.right; document.getElementById('lk-' + id).value = l.strike; document.getElementById('lp-' + id).value = l.premium; });
+  calc(); document.getElementById('entry-form').classList.add('vis'); setType('options'); } catch (e) { alert('Failed: ' + e); } }
 
-function closePos(id){const idx=S.positions.findIndex(p=>p.id===id);if(idx===-1)return;const pos=S.positions[idx];
-  if(pos.type==='stock'){const ep=prompt(`Exit price for ${pos.ticker}:`);if(ep===null)return;const px=parseFloat(ep)||0;
-    const pnl=pos.direction==='LONG'?(px-pos.entry_price)*pos.shares:(pos.entry_price-px)*pos.shares;
-    S.positions.splice(idx,1);S.closed.push({...pos,exit_date:new Date().toISOString().split('T')[0],exit_price:px,realized_pnl:pnl,days_held:Math.floor((new Date()-new Date(pos.entry_date))/864e5),win:pnl>0});S.capital+=pnl;}
-  else{const pp=prompt('P&L per contract ($):','0');if(pp===null)return;const pnl=(parseFloat(pp)||0)*(pos.contracts||1)*100;
-    S.positions.splice(idx,1);S.closed.push({...pos,exit_date:new Date().toISOString().split('T')[0],realized_pnl:pnl,days_held:Math.floor((new Date()-new Date(pos.entry_date))/864e5),win:pnl>0});S.capital+=pnl;}
-  save();render();}
+/* ── Close Position → DB ── */
+async function closePos(id) {
+  const pos = S.positions.find(p => p.id === id); if (!pos) return;
+  let pnl;
+  if (pos.type === 'stock') {
+    const ep = prompt(`Exit price for ${pos.ticker}:`); if (ep === null) return;
+    const px = parseFloat(ep) || 0;
+    pnl = pos.direction === 'LONG' ? (px - parseFloat(pos.entry_price)) * parseInt(pos.shares) : (parseFloat(pos.entry_price) - px) * parseInt(pos.shares);
+  } else {
+    const pp = prompt('P&L per contract ($):', '0'); if (pp === null) return;
+    pnl = (parseFloat(pp) || 0) * (parseInt(pos.contracts) || 1) * 100;
+  }
+  const res = await fetch(API + '?action=close', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, realized_pnl: pnl }) });
+  const d = await res.json();
+  if (d.error) return alert(d.error);
+  await loadFromDB(); render();
+}
 
-function render(){
-  document.getElementById('cap-disp').textContent='$'+S.capital.toLocaleString(undefined,{maximumFractionDigits:0});
-  const te=S.positions.reduce((s,p)=>s+(p.total_cost||0),0),ep=S.capital>0?(te/S.capital*100).toFixed(1):0;
-  document.getElementById('cap-exp').textContent='$'+te.toLocaleString()+' ('+ep+'%)';document.getElementById('cap-unr').textContent='—';
-  document.getElementById('s-open').textContent=S.positions.length;
-  const cl=S.closed;if(cl.length){const w=cl.filter(c=>c.win),l=cl.filter(c=>!c.win),wr=(w.length/cl.length*100).toFixed(1);
-    const wrE=document.getElementById('s-wr');wrE.textContent=wr+'%';wrE.className='sv '+(parseFloat(wr)>=50?'g':'r');
-    const tp=cl.reduce((s,c)=>s+(c.realized_pnl||0),0),tE=document.getElementById('s-pnl');tE.textContent=(tp>=0?'+':'')+' $'+Math.abs(tp).toLocaleString(undefined,{maximumFractionDigits:0});tE.className='sv '+(tp>=0?'g':'r');
-    document.getElementById('s-trades').textContent=cl.length;
-    const ws=w.reduce((s,c)=>s+c.realized_pnl,0),ls=Math.abs(l.reduce((s,c)=>s+c.realized_pnl,0));
-    document.getElementById('s-pf').textContent=ls>0?(ws/ls).toFixed(2):'∞';
-    document.getElementById('s-hold').textContent=(cl.reduce((s,c)=>s+(c.days_held||0),0)/cl.length).toFixed(1)+'d';}
-  const pl=document.getElementById('pos-list'),now=new Date();
-  if(!S.positions.length){pl.innerHTML='<div class="empty"><div class="empty-i">📋</div><div class="empty-t">No open positions</div></div>';return;}
-  pl.innerHTML=S.positions.map(p=>{const ed=new Date(p.entry_date),cd=Math.max(0,Math.floor((now-ed)/864e5)),td=Math.floor(cd*5/7);
-    if(p.type==='stock')return`<div class="pos"><div class="pos-top"><div class="pos-desc">${p.description}</div><span class="dir ${p.direction.toLowerCase()}">${p.direction}</span></div>
-      <div class="pos-g"><div><div class="pf-l">Ticker</div><div class="pf-v">${p.ticker}</div></div><div><div class="pf-l">Entry</div><div class="pf-v">${p.entry_date}</div></div>
-      <div><div class="pf-l">Shares</div><div class="pf-v">${p.shares}</div></div><div><div class="pf-l">Price</div><div class="pf-v">$${p.entry_price.toFixed(2)}</div></div>
-      <div><div class="pf-l">Cost</div><div class="pf-v">$${(p.total_cost||0).toLocaleString()}</div></div><div><div class="pf-l">Days</div><div class="pf-v">${cd}</div></div>
-      <div><div class="pf-l">ID</div><div class="pf-v">${p.id}</div></div></div><div id="be-${p.id}"></div><button class="cbtn" onclick="closePos('${p.id}')">Close Position</button></div>`;
-    const h=p.horizon_days||7,pct=h>0?Math.min(100,td/h*100):0,late=pct>85,expD=p.expiration?new Date(p.expiration):null,dte=expD?Math.floor((expD-now)/864e5):'—';
-    let cls='',ban='';if(h>0&&td>=h){cls='exit';ban=`<div class="abanner ab-exit">🚨 TIME STOP — Day ${td}/${h}. Exit.</div>`;}
-    else if(dte!=='—'&&dte<=3){cls='exit';ban=`<div class="abanner ab-exit">⚠️ THETA — ${dte} DTE left.</div>`;}
-    else if(h>0&&td>=h-1){cls='scale';ban=`<div class="abanner ab-scale">⏰ Day ${td}/${h} — last day tomorrow.</div>`;}
-    else ban=`<div class="abanner ab-hold">${h>0?'Day '+td+'/'+h+' — ':''}holding.</div>`;
-    const lh=(p.legs||[]).map(l=>`<div class="pos-leg"><span class="${l.action.toLowerCase()}">${l.action}</span> $${l.strike} ${l.type} @ $${l.premium.toFixed(2)}</div>`).join('');
-    return`<div class="pos ${cls}"><div class="pos-top"><div class="pos-desc">${p.ticker} — ${p.legs?.length||0} leg${(p.legs?.length||0)!==1?'s':''}</div><span class="dir ${p.net_premium>=0?'bull':'bear'}">${p.direction}</span></div>
-      <div class="pos-legs">${lh}</div><div class="pos-g" style="margin-top:8px">
-      <div><div class="pf-l">Entry</div><div class="pf-v">${p.entry_date}</div></div><div><div class="pf-l">Expiry</div><div class="pf-v">${p.expiration||'—'}</div></div>
-      <div><div class="pf-l">DTE</div><div class="pf-v">${dte}</div></div><div><div class="pf-l">Contracts</div><div class="pf-v">${p.contracts||1}</div></div>
-      <div><div class="pf-l">Net</div><div class="pf-v">${p.net_premium>=0?'Cr':'Dr'} $${Math.abs(p.net_premium||0).toFixed(2)}</div></div>
-      <div><div class="pf-l">Max Profit</div><div class="pf-v">${p.max_profit?'$'+p.max_profit.toFixed(2):'—'}</div></div>
-      <div><div class="pf-l">Max Loss</div><div class="pf-v">${p.max_loss?'$'+p.max_loss.toFixed(2):'—'}</div></div>
-      <div><div class="pf-l">ID</div><div class="pf-v">${p.id}</div></div></div>
-      ${h>0?`<div class="pbar"><div class="pbar-f ${late?'late':''}" style="width:${pct}%"></div></div>`:''}${ban}<div id="be-${p.id}"></div>
-      <button class="cbtn" onclick="closePos('${p.id}')">Close Position</button></div>`;}).join('');
-  document.getElementById('hist-cnt').textContent=S.closed.length;const hc=document.getElementById('hist');
-  if(!S.closed.length){hc.innerHTML='<div class="empty"><div class="empty-i">📊</div><div class="empty-t">No closed trades</div></div>';}
-  else hc.innerHTML=`<table class="htbl"><thead><tr><th>ID</th><th>Type</th><th>Description</th><th>Entry</th><th>Exit</th><th>Days</th><th>P&L</th><th></th></tr></thead><tbody>`+
-    S.closed.slice().reverse().map(c=>{const p=c.realized_pnl||0;return`<tr><td>${c.id}</td><td>${c.type||'opt'}</td><td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.description}</td><td>${c.entry_date}</td><td>${c.exit_date}</td><td>${c.days_held||'?'}</td><td style="color:${p>=0?'var(--c-grn)':'var(--c-red)'}">${p>=0?'+':''}$${Math.abs(p).toFixed(0)}</td><td>${c.win?'✅':'❌'}</td></tr>`;}).join('')+'</tbody></table>';}
+/* ── Render ── */
+function render() {
+  document.getElementById('cap-disp').textContent = '$' + S.capital.toLocaleString(undefined, { maximumFractionDigits: 0 });
+  const te = S.positions.reduce((s, p) => s + parseFloat(p.total_cost || 0), 0), ep = S.capital > 0 ? (te / S.capital * 100).toFixed(1) : 0;
+  document.getElementById('cap-exp').textContent = '$' + te.toLocaleString() + ' (' + ep + '%)';
+  const unr = S.positions.reduce((s, p) => s + parseFloat(p.current_pnl || 0), 0);
+  const unrEl = document.getElementById('cap-unr');
+  if (unr !== 0) { unrEl.textContent = (unr >= 0 ? '+' : '') + '$' + Math.abs(unr).toFixed(0); unrEl.style.color = unr >= 0 ? 'var(--c-grn)' : 'var(--c-red)'; }
+  else unrEl.textContent = '—';
 
-async function loadModels(){let d7=null,d14=null;
-  try{const r=await fetch('data/lgbm-prediction.json?t='+Date.now());if(r.ok)d7=await r.json();}catch(e){}
-  try{const r=await fetch('data/lgbm-prediction-14d.json?t='+Date.now());if(r.ok)d14=await r.json();}catch(e){}
-  if(d7){const e=document.getElementById('m7s');e.textContent=d7.direction;e.className='mod-s '+(d7.direction==='BULLISH'?'bull':d7.direction==='BEARISH'?'bear':'neutral');document.getElementById('m7c').textContent=d7.direction!=='NEUTRAL'?d7.confidence+'% | prob='+d7.probability.toFixed(4):'Below threshold — no trade';}
-  if(d14){const e=document.getElementById('m14s');e.textContent=d14.direction;e.className='mod-s '+(d14.direction==='BULLISH'?'bull':d14.direction==='BEARISH'?'bear':'neutral');document.getElementById('m14c').textContent=d14.direction!=='NEUTRAL'?d14.confidence+'% | prob='+d14.probability.toFixed(4):'Below threshold — no trade';}
-  if(d7&&d14){const w=document.getElementById('mod-agree-wrap');
-    if(d7.direction===d14.direction&&d7.direction!=='NEUTRAL')w.innerHTML=`<div class="mod-agree high">✅ Both models ${d7.direction}. High conviction.</div>`;
-    else if(d7.direction!=='NEUTRAL'&&d14.direction!=='NEUTRAL'&&d7.direction!==d14.direction)w.innerHTML=`<div class="mod-agree conflict">⚠️ CONFLICT — 7d: ${d7.direction}, 14d: ${d14.direction}</div>`;
-    else if(d7.direction==='NEUTRAL'&&d14.direction==='NEUTRAL')w.innerHTML=`<div class="mod-agree none">Both NEUTRAL — no edge. Sit out.</div>`;
-    else{const a=d7.direction!=='NEUTRAL'?d7:d14,h=d7.direction!=='NEUTRAL'?'7d':'14d';w.innerHTML=`<div class="mod-agree none">${h}: ${a.direction} (${a.confidence}%). Other neutral.</div>`;}}}
+  document.getElementById('s-open').textContent = S.positions.length;
+  const cl = S.closed; if (cl.length) {
+    const w = cl.filter(c => c.win), wr = (w.length / cl.length * 100).toFixed(1);
+    const wrE = document.getElementById('s-wr'); wrE.textContent = wr + '%'; wrE.className = 'sv ' + (parseFloat(wr) >= 50 ? 'g' : 'r');
+    const tp = cl.reduce((s, c) => s + parseFloat(c.realized_pnl || 0), 0), tE = document.getElementById('s-pnl');
+    tE.textContent = (tp >= 0 ? '+' : '') + '$' + Math.abs(tp).toLocaleString(undefined, { maximumFractionDigits: 0 }); tE.className = 'sv ' + (tp >= 0 ? 'g' : 'r');
+    document.getElementById('s-trades').textContent = cl.length;
+    const ws = w.reduce((s, c) => s + parseFloat(c.realized_pnl), 0), ls = Math.abs(cl.filter(c => !c.win).reduce((s, c) => s + parseFloat(c.realized_pnl), 0));
+    document.getElementById('s-pf').textContent = ls > 0 ? (ws / ls).toFixed(2) : '∞';
+    document.getElementById('s-hold').textContent = (cl.reduce((s, c) => s + (parseInt(c.days_held) || 0), 0) / cl.length).toFixed(1) + 'd';
+  }
 
-async function loadActions(){try{const r=await fetch('data/position-actions.json?t='+Date.now());if(!r.ok)return;const d=await r.json();
-  if(d.actions?.length){document.getElementById('act-sec').style.display='';document.getElementById('act-cnt').textContent=d.actions.length;
-    document.getElementById('act-list').innerHTML=d.actions.map(a=>`<div class="abanner ${a.action==='EXIT'?'ab-exit':'ab-scale'}"><span>${a.action==='EXIT'?'🚨':'⚖️'}</span><div><strong>${a.action}</strong> [${a.position_id}] — ${a.condition}<br><span style="font-size:10px;opacity:.8">${a.reason}</span></div></div>`).join('');}
-  if(d.positions_enriched)d.positions_enriched.forEach(pe=>{const el=document.getElementById('be-'+pe.id);if(!el)return;
-    el.innerHTML=`<div class="be-card"><div class="be-title">Live Data (ThetaData)</div>
-      ${pe.current_value?`<div class="be-row"><span>Value</span><span class="be-val">$${pe.current_value.toFixed(2)}</span></div>`:''}
-      ${pe.pnl!==undefined?`<div class="be-row"><span>P&L</span><span class="be-val" style="color:${pe.pnl>=0?'var(--c-grn)':'var(--c-red)'}">$${pe.pnl.toFixed(2)}</span></div>`:''}
-      ${pe.delta!==undefined?`<div class="be-row"><span>Δ</span><span class="be-val">${pe.delta.toFixed(3)}</span></div>`:''}
-      ${pe.theta!==undefined?`<div class="be-row"><span>Θ</span><span class="be-val">${pe.theta.toFixed(3)}</span></div>`:''}
-      ${pe.iv!==undefined?`<div class="be-row"><span>IV</span><span class="be-val">${(pe.iv*100).toFixed(1)}%</span></div>`:''}</div>`;});}catch(e){}}
+  const pl = document.getElementById('pos-list'), now = new Date();
+  if (!S.positions.length) { pl.innerHTML = '<div class="empty"><div class="empty-i">📋</div><div class="empty-t">No open positions</div></div>'; }
+  else {
+    pl.innerHTML = S.positions.map(p => {
+      const ed = new Date(p.entry_date), cd = Math.max(0, Math.floor((now - ed) / 864e5)), td = Math.floor(cd * 5 / 7);
+      const pnl = parseFloat(p.current_pnl || 0), pnlPct = parseFloat(p.current_pnl_pct || 0);
+      const exitAct = p.exit_action || '', exitReason = p.exit_reason || '';
 
-document.addEventListener('DOMContentLoaded',async()=>{await loadModels();await loadActions();render();});
+      if (p.type === 'stock') return `<div class="pos ${exitAct === 'EXIT' ? 'exit' : ''}"><div class="pos-top"><div class="pos-desc">${p.description}</div><span class="dir ${(p.direction || '').toLowerCase()}">${p.direction}</span></div>
+        <div class="pos-g"><div><div class="pf-l">Ticker</div><div class="pf-v">${p.ticker}</div></div><div><div class="pf-l">Entry</div><div class="pf-v">${p.entry_date}</div></div>
+        <div><div class="pf-l">Shares</div><div class="pf-v">${p.shares}</div></div><div><div class="pf-l">Price</div><div class="pf-v">$${parseFloat(p.entry_price).toFixed(2)}</div></div>
+        <div><div class="pf-l">Cost</div><div class="pf-v">$${parseFloat(p.total_cost || 0).toLocaleString()}</div></div><div><div class="pf-l">Days</div><div class="pf-v">${cd}</div></div>
+        <div><div class="pf-l">ID</div><div class="pf-v">${p.id}</div></div>
+        ${pnl ? `<div><div class="pf-l">P&L</div><div class="pf-v" style="color:${pnl >= 0 ? 'var(--c-grn)' : 'var(--c-red)'}">$${pnl.toFixed(2)}</div></div>` : ''}</div>
+        ${exitAct && exitAct !== 'HOLD' ? `<div class="abanner ${exitAct === 'EXIT' ? 'ab-exit' : 'ab-scale'}">${exitAct === 'EXIT' ? '🚨' : '⚖️'} ${exitReason}</div>` : ''}
+        <button class="cbtn" onclick="closePos('${p.id}')">Close Position</button></div>`;
+
+      const h = parseInt(p.horizon_days) || 7, pct = h > 0 ? Math.min(100, td / h * 100) : 0, late = pct > 85;
+      const expD = p.expiration ? new Date(p.expiration) : null, dte = expD ? Math.floor((expD - now) / 864e5) : '—';
+      const legs = typeof p.legs === 'string' ? JSON.parse(p.legs || '[]') : (p.legs || []);
+      let cls = '', ban = '';
+      if (exitAct === 'EXIT') { cls = 'exit'; ban = `<div class="abanner ab-exit">🚨 ${exitReason}</div>`; }
+      else if (exitAct === 'SCALE_OUT') { cls = 'scale'; ban = `<div class="abanner ab-scale">⚖️ ${exitReason}</div>`; }
+      else if (h > 0 && td >= h) { cls = 'exit'; ban = `<div class="abanner ab-exit">🚨 TIME STOP — Day ${td}/${h}.</div>`; }
+      else if (dte !== '—' && dte <= 3) { cls = 'exit'; ban = `<div class="abanner ab-exit">⚠️ THETA — ${dte} DTE.</div>`; }
+      else if (h > 0 && td >= h - 1) { cls = 'scale'; ban = `<div class="abanner ab-scale">⏰ Day ${td}/${h} — last day.</div>`; }
+      else ban = `<div class="abanner ab-hold">${h > 0 ? 'Day ' + td + '/' + h + ' — ' : ''}holding.</div>`;
+      const lh = legs.map(l => `<div class="pos-leg"><span class="${l.action.toLowerCase()}">${l.action}</span> $${l.strike} ${l.type} @ $${parseFloat(l.premium).toFixed(2)}</div>`).join('');
+      const netP = parseFloat(p.net_premium || 0);
+      return `<div class="pos ${cls}"><div class="pos-top"><div class="pos-desc">${p.ticker} — ${legs.length} leg${legs.length !== 1 ? 's' : ''}</div><span class="dir ${netP >= 0 ? 'bull' : 'bear'}">${p.direction}</span></div>
+        <div class="pos-legs">${lh}</div><div class="pos-g" style="margin-top:8px">
+        <div><div class="pf-l">Entry</div><div class="pf-v">${p.entry_date}</div></div><div><div class="pf-l">Expiry</div><div class="pf-v">${p.expiration || '—'}</div></div>
+        <div><div class="pf-l">DTE</div><div class="pf-v">${dte}</div></div><div><div class="pf-l">Contracts</div><div class="pf-v">${p.contracts || 1}</div></div>
+        <div><div class="pf-l">Net</div><div class="pf-v">${netP >= 0 ? 'Cr' : 'Dr'} $${Math.abs(netP).toFixed(2)}</div></div>
+        <div><div class="pf-l">Max Profit</div><div class="pf-v">${parseFloat(p.max_profit) ? '$' + parseFloat(p.max_profit).toFixed(2) : '—'}</div></div>
+        <div><div class="pf-l">Max Loss</div><div class="pf-v">${parseFloat(p.max_loss) ? '$' + parseFloat(p.max_loss).toFixed(2) : '—'}</div></div>
+        <div><div class="pf-l">P&L</div><div class="pf-v" style="color:${pnl >= 0 ? 'var(--c-grn)' : 'var(--c-red)'}">${pnl ? '$' + pnl.toFixed(2) : '—'}</div></div></div>
+        ${h > 0 ? `<div class="pbar"><div class="pbar-f ${late ? 'late' : ''}" style="width:${pct}%"></div></div>` : ''}${ban}
+        ${p.net_delta ? `<div class="be-card"><div class="be-title">Live Data</div><div class="be-row"><span>Δ</span><span class="be-val">${parseFloat(p.net_delta).toFixed(3)}</span></div><div class="be-row"><span>Θ</span><span class="be-val">${parseFloat(p.net_theta).toFixed(3)}</span></div><div class="be-row"><span>IV</span><span class="be-val">${(parseFloat(p.avg_iv) * 100).toFixed(1)}%</span></div></div>` : ''}
+        <button class="cbtn" onclick="closePos('${p.id}')">Close Position</button></div>`;
+    }).join('');
+  }
+
+  document.getElementById('hist-cnt').textContent = S.closed.length; const hc = document.getElementById('hist');
+  if (!S.closed.length) { hc.innerHTML = '<div class="empty"><div class="empty-i">📊</div><div class="empty-t">No closed trades</div></div>'; }
+  else hc.innerHTML = `<table class="htbl"><thead><tr><th>ID</th><th>Type</th><th>Description</th><th>Entry</th><th>Exit</th><th>Days</th><th>P&L</th><th></th></tr></thead><tbody>` +
+    S.closed.slice().reverse().map(c => { const p = parseFloat(c.realized_pnl || 0); return `<tr><td>${c.id}</td><td>${c.type || 'opt'}</td><td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.description}</td><td>${c.entry_date}</td><td>${c.exit_date}</td><td>${c.days_held || '?'}</td><td style="color:${p >= 0 ? 'var(--c-grn)' : 'var(--c-red)'}"> ${p >= 0 ? '+' : ''}$${Math.abs(p).toFixed(0)}</td><td>${c.win ? '✅' : '❌'}</td></tr>`; }).join('') + '</tbody></table>';
+}
+
+/* ── Models ── */
+async function loadModels() { let d7 = null, d14 = null;
+  try { const r = await fetch('data/lgbm-prediction.json?t=' + Date.now()); if (r.ok) d7 = await r.json(); } catch (e) {}
+  try { const r = await fetch('data/lgbm-prediction-14d.json?t=' + Date.now()); if (r.ok) d14 = await r.json(); } catch (e) {}
+  if (d7) { const e = document.getElementById('m7s'); e.textContent = d7.direction; e.className = 'mod-s ' + (d7.direction === 'BULLISH' ? 'bull' : d7.direction === 'BEARISH' ? 'bear' : 'neutral'); document.getElementById('m7c').textContent = d7.direction !== 'NEUTRAL' ? d7.confidence + '% | prob=' + d7.probability.toFixed(4) : 'Below threshold — no trade'; }
+  if (d14) { const e = document.getElementById('m14s'); e.textContent = d14.direction; e.className = 'mod-s ' + (d14.direction === 'BULLISH' ? 'bull' : d14.direction === 'BEARISH' ? 'bear' : 'neutral'); document.getElementById('m14c').textContent = d14.direction !== 'NEUTRAL' ? d14.confidence + '% | prob=' + d14.probability.toFixed(4) : 'Below threshold — no trade'; }
+  if (d7 && d14) { const w = document.getElementById('mod-agree-wrap');
+    if (d7.direction === d14.direction && d7.direction !== 'NEUTRAL') w.innerHTML = `<div class="mod-agree high">✅ Both models ${d7.direction}. High conviction.</div>`;
+    else if (d7.direction !== 'NEUTRAL' && d14.direction !== 'NEUTRAL' && d7.direction !== d14.direction) w.innerHTML = `<div class="mod-agree conflict">⚠️ CONFLICT — 7d: ${d7.direction}, 14d: ${d14.direction}</div>`;
+    else if (d7.direction === 'NEUTRAL' && d14.direction === 'NEUTRAL') w.innerHTML = `<div class="mod-agree none">Both NEUTRAL — no edge. Sit out.</div>`;
+    else { const a = d7.direction !== 'NEUTRAL' ? d7 : d14, h = d7.direction !== 'NEUTRAL' ? '7d' : '14d'; w.innerHTML = `<div class="mod-agree none">${h}: ${a.direction} (${a.confidence}%). Other neutral.</div>`; } } }
+
+/* ── Init ── */
+document.addEventListener('DOMContentLoaded', async () => { await Promise.all([loadFromDB(), loadModels()]); render(); });
 </script>
 </body>
 </html>
