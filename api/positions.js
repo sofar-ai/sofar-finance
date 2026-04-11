@@ -107,6 +107,15 @@ export default async function handler(req, res) {
       return res.json({ ok: true, capital: value });
     }
 
+
+    // DELETE /api/positions?action=delete — delete from history
+    if (req.method === 'POST' && action === 'delete') {
+      const { id } = req.body;
+      if (!id) return res.status(400).json({ error: 'id required' });
+      await sql`DELETE FROM positions_closed WHERE id = ${id}`;
+      await sql`DELETE FROM positions WHERE id = ${id}`;
+      return res.json({ ok: true, deleted: id });
+    }
     return res.status(400).json({ error: 'Unknown action: ' + action });
 
   } catch (err) {

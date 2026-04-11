@@ -379,8 +379,17 @@ function render() {
 
   document.getElementById('hist-cnt').textContent = S.closed.length; const hc = document.getElementById('hist');
   if (!S.closed.length) { hc.innerHTML = '<div class="empty"><div class="empty-i">📊</div><div class="empty-t">No closed trades</div></div>'; }
-  else hc.innerHTML = `<table class="htbl"><thead><tr><th>ID</th><th>Type</th><th>Description</th><th>Entry</th><th>Exit</th><th>Days</th><th>P&L</th><th></th></tr></thead><tbody>` +
-    S.closed.slice().reverse().map(c => { const p = parseFloat(c.realized_pnl || 0); return `<tr><td>${c.id}</td><td>${c.type || 'opt'}</td><td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.description}</td><td>${c.entry_date}</td><td>${c.exit_date}</td><td>${c.days_held || '?'}</td><td style="color:${p >= 0 ? 'var(--c-grn)' : 'var(--c-red)'}"> ${p >= 0 ? '+' : ''}$${Math.abs(p).toFixed(0)}</td><td>${c.win ? '✅' : '❌'}</td></tr>`; }).join('') + '</tbody></table>';
+  else hc.innerHTML = `<table class="htbl"><thead><tr><th>ID</th><th>Type</th><th>Description</th><th>Entry</th><th>Exit</th><th>Days</th><th>P&L</th><th></th><th></th></tr></thead><tbody>` +
+    S.closed.slice().reverse().map(c => { const p = parseFloat(c.realized_pnl || 0); return `<tr><td>${c.id}</td><td>${c.type || 'opt'}</td><td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.description}</td><td>${c.entry_date}</td><td>${c.exit_date}</td><td>${c.days_held || '?'}</td><td style="color:${p >= 0 ? 'var(--c-grn)' : 'var(--c-red)'}"> ${p >= 0 ? '+' : ''}$${Math.abs(p).toFixed(0)}</td><td>${c.win ? '✅' : '❌'}</td><td><button class="cbtn" onclick="delTrade('${c.id}')">✕</button></td></tr>`; }).join('') + '</tbody></table>';
+}
+
+/* ── Delete Trade ── */
+async function delTrade(id) {
+  if (!confirm("Delete this trade from history?")) return;
+  const res = await fetch(API + "?action=delete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
+  const d = await res.json();
+  if (d.error) return alert(d.error);
+  await loadFromDB(); render();
 }
 
 /* ── Models ── */
