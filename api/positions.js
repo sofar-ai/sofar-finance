@@ -60,37 +60,40 @@ export default async function handler(req, res) {
       return res.json({ ok: true, id: p.id });
     }
 
-    // POST /api/positions?action=close — close a position
+    // POST /api/positions?action=close — close (full or partial)
     if (req.method === 'POST' && action === 'close') {
-      const { id, realized_pnl, exit_price } = req.body;
+      const { id, realized_pnl, exit_price, exit_date, partial } = req.body;
       if (!id) return res.status(400).json({ error: 'id required' });
 
-      // Get position
       const rows = await sql`SELECT * FROM positions WHERE id = ${id} AND status = 'open'`;
       if (!rows.length) return res.status(404).json({ error: 'Position not found' });
       const pos = rows[0];
 
-      const exitDate = new Date().toISOString().split('T')[0];
-      const entryDate = pos.entry_date;
-      const daysHeld = Math.floor((new Date() - new Date(entryDate)) / 86400000);
+      const closeDate = exit_date || new Date().toISOString().split('T')[0];
+      const daysHeld = Math.floor((new Date(closeDate) - new Date(pos.entry_date)) / 86400000);
       const pnl = parseFloat(realized_pnl) || 0;
       const win = pnl > 0;
       const pnlPct = pos.total_cost > 0 ? (pnl / parseFloat(pos.total_cost) * 100) : 0;
 
-      // Move to closed
+      // Log closed portion (use timestamp suffix for partial close IDs)
+      const closedId = partial ? pos.id + '_' + Date.now().toString(36) : pos.id;
       await sql`INSERT INTO positions_closed (id, type, ticker, direction, description,
         entry_date, exit_date, entry_price, shares, expiration, contracts, legs,
         net_premium, max_profit, max_loss, total_cost, horizon_days, entry_spot,
         exit_price, realized_pnl, realized_pnl_pct, days_held, win, exit_reason)
-        VALUES (${pos.id}, ${pos.type}, ${pos.ticker}, ${pos.direction}, ${pos.description},
-        ${pos.entry_date}, ${exitDate}, ${pos.entry_price}, ${pos.shares}, ${pos.expiration},
+        VALUES (${closedId}, ${pos.type}, ${pos.ticker}, ${pos.direction}, ${pos.description},
+        ${pos.entry_date}, ${closeDate}, ${pos.entry_price}, ${pos.shares}, ${pos.expiration},
         ${pos.contracts}, ${JSON.stringify(pos.legs || [])}, ${pos.net_premium}, ${pos.max_profit},
         ${pos.max_loss}, ${pos.total_cost}, ${pos.horizon_days}, ${pos.entry_spot},
         ${exit_price || null}, ${pnl}, ${pnlPct}, ${daysHeld}, ${win},
         ${pos.exit_reason || 'manual_close'})`;
 
-      // Delete from open
-      await sql`DELETE FROM positions WHERE id = ${id}`;
+      if (partial) {
+        // Partial close — don't delete, just update capital
+      } else {
+        // Full close — remove from open positions
+        await sql`DELETE FROM positions WHERE id = ${id}`;
+      }
 
       // Update capital
       await sql`UPDATE portfolio_config SET value = (CAST(value AS NUMERIC) + ${pnl})::TEXT, updated_at = NOW() WHERE key = 'capital'`;
