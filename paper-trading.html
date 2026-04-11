@@ -191,6 +191,29 @@
         </div>
       </div>
     </div>
+      <!-- Close Modal -->
+    <div id="close-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center">
+      <div style="background:var(--c-card);border:1px solid var(--c-bdr);border-radius:8px;padding:20px;max-width:420px;width:90%">
+        <div style="font:700 10px var(--fm);letter-spacing:.12em;text-transform:uppercase;color:var(--c-mut);margin-bottom:12px">Close Position <span id="cm-id"></span></div>
+        <div id="cm-desc" style="font:600 13px var(--fb);color:var(--c-txt);margin-bottom:14px"></div>
+        <div id="cm-stock-fields" style="display:none">
+          <div class="fr"><div><label>Exit Price</label><input type="number" id="cm-exit-price" step="0.01" oninput="cmCalc()"></div><div><label>Shares to Close</label><input type="number" id="cm-shares" min="1" oninput="cmCalc()"></div></div>
+        </div>
+        <div id="cm-opt-fields" style="display:none">
+          <div id="cm-legs"></div>
+          <div class="fr" style="margin-top:10px"><div><label>Contracts to Close</label><input type="number" id="cm-contracts" min="1" oninput="cmCalc()"></div><div></div></div>
+        </div>
+        <div class="fr"><div><label>Exit Date</label><input type="date" id="cm-date"></div><div></div></div>
+        <div class="calc-preview" id="cm-calc" style="margin-top:10px">
+          <div class="calc-row"><span>P&amp;L per unit</span><span class="calc-val" id="cm-pnl-per">&#8212;</span></div>
+          <div class="calc-row"><span>Total P&amp;L</span><span class="calc-val" id="cm-pnl-total" style="font-size:14px">&#8212;</span></div>
+        </div>
+        <div class="fbtns" style="margin-top:14px">
+          <button class="btn btn-p" onclick="cmSubmit()" style="background:var(--c-red)">Close Position</button>
+          <button class="btn btn-g" onclick="cmCancel()">Cancel</button>
+        </div>
+      </div>
+    </div>
   <nav class="mobile-bottom-nav">
     <a href="index.html" class="mbn-item"><span class="mbn-icon">📈</span><span class="mbn-label">Market</span></a>
     <a href="options-flow.html" class="mbn-item"><span class="mbn-icon">🌊</span><span class="mbn-label">Flow</span></a>
@@ -318,23 +341,98 @@ async function loadRec() { try { const r = await fetch('data/trade-recommendatio
   calc(); document.getElementById('entry-form').classList.add('vis'); setType('options'); } catch (e) { alert('Failed: ' + e); } }
 
 /* ── Close Position → DB ── */
+let cmPos = null;
 async function closePos(id) {
   const pos = S.positions.find(p => p.id === id); if (!pos) return;
-  let pnl;
+  cmPos = pos;
+  document.getElementById('cm-id').textContent = id;
+  document.getElementById('cm-desc').textContent = pos.description || '';
+  document.getElementById('cm-date').value = new Date().toISOString().split('T')[0];
+  const modal = document.getElementById('close-modal');
+  modal.style.display = 'flex';
   if (pos.type === 'stock') {
-    const ep = prompt(`Exit price for ${pos.ticker}:`); if (ep === null) return;
-    const px = parseFloat(ep) || 0;
-    pnl = pos.direction === 'LONG' ? (px - parseFloat(pos.entry_price)) * parseInt(pos.shares) : (parseFloat(pos.entry_price) - px) * parseInt(pos.shares);
+    document.getElementById('cm-stock-fields').style.display = '';
+    document.getElementById('cm-opt-fields').style.display = 'none';
+    document.getElementById('cm-shares').value = pos.shares || 100;
+    document.getElementById('cm-shares').max = pos.shares || 100;
+    document.getElementById('cm-exit-price').value = '';
   } else {
-    const pp = prompt('P&L per contract ($):', '0'); if (pp === null) return;
-    pnl = (parseFloat(pp) || 0) * (parseInt(pos.contracts) || 1) * 100;
+    document.getElementById('cm-stock-fields').style.display = 'none';
+    document.getElementById('cm-opt-fields').style.display = '';
+    document.getElementById('cm-contracts').value = parseInt(pos.contracts) || 1;
+    document.getElementById('cm-contracts').max = parseInt(pos.contracts) || 1;
+    const legs = typeof pos.legs === 'string' ? JSON.parse(pos.legs || '[]') : (pos.legs || []);
+    document.getElementById('cm-legs').innerHTML = legs.map((l, i) =>
+      '<div class="fr"><div><label>' + l.action + ' $' + l.strike + ' ' + l.type + ' entry: $' + parseFloat(l.premium).toFixed(2) + '</label><input type="number" id="cm-leg-' + i + '" step="0.01" placeholder="Exit premium" oninput="cmCalc()"></div></div>'
+    ).join('');
   }
-  const res = await fetch(API + '?action=close', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, realized_pnl: pnl }) });
+  cmCalc();
+}
+function cmCancel() { document.getElementById('close-modal').style.display = 'none'; cmPos = null; }
+function cmCalc() {
+  if (!cmPos) return;
+  if (cmPos.type === 'stock') {
+    const ep = parseFloat(document.getElementById('cm-exit-price').value) || 0;
+    const entry = parseFloat(cmPos.entry_price) || 0;
+    const sh = parseInt(document.getElementById('cm-shares').value) || 0;
+    const pnlPer = cmPos.direction === 'LONG' ? (ep - entry) : (entry - ep);
+    const total = pnlPer * sh;
+    document.getElementById('cm-pnl-per').textContent = '$' + pnlPer.toFixed(2) + '/share';
+    const te = document.getElementById('cm-pnl-total');
+    te.textContent = (total >= 0 ? '+' : '') + '$' + Math.abs(total).toFixed(2);
+    te.style.color = total >= 0 ? 'var(--c-grn)' : 'var(--c-red)';
+  } else {
+    const legs = typeof cmPos.legs === 'string' ? JSON.parse(cmPos.legs || '[]') : (cmPos.legs || []);
+    let netEntry = 0, netExit = 0;
+    legs.forEach((l, i) => {
+      const exitPrem = parseFloat(document.getElementById('cm-leg-' + i)?.value) || 0;
+      const mult = l.action === 'BUY' ? 1 : -1;
+      netEntry += parseFloat(l.premium) * mult;
+      netExit += exitPrem * mult;
+    });
+    const pnlPer = netExit - netEntry;
+    const con = parseInt(document.getElementById('cm-contracts').value) || 1;
+    const total = pnlPer * con * 100;
+    document.getElementById('cm-pnl-per').textContent = (pnlPer >= 0 ? '+' : '') + '$' + Math.abs(pnlPer).toFixed(2) + '/contract';
+    const te = document.getElementById('cm-pnl-total');
+    te.textContent = (total >= 0 ? '+' : '') + '$' + Math.abs(total).toFixed(2);
+    te.style.color = total >= 0 ? 'var(--c-grn)' : 'var(--c-red)';
+  }
+}
+async function cmSubmit() {
+  if (!cmPos) return;
+  let pnl = 0, closingAll = true;
+  const exitDate = document.getElementById('cm-date').value;
+  if (cmPos.type === 'stock') {
+    const ep = parseFloat(document.getElementById('cm-exit-price').value);
+    const sh = parseInt(document.getElementById('cm-shares').value) || 0;
+    if (!ep) return alert('Enter exit price');
+    const entry = parseFloat(cmPos.entry_price) || 0;
+    pnl = (cmPos.direction === 'LONG' ? (ep - entry) : (entry - ep)) * sh;
+    closingAll = sh >= parseInt(cmPos.shares);
+  } else {
+    const legs = typeof cmPos.legs === 'string' ? JSON.parse(cmPos.legs || '[]') : (cmPos.legs || []);
+    let netEntry = 0, netExit = 0;
+    for (let i = 0; i < legs.length; i++) {
+      const exitPrem = parseFloat(document.getElementById('cm-leg-' + i)?.value);
+      if (isNaN(exitPrem)) return alert('Enter exit premium for all legs');
+      const mult = legs[i].action === 'BUY' ? 1 : -1;
+      netEntry += parseFloat(legs[i].premium) * mult;
+      netExit += exitPrem * mult;
+    }
+    const con = parseInt(document.getElementById('cm-contracts').value) || 1;
+    pnl = (netExit - netEntry) * con * 100;
+    closingAll = con >= (parseInt(cmPos.contracts) || 1);
+  }
+  const res = await fetch(API + '?action=close', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: cmPos.id, realized_pnl: pnl, exit_date: exitDate, partial: !closingAll })
+  });
   const d = await res.json();
   if (d.error) return alert(d.error);
+  cmCancel();
   await loadFromDB(); render();
 }
-
 /* ── Render ── */
 function render() {
   document.getElementById('cap-disp').textContent = '$' + S.capital.toLocaleString(undefined, { maximumFractionDigits: 0 });
