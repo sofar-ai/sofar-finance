@@ -114,6 +114,7 @@ const OptionsFlowPage = (() => {
       <span class="tape-expiry">${trade.expiration ? fmtExp(trade.expiration) : '—'}</span>
       <span class="tape-cp tape-cp-${isCall?'c':'p'}">${right}</span>
       <span class="tape-prem">${fmtPrem(trade.premium)}</span>
+      <span class="tape-time" style="color:#888;font-size:11px;margin-left:6px">${trade.timestamp ? new Date(trade.timestamp).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}) : ""}</span>
       <span class="tape-size">${(trade.size ?? trade.ask_size) != null ? `${trade.size ?? trade.ask_size}x` : '—'}</span>
       <span class="tape-side ${sideClass}">${sideLabel}</span>
       ${trade.exchange ? `<span class="tape-exch">${trade.exchange}</span>` : ''}
