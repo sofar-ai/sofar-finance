@@ -82,6 +82,7 @@ const TopFlow = (() => {
           <span class="tf-strike">${t.strike != null ? (+t.strike).toFixed(0) : '—'}</span>
           <span class="tf-expiry">${t.expiration ? fmtExp(t.expiration) : '—'}</span>
           <span class="tf-prem">${fmtPrem(t.premium)}</span>
+          <span class="tf-time" style="color:#888;font-size:11px;margin-left:6px">${t.timestamp ? new Date(t.timestamp).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}) : ""}</span>
         </div>
         <div class="tf-reason">${t.reason || ''}</div>
       `;
