@@ -1,320 +1,338 @@
 {
   "calibration_notes": {
-    "pattern_acknowledgment": "Recent 10-prediction streak shows 70% bullish calls with only 40% accuracy on bullish predictions (4/10 correct). This suggests I've been exhibiting bullish bias despite bearish market conditions. My directional accuracy is 68% overall but drops to 40% when bullish.",
-    "conviction_audit": "MEDIUM tier performing at 80% accuracy (n=5) vs overall 68%. HIGH tier has no data. Setting HIGH threshold at 85% today - only use if 4+ signals converge strongly.",
-    "target_bias_correction": "Intraday showing 6.40% undershoot bias, next-day showing 0.70% overshoot bias. Correcting by widening intraday targets by 0.3-0.5% and tightening next-day targets slightly.",
-    "regime_adjustment": "Currently in PINNED regime (positive GEX + contango). My backtested accuracy in PINNED is 63.0% with mean reversion strategy. Will favor tight ranges and mean reversion setups, with slight bullish bias (63.4% vs 61.5% bearish accuracy in this regime).",
+    "pattern_acknowledgment": "WEAK_TIMEFRAME flags show intraday 44.4% and next_day 43.8% accuracy both below baseline. Recent 10 predictions: 8/10 BULLISH calls all failed, suggesting systematic bullish bias in neutral/bearish tape",
+    "conviction_audit": "MEDIUM tier 80% accuracy (n=5) vastly outperforms LOW tier 35% (n=20). Threshold for HIGH today: 75%+ (must exceed overall 48.5% by significant margin)",
+    "target_bias_correction": "Intraday showing 0.94% undershoot bias, next_day 1.17% overshoot. Applying: intraday targets +20bps higher, next_day targets -30bps lower",
+    "regime_adjustment": "PINNED regime detected (63.0% historical accuracy). Switching to MEAN REVERSION strategy with tighter targets (intraday \u22640.5%, next_day \u22641.0%) and BULLISH preference",
     "specific_changes": [
-      "Reducing bullish calls from 70% to max 40% given recent bias",
-      "Using PINNED regime mean reversion with <=0.5% intraday ranges",
-      "Weighting vol_regime signal higher after it was top predictor but underweighted last cycle"
+      "Stop defaulting to LOW confidence - use MEDIUM (51-65) when 2+ signals align per backtested performance",
+      "Apply PINNED regime rules: favor mean reversion over momentum, tighten ranges to \u22640.5% intraday",
+      "Weight options flow lower given recent misses - focus on GEX/regime signals which show better edge"
     ]
   },
-  "calibration_summary": "Correcting recent bullish bias (70% bullish calls at 40% accuracy) by capping bullish predictions at 40%. Applying PINNED regime mean reversion strategy with tighter 0.5% intraday ranges based on 63% backtested accuracy in this regime.",
+  "calibration_summary": "Shifting from failed momentum plays to mean reversion given PINNED regime (63% historical accuracy). Raising baseline confidence to MEDIUM tier which shows 80% accuracy vs 35% in LOW tier.",
   "intraday": {
-    "signal": "BEARISH",
-    "confidence": 42,
-    "summary": "Market likely to drift lower over next 2 hours within tight range. SPX call wall at $6850 ($120.94M premium) caps upside while Iran ceasefire uncertainty and record-low consumer sentiment weigh. Positive GEX ($531M) will dampen moves to 0.3-0.5% range.",
-    "key_driver": "SPX call wall resistance at 6850 with Iran negotiation uncertainty",
-    "primary_driver": "flow",
+    "signal": "BULLISH",
+    "confidence": 55,
+    "summary": "PINNED regime ($490M positive GEX) favors mean reversion with SPY near put wall support at $680. Oil surge (+6%) and Iran blockade creating initial selling, but positive gamma will dampen moves. Expect bounce from $680 toward $683 call cluster",
+    "key_driver": "Positive GEX regime creating dealer bid at $680 put wall",
+    "primary_driver": "regime",
     "predicted_prices": {
-      "SPY": 678.25,
-      "QQQ": 609.85,
-      "IWM": 260.75,
-      "NVDA": 187.9,
-      "AAPL": 259.8
+      "SPY": 682.5,
+      "QQQ": 614.8,
+      "IWM": 264.1,
+      "NVDA": 189.5,
+      "AAPL": 258.5
     },
     "predicted_range": [
-      677.8,
-      679.2
+      681.0,
+      683.5
     ],
-    "price_target_basis": "SPX call wall at $6850 strike ($120.94M premium, 15 trades) translates to SPY ~$678.50 resistance",
+    "price_target_basis": "SPY $683 strike showing $2.8M call premium concentration",
     "regime_strategy": "MEAN_REVERSION"
   },
   "next_day": {
-    "signal": "BULLISH",
-    "confidence": 55,
-    "summary": "Bounce expected tomorrow as oversold conditions meet positive GEX support. QQQ put wall at $590 ($10.53M premium) provides floor while META/RKLB call accumulation ($53.6M combined) signals institutional risk-on positioning despite headlines.",
-    "key_driver": "Oversold bounce from QQQ $590 put wall support with positive GEX regime",
-    "primary_driver": "flow",
+    "signal": "BEARISH",
+    "confidence": 58,
+    "summary": "Iran blockade and oil at $101 will weigh on sentiment overnight. Deep ITM put flows on MSFT ($85M) and AAPL ($43M) suggest institutional hedging. PINNED regime limits downside but headline risk persists",
+    "key_driver": "Geopolitical escalation with Hormuz blockade disrupting oil flows",
+    "primary_driver": "headlines",
     "predicted_prices": {
-      "SPY": 682.5,
-      "QQQ": 614.25,
-      "IWM": 262.8,
-      "NVDA": 190.5,
-      "AAPL": 262.0
+      "SPY": 678.0,
+      "QQQ": 610.5,
+      "IWM": 261.8,
+      "NVDA": 186.0,
+      "AAPL": 256.0
     },
     "predicted_range": [
-      680.5,
-      683.5
+      676.5,
+      680.0
     ],
-    "price_target_basis": "QQQ put wall at $590 strike ($10.53M premium) provides support floor, implying 0.5-1% bounce",
+    "price_target_basis": "SPY $680 put wall providing support per GEX positioning",
     "regime_strategy": "MEAN_REVERSION"
   },
   "long_term": {
     "signal": "BULLISH",
-    "confidence": 65,
-    "summary": "30-day outlook remains constructive despite near-term headwinds. Massive SPX July $6000 calls ($415.6M premium) and MSTR/RKLB institutional accumulation ($89M combined) signal longer-term optimism. Historical 74% monthly win rate supports bullish stance.",
-    "key_driver": "$415.6M institutional SPX call positioning for July at 6000 strike",
-    "primary_driver": "flow",
+    "confidence": 62,
+    "summary": "Base rate favors 74% probability of positive 30-day returns. PINNED regime historically produces steady grind higher. Iran tensions likely to ease given economic pressures. Tech earnings in May provide catalyst",
+    "key_driver": "Historical 74% win rate for 30-day periods outweighs current headlines",
+    "primary_driver": "regime",
     "predicted_prices": {
-      "SPY": 705.0,
-      "QQQ": 635.0,
+      "SPY": 695.0,
+      "QQQ": 628.0,
       "IWM": 270.0,
       "NVDA": 195.0,
-      "AAPL": 270.0
+      "AAPL": 265.0
     },
     "predicted_range": [
-      690.0,
-      715.0
+      685.0,
+      705.0
     ],
-    "price_target_basis": "SPX call cluster at $6000 strike ($1537.15M premium across 16 trades) as major attractor",
-    "regime_strategy": "TREND_FOLLOWING"
+    "price_target_basis": "Historical median 30-day move in PINNED regime: +2.1%",
+    "regime_strategy": "MEAN_REVERSION"
   },
-  "news_impact": "Iran ceasefire negotiations creating binary risk this weekend - market pricing uncertainty. Record-low consumer sentiment and stagflation concerns are bearish but likely overpriced given resilient earnings outlook. Anthropic cyber threat adds tech sector uncertainty.",
-  "options_flow_impact": "Bullish flow signal (0.559 P/C ratio) with $7.6B call premium vs $4.2B puts. However, massive SPX put hedging ($146M at 7300 strike) suggests institutions protecting long exposure. Deep ITM call buying in AMZN/AMD ($57.8M combined) confirms underlying bullish positioning.",
+  "news_impact": "Iran blockade and oil surge dominating sentiment but market showing resilience. Trump's 50% China tariff threat adding uncertainty. Intel's 9-day 56% rally creating momentum pocket in semis",
+  "options_flow_impact": "Neutral PC ratio 0.85 with balanced premium ($1.67B calls vs $1.42B puts). Heavy ITM put buying in mega-caps likely hedging not directional. MU extreme OTM calls ($5.8M at $140) suggesting bullish semiconductor positioning",
   "risks": [
-    "Iran ceasefire talks fail, escalating energy crisis",
-    "Stagflation narrative gains traction with next CPI print",
-    "Anthropic cyber threat materializes into actual market disruption"
+    "Hormuz blockade escalation could spike oil to $120+",
+    "China tariff retaliation risk if Trump follows through",
+    "VIX curve could flip to backwardation on further Iran tensions"
   ],
   "benchmarks": {
     "SPY": {
-      "intraday_bias": "BEARISH",
-      "next_day_bias": "BULLISH",
+      "intraday_bias": "BULLISH",
+      "next_day_bias": "BEARISH",
       "long_term_bias": "BULLISH",
-      "analysis": "SPY faces near-term resistance from SPX 6850 call wall but has solid support from positive GEX regime. Iran uncertainty caps upside today but oversold bounce likely tomorrow. Long-term bullish given massive institutional call positioning.",
-      "key_driver": "SPX call wall at 6850 creating resistance",
-      "primary_driver": "flow",
-      "conflicting_signals": "Bullish P/C ratio conflicts with bearish headlines and CAG bear-deluded signal",
-      "predicted_price_2h": 678.25,
-      "predicted_price_nextday": 682.5,
-      "predicted_price_30d": 705.0,
+      "analysis": "Trading at $681.58 between put wall $680 and call resistance $683. Positive GEX creating compression. Iran headlines bearish but regime supportive",
+      "key_driver": "Put wall support at $680 in PINNED regime",
+      "primary_driver": "regime",
+      "conflicting_signals": "Deep ITM puts ($43M AAPL, $85M MSFT) suggest hedging activity",
+      "predicted_price_2h": 682.5,
+      "predicted_price_nextday": 678.0,
+      "predicted_price_30d": 695.0,
       "predicted_range_2h": [
-        677.8,
-        679.2
-      ],
-      "predicted_range_nextday": [
-        680.5,
+        681.0,
         683.5
       ],
-      "price_target_basis": "SPX call wall at $6850 strike ($120.94M premium) caps near-term upside"
+      "predicted_range_nextday": [
+        676.5,
+        680.0
+      ],
+      "price_target_basis": "Call cluster at $683 strike with $2.8M premium concentration"
     },
     "QQQ": {
-      "intraday_bias": "BEARISH",
-      "next_day_bias": "BULLISH",
+      "intraday_bias": "BULLISH",
+      "next_day_bias": "BEARISH",
       "long_term_bias": "BULLISH",
-      "analysis": "QQQ showing relative weakness with tech uncertainty from Anthropic threat. Put wall at $590 provides solid floor for bounce setup. Call positioning at $620 suggests upside target once Iran uncertainty clears.",
-      "key_driver": "Put support at $590 with oversold technicals",
-      "primary_driver": "flow",
-      "conflicting_signals": "Deep ITM call buying in mega-cap tech conflicts with near-term bearish sentiment",
-      "predicted_price_2h": 609.85,
-      "predicted_price_nextday": 614.25,
-      "predicted_price_30d": 635.0,
+      "analysis": "Tech showing relative strength despite headlines. INTC momentum (+56% in 9 days) lifting semis. Rate sensitivity remains but 10Y stable at 4.32%",
+      "key_driver": "Semiconductor momentum led by INTC rally",
+      "primary_driver": "technicals",
+      "conflicting_signals": "NVDA deep ITM puts ($5.6M) and AAPL weakness",
+      "predicted_price_2h": 614.8,
+      "predicted_price_nextday": 610.5,
+      "predicted_price_30d": 628.0,
       "predicted_range_2h": [
-        609.0,
-        611.0
+        613.0,
+        615.5
       ],
       "predicted_range_nextday": [
-        612.0,
-        616.0
+        608.0,
+        612.0
       ],
-      "price_target_basis": "QQQ put wall at $590 strike ($10.53M premium) as support floor"
+      "price_target_basis": "QQQ tracking SPY beta 1.2x in PINNED regime"
     }
   },
   "tickers_to_watch": [
     {
-      "ticker": "MSTR",
-      "intraday_bias": "NEUTRAL",
-      "next_day_bias": "BULLISH",
-      "long_term_bias": "BULLISH",
-      "reasoning": "Massive $146M call accumulation at $130 strike (practically ATM) signals institutional conviction in crypto proxy. Near-term choppy as Bitcoin correlates with risk assets, but June 2026 timeframe allows for appreciation.",
-      "key_driver": "$146M institutional call positioning at $130 strike",
-      "primary_driver": "flow",
-      "conflicting_signals": "Iran conflict typically pressures risk assets including crypto proxies",
-      "predicted_price_2h": 129.0,
-      "predicted_price_nextday": 131.5,
-      "predicted_price_30d": 145.0,
-      "predicted_range_2h": [
-        128.0,
-        130.0
-      ],
-      "price_target_basis": "Call wall at $130 strike ($146.05M premium) as near-term magnet"
-    },
-    {
-      "ticker": "RKLB",
+      "ticker": "USO",
       "intraday_bias": "BULLISH",
       "next_day_bias": "BULLISH",
-      "long_term_bias": "BULLISH",
-      "reasoning": "Sophisticated $39.9M collar structure (90C/65P) shows institutional accumulation with defined risk. Space sector momentum continues despite broader market concerns. 32% OTM calls suggest significant upside expectations.",
-      "key_driver": "$39.9M institutional collar with 32% upside target",
+      "long_term_bias": "BEARISH",
+      "reasoning": "Oil ETF with massive call flow ($3.66M at $75 strike) as WTI hits $101 on Hormuz blockade. Momentum trade but unsustainable above $105",
+      "key_driver": "$19.4M in OTM call premium concentrated $68-85 strikes",
       "primary_driver": "flow",
-      "conflicting_signals": "High-beta growth name vulnerable to rate volatility",
-      "predicted_price_2h": 68.75,
-      "predicted_price_nextday": 69.5,
-      "predicted_price_30d": 75.0,
+      "conflicting_signals": "No put activity suggesting one-sided positioning vulnerable to reversal",
+      "predicted_price_2h": 133.5,
+      "predicted_price_nextday": 135.0,
+      "predicted_price_30d": 125.0,
       "predicted_range_2h": [
-        67.75,
-        69.0
+        132.0,
+        134.5
       ],
-      "price_target_basis": "Put protection at $65 strike ($39.52M premium) as downside floor"
+      "price_target_basis": "Call wall at $75 strike ($3.66M premium) = USO $134.50"
     },
     {
-      "ticker": "META",
-      "intraday_bias": "BEARISH",
+      "ticker": "MU",
+      "intraday_bias": "BULLISH",
       "next_day_bias": "BULLISH",
-      "long_term_bias": "BULLISH",
-      "reasoning": "Call accumulation at $645/665 strikes ($27.1M combined) shows upside targets. Near-term pressure from tech sentiment and Anthropic AI concerns, but deep ITM activity suggests institutions maintaining core positions.",
-      "key_driver": "Call clusters at $645/665 with $30M deep ITM positioning",
+      "long_term_bias": "BEARISH",
+      "reasoning": "Extreme OTM call activity ($5.8M at $140, $4.1M at $100) with stock at $414. Classic retail speculation on semiconductor momentum",
+      "key_driver": "Massive OTM call skew with $140 strike wall",
       "primary_driver": "flow",
-      "conflicting_signals": "Anthropic's Mythos AI threat specifically targets social media manipulation",
-      "predicted_price_2h": 628.0,
-      "predicted_price_nextday": 633.5,
-      "predicted_price_30d": 665.0,
+      "conflicting_signals": "$6.46M in deep OTM puts at $500 strike providing ceiling",
+      "predicted_price_2h": 418.0,
+      "predicted_price_nextday": 422.0,
+      "predicted_price_30d": 380.0,
       "predicted_range_2h": [
-        627.0,
-        630.5
+        412.0,
+        420.0
       ],
-      "price_target_basis": "Call wall at $645 strike ($13.77M premium) as first upside target"
+      "price_target_basis": "Put wall at $500 strike ($6.46M premium) caps upside"
+    },
+    {
+      "ticker": "INTC",
+      "intraday_bias": "BEARISH",
+      "next_day_bias": "BEARISH",
+      "long_term_bias": "BEARISH",
+      "reasoning": "Up 56% in 9 days reaching extreme overbought (RSI likely >75). No supporting flow data. Classic momentum exhaustion setup",
+      "key_driver": "9-day 56% parabolic move without consolidation",
+      "primary_driver": "technicals",
+      "conflicting_signals": "Semiconductor sector momentum remains strong",
+      "predicted_price_2h": 63.8,
+      "predicted_price_nextday": 62.5,
+      "predicted_price_30d": 58.0,
+      "predicted_range_2h": [
+        63.5,
+        64.5
+      ],
+      "price_target_basis": "Mean reversion to 10-day average near $58 after parabolic move"
     }
   ],
   "trade_ideas": [
     {
-      "idea": "QQQ bounce play from put wall support",
-      "ticker": "QQQ",
-      "type": "calls",
+      "idea": "Fade INTC momentum exhaustion",
+      "ticker": "INTC",
+      "type": "puts",
       "timeframe": "next-day",
-      "thesis": "Oversold bounce from $590 put wall support with positive GEX dampening downside",
-      "risk": "Iran talks fail over weekend causing gap down Monday",
-      "instrument": "QQQ $612 calls exp Apr 16",
-      "entry_zone": "$609.50-610.50",
-      "stop_invalidation": "Below $608",
-      "target": "$614.25",
+      "thesis": "56% 9-day rally reaching exhaustion without options flow support. PINNED regime favors mean reversion",
+      "risk": "Continued semiconductor momentum if NVDA breaks higher",
+      "instrument": "INTC $64 puts exp Apr 17",
+      "entry_zone": "$64.00-64.50",
+      "stop_invalidation": "$65.50",
+      "target": "$62.00",
       "risk_reward": "1:2.5"
     },
     {
-      "idea": "SPY fade into resistance",
-      "ticker": "SPY",
-      "type": "puts",
-      "timeframe": "intraday",
-      "thesis": "SPX 6850 call wall caps upside with Iran uncertainty weighing on sentiment",
-      "risk": "Surprise positive Iran headlines cause squeeze higher",
-      "instrument": "SPY $679 puts exp Apr 10",
-      "entry_zone": "$679.20-679.80",
-      "stop_invalidation": "Above $680.50",
-      "target": "$678.00",
-      "risk_reward": "1:1.8"
+      "idea": "USO calls on Hormuz blockade",
+      "ticker": "USO",
+      "type": "calls",
+      "timeframe": "next-day",
+      "thesis": "Oil momentum with $19.4M call flow concentration. WTI breaking $101 on supply disruption",
+      "risk": "Ceasefire headlines or SPR release",
+      "instrument": "USO $75 calls exp Apr 17",
+      "entry_zone": "$132.00-133.00",
+      "stop_invalidation": "$130.00",
+      "target": "$137.00",
+      "risk_reward": "1:2"
     }
   ],
   "notable_divergences": [
     {
-      "ticker": "SPX",
+      "ticker": "MSFT",
+      "signal": "BULLISH",
+      "flow_direction": "bearish",
+      "detail": "$85.48M in deep ITM puts despite stock near highs",
+      "description": "Large institutional hedging not directional conviction - protecting gains in PINNED regime",
+      "inputs_conflicting": "flow vs regime",
+      "significance": "medium",
+      "expirations": [
+        "2026-04-17"
+      ]
+    },
+    {
+      "ticker": "MU",
       "signal": "BEARISH",
       "flow_direction": "bullish",
-      "detail": "$415.6M in July 6000 calls despite near-term bearish setup",
-      "description": "Massive institutional call buying for summer despite immediate headwinds suggests temporary pullback within larger uptrend",
-      "inputs_conflicting": "flow vs headlines",
+      "detail": "$9.88M in extreme OTM calls ($100-140 strikes) with stock at $414",
+      "description": "Retail speculation chasing semiconductor momentum - classic topping behavior",
+      "inputs_conflicting": "flow vs technicals",
       "significance": "high",
       "expirations": [
-        "2026-07-17"
+        "2026-04-17"
       ]
     }
   ],
   "earnings_warnings": {},
   "magnitude_flags": [
     {
-      "ticker": "SPX",
+      "ticker": "MU",
       "flag": "OUTSIZED_MOVE_EXPECTED",
-      "basis": "$58.8M single trade on 7300 puts and $415.6M on 6000 calls shows extreme positioning"
+      "basis": "$5.81M single trade on $140 calls - extreme speculation on 66% OTM strikes"
+    },
+    {
+      "ticker": "USO",
+      "flag": "OUTSIZED_MOVE_EXPECTED",
+      "basis": "$19.4M cumulative call premium across $68-85 strikes on oil supply shock"
     }
   ],
   "signal_attribution": {
-    "primary_driver": "options_flow",
+    "primary_driver": "vol_regime",
     "weights": {
       "headlines": {
-        "weight": 0.15,
-        "values_cited": "Iran ceasefire uncertainty, record-low consumer sentiment, Anthropic cyber threat",
-        "influence": "Created near-term bearish sentiment but likely overpriced given flow"
+        "weight": 0.2,
+        "values_cited": "Iran blockade, oil +6% to $101, Trump 50% China tariffs, INTC +56% rally",
+        "influence": "Bearish geopolitical backdrop but INTC momentum notable"
       },
       "options_flow": {
-        "weight": 0.35,
-        "values_cited": "P/C 0.559 bullish, SPX 6850 call wall $120.9M, QQQ $590 put wall $10.5M",
-        "influence": "Primary driver - defined resistance/support levels and showed institutional bullish positioning"
+        "weight": 0.15,
+        "values_cited": "PC 0.85 neutral, MU $5.8M calls at $140, USO $19.4M call skew",
+        "influence": "Speculation in commodities/semis but overall balanced"
       },
       "gex": {
-        "weight": 0.2,
-        "values_cited": "Net GEX $531M positive, call wall 6825, put wall 6800",
-        "influence": "Confirmed mean reversion regime with dampened volatility expectation"
+        "weight": 0.25,
+        "values_cited": "Net GEX +$490M, put wall $680, call wall $683, flip $674",
+        "influence": "PINNED regime primary driver - compression and mean reversion"
       },
       "vix_structure": {
         "weight": 0.1,
-        "values_cited": "VIX 20.12 moderate, contango +4.0% VX2/VX1",
-        "influence": "Supported mean reversion thesis with no immediate panic despite headlines"
+        "values_cited": "VIX 19.72, contango +6.3% VX2/VX1",
+        "influence": "Confirms PINNED regime - no near-term stress"
       },
       "vol_regime": {
-        "weight": 0.15,
-        "values_cited": "PINNED regime 24% confidence, 63% historical accuracy",
-        "influence": "Dictated mean reversion strategy with tight range targets"
+        "weight": 0.25,
+        "values_cited": "PINNED regime 63% historical accuracy, mean reversion dominant",
+        "influence": "Regime rules override momentum - tighten targets and fade extremes"
       },
       "prediction_feedback": {
         "weight": 0.05,
-        "values_cited": "68% directional accuracy, MEDIUM tier 80%, recent bullish bias at 70%",
-        "influence": "Forced correction of bullish bias and confidence calibration"
+        "values_cited": "MEDIUM tier 80% vs LOW 35%, recent 8/10 bullish failures",
+        "influence": "Shift to MEDIUM confidence and reduce bullish bias"
       },
       "event_trees": {
         "weight": 0.0,
         "values_cited": "No event tree data provided",
-        "influence": "Unable to incorporate systematic event probability analysis"
+        "influence": "Weight redistributed to regime and GEX"
       },
       "price_data": {
         "weight": 0.0,
-        "values_cited": "No technical indicator values provided beyond current prices",
-        "influence": "Could not assess RSI oversold/overbought conditions or moving average positions"
+        "values_cited": "SPY $681.58",
+        "influence": "Price incorporated via technical levels"
       }
     },
     "weights_sum": 1.0,
-    "reasoning_chain": "Options flow showing bullish P/C ratio 0.559 with massive institutional call positioning \u2192 GEX positive regime confirms dealer hedging will dampen moves \u2192 VIX contango shows no immediate panic \u2192 PINNED regime historically favors mean reversion \u2192 Near-term bearish within tight range due to call wall resistance, but next-day bullish bounce from put wall support"
+    "reasoning_chain": "PINNED vol regime (25% weight) + positive GEX (25%) = mean reversion dominates \u2192 Headlines bearish (20%) but regime overrides momentum \u2192 Flow shows speculation pockets (15%) but PC neutral \u2192 Fade INTC extremes, buy SPY dips to $680 put wall, USO momentum valid given supply shock"
   },
-  "generated_at": "2026-04-11T15:28:08Z",
-  "next_update": "2026-04-11T17:28:08Z",
+  "generated_at": "2026-04-13T16:45:01Z",
+  "next_update": "2026-04-13T18:45:01Z",
   "prices_at_generation": {
-    "SPY": 679.46,
-    "QQQ": 611.07,
-    "IWM": 261.3,
-    "AAPL": 260.48,
-    "NVDA": 188.63,
-    "TSLA": 348.95,
-    "META": 629.86,
-    "MSFT": 370.87,
-    "AMD": 245.04,
-    "AMZN": 238.38,
-    "NKY": 56924.11,
-    "KOSPI": 5858.87,
-    "TAIEX": 35417.83,
-    "TOPIX": 396.5,
-    "GOLD": 4787.4,
-    "SILVER": 76.48,
-    "WTI": 96.57,
-    "BRENT": 95.2,
-    "VIX": 19.23,
+    "SPY": 681.58,
+    "QQQ": 613.36,
+    "IWM": 263.41,
+    "AAPL": 257.945,
+    "NVDA": 188.19,
+    "TSLA": 352.47,
+    "META": 629.42,
+    "MSFT": 380.555,
+    "AMD": 245.44,
+    "AMZN": 238.27,
+    "NKY": 56502.77,
+    "KOSPI": 5808.62,
+    "TAIEX": 35457.29,
+    "TOPIX": 394.8,
+    "GOLD": 4757.0,
+    "SILVER": 75.66,
+    "WTI": 100.96,
+    "BRENT": 100.52,
+    "VIX": 19.47,
     "10Y_YIELD": 4.317,
-    "30Y_YIELD": 4.914,
-    "3M_YIELD": 3.593,
-    "DXY": 98.698,
-    "captured_at": "2026-04-11T15:28:08Z",
-    "MSTR": 128.64,
-    "RKLB": 68.05
+    "30Y_YIELD": 4.91,
+    "3M_YIELD": 3.603,
+    "DXY": 98.705,
+    "captured_at": "2026-04-13T16:45:01Z",
+    "USO": 130.766,
+    "MU": 413.695,
+    "INTC": 65.19
   },
   "regime": "low_vol_uptrend",
   "signal_snapshot": {
-    "pc_ratio": 0.559,
-    "flow_sentiment": "BULLISH",
-    "top_flow_summary": "SPX $415.6M C, RKLB $39.9M C, MSTR $49.2M C",
-    "vix": 19.23,
+    "pc_ratio": 0.854,
+    "flow_sentiment": "NEUTRAL",
+    "top_flow_summary": "MU $5.8M C, MU $4.1M C, MSFT $3.9M P",
+    "vix": 19.47,
     "news_headlines": [
-      "Ireland gridlocked by fuel protests as Iran war drives prices higher",
-      "Strange Times: GDP Growth Slows Down, Inflation Is Rising, But Markets Don't Care",
-      "What's at stake ahead of crucial U.S.-Iran peace talks as leaders meet in Pakistan"
+      "LVMH sales miss expectations as luxury recovery is put on pause amid Middle East war",
+      "Patient Capital Management Q1 2026 Commentary",
+      "Intel's stock is on track for a historic 9-day winning streak, up 56% over that run"
     ],
     "regime": "low_vol_uptrend"
   },
@@ -322,16 +340,16 @@
     "headlines_count": 25,
     "trends_count": 12,
     "trends_sample": [
-      "Iran War Energy Crisis Escalates",
-      "US-Iran Ceasefire Negotiations Uncertainty",
-      "Inflation Persists Despite Cooling Signals"
+      "Iran Ceasefire Market Impact",
+      "AI Infrastructure & Data Center Boom",
+      "S&P 500 Rally & Tech Momentum"
     ],
-    "flow_trades": 41170,
+    "flow_trades": 11839,
     "top_trades": 5,
-    "sentiment": "BULLISH",
-    "pc_ratio": 0.559,
+    "sentiment": "NEUTRAL",
+    "pc_ratio": 0.854,
     "price_source": "Yahoo",
-    "feedback_patterns": 0,
+    "feedback_patterns": 2,
     "strike_clusters": true
   }
 }
