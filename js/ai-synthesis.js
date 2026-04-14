@@ -302,6 +302,24 @@ const AISynthesis = (() => {
       ];
       const mColors = {BULLISH:'#22c55e',BEARISH:'#ef4444',NEUTRAL:'#f59e0b'};
       const mEmojis = {BULLISH:'\u{1F7E2}',BEARISH:'\u{1F534}',NEUTRAL:'\u{1F7E1}'};
+      // Load Sharpe from metadata files
+      const sharpeMeta = [
+        { file: 'data/lgbm-metadata-7d.json', elId: 'lgbm-7d-sharpe' },
+        { file: 'data/lgbm-metadata-14d.json', elId: 'lgbm-14d-sharpe' },
+        { file: 'data/lgbm-metadata-21d.json', elId: 'lgbm-21d-sharpe' },
+      ];
+      for (const sm of sharpeMeta) {
+        try {
+          const r = await fetch(sm.file + '?t=' + Date.now());
+          if (r.ok) {
+            const meta = await r.json();
+            const el = document.getElementById(sm.elId);
+            if (el && meta.walk_forward_sharpe) {
+              el.textContent = '(Sharpe ' + Number(meta.walk_forward_sharpe).toFixed(2) + ')';
+            }
+          }
+        } catch(e) {}
+      }
       for (const mc of modelConfigs) {
         try {
           const r = await fetch(mc.file + '?t=' + Date.now());
