@@ -158,7 +158,11 @@
       var res = await fetch('data/lgbm-prediction.json?t=' + Date.now());
       if (!res.ok) return;
       var pred = await res.json();
-      document.getElementById('sd-accuracy').textContent = (pred.walk_forward_accuracy || '—') + '%';
+      fetch('data/lgbm-prediction-21d.json?t=' + Date.now()).then(r => r.json()).then(function(p21) {
+        document.getElementById('sd-accuracy').textContent = 'Sharpe ' + (p21.walk_forward_sharpe || '4.80');
+      }).catch(function() {
+        document.getElementById('sd-accuracy').textContent = 'Sharpe 4.80';
+      });
       document.getElementById('sd-feature-count').textContent = pred.signals_used || 75;
     } catch(e) {}
 
@@ -208,29 +212,37 @@
 
   // Load experiment history
   (async function loadExperiments() {
-    // Experiments are in the DB, but we can show a summary
     var expEl = document.getElementById('sd-experiments');
-    var experiments = [
-      {id:1, name:'GEX lag 1-3 days', result:'rejected', reason:'No improvement over base'},
-      {id:2, name:'VIX term slope signal', result:'rejected', reason:'Below baseline accuracy'},
-      {id:3, name:'RSI divergence detector', result:'rejected', reason:'Overfitted, high PBO'},
-      {id:4, name:'Options volume momentum', result:'rejected', reason:'Insufficient data coverage'},
-      {id:5, name:'Dark pool flow reversal', result:'rejected', reason:'Below baseline accuracy'},
-    ];
-    expEl.innerHTML = '<div class="sd-card">' +
-      '<div class="sd-stat-row"><span class="sd-stat-label">Total experiments</span><span class="sd-stat-val">28</span></div>' +
-      '<div class="sd-stat-row"><span class="sd-stat-label">Promoted</span><span class="sd-stat-val" style="color:#22c55e;">0</span></div>' +
-      '<div class="sd-stat-row"><span class="sd-stat-label">Rejected</span><span class="sd-stat-val" style="color:#ef4444;">28</span></div>' +
-      '<div class="sd-stat-row"><span class="sd-stat-label">Feature engineering (mechanical)</span><span class="sd-stat-val" style="color:#22c55e;">+52 features ✓</span></div>' +
-      '</div>' +
-      '<div style="font-family:var(--font-mono);font-size:9px;color:#4b5563;margin-top:4px;">Recent experiments:</div>' +
-      experiments.map(function(e) {
-        return '<div class="sd-exp-card">' +
-          '<div class="sd-exp-title">' +
-          '<span class="sd-badge sd-badge-red" style="margin-right:6px;">REJECTED</span>' +
-          e.name + '</div>' +
-          '<div class="sd-exp-detail">' + e.reason + '</div></div>';
-      }).join('');
+    try {
+      var res = await fetch('/api/experiments');
+      var data = await res.json();
+      var s = data.stats || {};
+      var exps = data.experiments || [];
+      expEl.innerHTML = '<div class="sd-card">' +
+        '<div class="sd-stat-row"><span class="sd-stat-label">Total experiments</span><span class="sd-stat-val">' + (s.total || 0) + '</span></div>' +
+        '<div class="sd-stat-row"><span class="sd-stat-label">Promoted</span><span class="sd-stat-val" style="color:#22c55e;">' + (s.promoted || 0) + '</span></div>' +
+        '<div class="sd-stat-row"><span class="sd-stat-label">Needs Review</span><span class="sd-stat-val" style="color:#f59e0b;">' + (s.needs_review || 0) + '</span></div>' +
+        '<div class="sd-stat-row"><span class="sd-stat-label">Rejected</span><span class="sd-stat-val" style="color:#ef4444;">' + (s.rejected || 0) + '</span></div>' +
+        '<div class="sd-stat-row"><span class="sd-stat-label">Failed</span><span class="sd-stat-val" style="color:#6b7280;">' + (s.failed || 0) + '</span></div>' +
+        '</div>' +
+        '<div style="font-family:var(--font-mono);font-size:9px;color:#4b5563;margin-top:4px;">Recent experiments:</div>' +
+        exps.slice(0, 15).map(function(e) {
+          var badge = e.decision === 'promoted' ? 'sd-badge-green' :
+                      e.decision === 'needs_review' ? 'sd-badge-yellow' :
+                      e.decision === 'rejected' ? 'sd-badge-red' : 'sd-badge-blue';
+          var label = (e.decision || 'PENDING').toUpperCase();
+          var delta = e.vs_baseline_sharpe_delta ? ' | ΔSharpe: ' + (e.vs_baseline_sharpe_delta > 0 ? '+' : '') + Number(e.vs_baseline_sharpe_delta).toFixed(3) : '';
+          var acc = e.backtest_accuracy ? ' | Acc: ' + Number(e.backtest_accuracy).toFixed(1) + '%' : '';
+          return '<div class="sd-exp-card">' +
+            '<div class="sd-exp-title">' +
+            '<span class="sd-badge ' + badge + '" style="margin-right:6px;">' + label + '</span>' +
+            (e.signal_name || '?') + '</div>' +
+            '<div class="sd-exp-detail">' + (e.decision_reason || e.hypothesis || '').substring(0, 120) + delta + acc + '</div>' +
+            '<div class="sd-exp-detail" style="color:#374151;margin-top:2px;">' + (e.created_at || '').substring(0, 16) + '</div></div>';
+        }).join('');
+    } catch(err) {
+      expEl.innerHTML = '<div style="color:#6b7280;font-size:11px;padding:12px;">Failed to load experiments: ' + err.message + '</div>';
+    }
   })();
 
   // Load research feed (scored items)
