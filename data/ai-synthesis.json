@@ -1,177 +1,320 @@
 {
   "calibration_notes": {
-    "pattern_acknowledgment": "ML models show strong medium-term bullishness, but the CAG 'Bear-Deluded' status suggests a slight contrarian bearish edge that may manifest as a failure to break the 7000 call wall.",
-    "conviction_audit": "High alignment between 14d and 21d models, though the 7d model is neutral, suggesting a transition phase or short-term consolidation.",
-    "target_bias_correction": "Capping intraday upside at 7000 due to the Call Wall and pinned volatility regime.",
-    "regime_adjustment": "Pinned regime implies low realized volatility; strategy shifts from trend-following to mean-reversion within the 6950-7000 range.",
-    "specific_changes": "Adjusted intraday high to exactly 7000.00 to align with GEX Call Wall resistance."
+    "pattern_acknowledgment": "REGIME_WEAKNESS detected: 0% accuracy in low_vol_unknown regime (n=4). Current regime is low_vol_uptrend with PINNED vol regime - different from the problematic regime but requires caution. Recent 10 predictions show 60% accuracy with next_day (80%) significantly outperforming intraday (46.7%).",
+    "conviction_audit": "No HIGH tier data available. MEDIUM tier at 67% accuracy exceeds overall 50.2%. Setting HIGH threshold at 75%+ (must exceed MEDIUM by 8%+). Will use MEDIUM (51-65) when multiple signals converge.",
+    "target_bias_correction": "Intraday showing balanced bias (2.86% avg error). Next_day showing overshoot bias (0.72% error but consistently above target). Correcting by: intraday targets centered on strike clusters, next_day targets reduced by 0.5% from initial calculation.",
+    "regime_adjustment": "Currently in PINNED regime (positive GEX + contango). Backtested accuracy 63.0% in this regime, Sharpe 5.58. Strategy: MEAN REVERSION with tight targets (intraday \u22640.5%, next_day \u22641.0%). Bullish bias preferred (63.4% vs 61.5% bearish accuracy in PINNED).",
+    "specific_changes": [
+      "Reducing intraday targets to 0.3-0.5% moves given PINNED regime compression",
+      "Weighting next_day predictions with MEDIUM confidence given 80% recent accuracy",
+      "Using SPX 7000 strike cluster ($12.3M calls, $11.6M puts) as key pivot for all indices"
+    ]
   },
-  "calibration_summary": "Bullish medium-term bias constrained by a pinned intraday volatility regime and a hard resistance ceiling at 7000.",
+  "calibration_summary": "Adjusting for PINNED volatility regime (63% historical accuracy) with mean reversion bias and compressed targets. Leveraging strong next_day performance (80% recent accuracy) while being cautious on intraday (46.7%) with tighter 0.5% ranges.",
   "intraday": {
-    "signal": "NEUTRAL",
-    "confidence": 62,
-    "summary": "Market is pinned between the 6950 put wall and 7000 call wall. Positive GEX will likely suppress volatility, leading to a range-bound session with a slight upward drift.",
-    "key_driver": "GEX Call Wall at 7000",
-    "primary_driver": "technical",
+    "signal": "BEARISH",
+    "confidence": 45,
+    "summary": "SPY likely to test $694-695 support in next 2 hours. Positive GEX $1.10B creating dealer resistance on rallies, PC ratio 0.553 shows complacency, and CAG BEAR-DELUDED signal (0.71) suggests contrarian bearish edge. SPX 7000 massive two-way flow ($12.3M calls vs $11.6M puts) creating pivot.",
+    "key_driver": "CAG BEAR-DELUDED signal with extreme complacency (Fear z=-1.12)",
+    "primary_driver": "regime",
     "predicted_prices": {
-      "SPY": {
-        "low": 6950.0,
-        "mid": 6985.0,
-        "high": 7000.0
-      },
-      "QQQ": {
-        "low": 608.0,
-        "mid": 613.0,
-        "high": 618.0
-      }
-    }
+      "SPY": 694.5,
+      "QQQ": 630.8,
+      "IWM": 267.5,
+      "NVDA": 196.8,
+      "AAPL": 263.9
+    },
+    "predicted_range": [
+      694.0,
+      695.5
+    ],
+    "price_target_basis": "SPX 7000 strike cluster with $23.9M total premium creating magnetic pivot at SPY ~$700",
+    "regime_strategy": "MEAN_REVERSION"
   },
   "next_day": {
     "signal": "BULLISH",
-    "confidence": 65,
-    "summary": "Strong alignment in 14d and 21d ML models suggests a breakout attempt above 7000 once the current pinned regime resets. Positive GEX provides a safety net at 6950.",
-    "key_driver": "ML Model Consensus",
-    "primary_driver": "ml_models",
+    "confidence": 55,
+    "summary": "Market likely to bounce back to SPY $698-699 range. PINNED regime historically shows 63.4% accuracy on bullish calls with mean reversion dominant. Massive SPX May expiry positioning ($12.3M calls) and put wall support at 6950 (SPY ~$695) should provide floor.",
+    "key_driver": "PINNED regime mean reversion with GEX put wall support at SPY $695",
+    "primary_driver": "regime",
     "predicted_prices": {
-      "SPY": {
-        "low": 6960.0,
-        "mid": 7020.0,
-        "high": 7050.0
-      },
-      "QQQ": {
-        "low": 610.0,
-        "mid": 620.0,
-        "high": 628.0
-      }
-    }
+      "SPY": 698.5,
+      "QQQ": 634.0,
+      "IWM": 269.0,
+      "NVDA": 199.5,
+      "AAPL": 265.8
+    },
+    "predicted_range": [
+      697.5,
+      699.5
+    ],
+    "price_target_basis": "GEX put wall at SPX 6950 ($695 SPY equivalent) providing support floor",
+    "regime_strategy": "MEAN_REVERSION"
   },
   "long_term": {
     "signal": "BULLISH",
-    "confidence": 66,
-    "summary": "Structural bullishness remains intact with the GEX flip well below current spot (6800). Long-term trajectory is supported by positive gamma and contango in VIX.",
-    "key_driver": "Positive Gamma Regime",
-    "primary_driver": "technical",
+    "confidence": 65,
+    "summary": "30-day outlook remains constructive with SPY targeting $710-715. Base rate shows 74% of monthly periods close positive. Current low_vol_uptrend regime typically persists, and massive May SPX positioning ($23.9M at 7000 strike) suggests institutional accumulation for continued grind higher.",
+    "key_driver": "74% monthly positive base rate in low volatility uptrend regime",
+    "primary_driver": "regime",
     "predicted_prices": {
-      "SPY": {
-        "low": 6800.0,
-        "mid": 7200.0,
-        "high": 7500.0
-      },
-      "QQQ": {
-        "low": 590.0,
-        "mid": 640.0,
-        "high": 670.0
-      }
-    }
+      "SPY": 712.0,
+      "QQQ": 648.0,
+      "IWM": 275.0,
+      "NVDA": 208.0,
+      "AAPL": 272.0
+    },
+    "predicted_range": [
+      705.0,
+      718.0
+    ],
+    "price_target_basis": "Historical regime analog: median 2.2% monthly gain in low_vol_uptrend periods",
+    "regime_strategy": "TREND_FOLLOWING"
   },
-  "news_impact": "No headlines detected; market is currently driven by internal liquidity and dealer hedging dynamics rather than external catalysts.",
-  "options_flow_impact": "Heavy concentration of SPX 7000 calls being bought and puts being sold indicates a strong magnet effect toward 7000, though it acts as a ceiling in the immediate term.",
+  "news_impact": "Headlines show typical mix of bullish fundamental stories (bank earnings, AI expansion) against macro concerns (Iran tensions, Fed policy). Jim Cramer's 'overbought' warning aligns with CAG BEAR-DELUDED reading. Tax policy headlines neutral. Overall news flow is not directionally decisive - deferring to technical regime signals.",
+  "options_flow_impact": "P/C ratio 0.553 shows strong call skew confirming bullish institutional positioning. SPX 7000 strike seeing massive two-way flow ($12.3M calls, $11.6M puts) creating strong pivot magnet. Deep ITM activity mixed with $179M call premium vs $172M put premium across tracked names - slightly bullish tilt but mostly hedging activity given PINNED regime.",
   "risks": [
-    "Break below 6950 Put Wall triggering dealer selling",
-    "Unexpected VIX spike breaking the contango structure",
-    "Aggressive QQQ put sweeps signaling a tech-led rotation"
+    "Iran ceasefire breakdown could spike VIX above 20",
+    "Tax Day selling pressure through end of day",
+    "SPX 7000 rejection could trigger dealer selling below 6950"
   ],
   "benchmarks": {
     "SPY": {
-      "price": 6994.48,
-      "change_pct": 0.0
+      "intraday_bias": "BEARISH",
+      "next_day_bias": "BULLISH",
+      "long_term_bias": "BULLISH",
+      "analysis": "SPY at $696.38 facing resistance at psychological $700 level (SPX 7000). PINNED regime suggests mean reversion - expect pullback to $694-695 before resuming uptrend. GEX flip at $680 provides deep support.",
+      "key_driver": "SPX 7000 two-way options battle creating pivot resistance",
+      "primary_driver": "regime",
+      "conflicting_signals": "Bullish P/C ratio 0.553 conflicts with bearish CAG signal",
+      "predicted_price_2h": 694.5,
+      "predicted_price_nextday": 698.5,
+      "predicted_price_30d": 712.0,
+      "predicted_range_2h": [
+        694.0,
+        695.5
+      ],
+      "predicted_range_nextday": [
+        697.5,
+        699.5
+      ],
+      "price_target_basis": "SPX 7000 call wall with $12.3M premium creating resistance"
     },
     "QQQ": {
-      "price": 613.39,
-      "change_pct": 0.0
+      "intraday_bias": "BEARISH",
+      "next_day_bias": "BULLISH",
+      "long_term_bias": "BULLISH",
+      "analysis": "QQQ at $632.01 showing relative strength but due for PINNED regime compression. NDX deep ITM puts ($5.9M at 26600-26800) suggest institutional hedging. Tech momentum intact longer-term.",
+      "key_driver": "PINNED volatility compression after recent outperformance",
+      "primary_driver": "regime",
+      "conflicting_signals": "Strong tech earnings momentum conflicts with overbought technicals",
+      "predicted_price_2h": 630.8,
+      "predicted_price_nextday": 634.0,
+      "predicted_price_30d": 648.0,
+      "predicted_range_2h": [
+        630.5,
+        631.5
+      ],
+      "predicted_range_nextday": [
+        633.0,
+        635.0
+      ],
+      "price_target_basis": "0.5% mean reversion move typical in PINNED regime compression"
     }
   },
   "tickers_to_watch": [
     {
-      "ticker": "QQQ",
+      "ticker": "MU",
       "intraday_bias": "BEARISH",
       "next_day_bias": "BULLISH",
-      "long_term_bias": "BULLISH",
-      "reason": "Significant put sweep activity detected at 633 and 700 levels, suggesting short-term hedging or speculation.",
-      "predicted_prices": {
-        "current": 613.39,
-        "intraday_target": 608.0,
-        "next_day_target": 620.0,
-        "long_term_target": 640.0
-      }
+      "long_term_bias": "BEARISH",
+      "reasoning": "MU showing extreme put skew with $11.4M in OTM puts vs $6.5M calls. Put walls at $910/$460 suggest major downside protection. Stock at $449 well above call wall at $260. Recent 7.5% gap needs digestion.",
+      "key_driver": "Massive put skew ($11.4M vs $6.5M) signaling distribution",
+      "primary_driver": "flow",
+      "conflicting_signals": "Recent momentum surge conflicts with heavy put positioning",
+      "predicted_price_2h": 447.0,
+      "predicted_price_nextday": 452.0,
+      "predicted_price_30d": 420.0,
+      "predicted_range_2h": [
+        446.0,
+        449.0
+      ],
+      "price_target_basis": "Put wall at $460 strike ($2.85M premium) as downside target"
     },
     {
-      "ticker": "TSLA",
+      "ticker": "USO",
       "intraday_bias": "NEUTRAL",
       "next_day_bias": "BEARISH",
-      "long_term_bias": "NEUTRAL",
-      "reason": "Mixed sweep activity (Call sells at 360, Put buys at 480) suggests high volatility and uncertainty.",
-      "predicted_prices": {
-        "current": 0.0,
-        "intraday_target": 0.0,
-        "next_day_target": 0.0,
-        "long_term_target": 0.0
-      }
+      "long_term_bias": "BEARISH",
+      "reasoning": "USO at $123.42 with massive call skew ($22.2M calls, zero puts) suggests exhaustion after Iran rally. Call wall at $95 but that's 23% OTM. Oil at $91.54 facing Iran ceasefire headwinds.",
+      "key_driver": "Iran ceasefire progress removing geopolitical premium",
+      "primary_driver": "headlines",
+      "conflicting_signals": "Strong call positioning conflicts with bearish fundamentals",
+      "predicted_price_2h": 123.4,
+      "predicted_price_nextday": 122.0,
+      "predicted_price_30d": 115.0,
+      "predicted_range_2h": [
+        123.0,
+        124.0
+      ],
+      "price_target_basis": "No near-term strikes; using 1% daily oil volatility assumption"
     }
   ],
   "trade_ideas": [
     {
-      "idea": "Mean reversion long at Put Wall",
-      "ticker": "SPX",
-      "direction": "LONG",
-      "entry": 6955.0,
-      "target": 6995.0,
-      "stop": 6930.0,
-      "timeframe": "1-2d",
-      "conviction": "HIGH",
-      "risk_reward": "1:3"
+      "idea": "Fade SPX 7000 resistance with tight stop",
+      "ticker": "SPY",
+      "type": "puts",
+      "timeframe": "intraday",
+      "thesis": "SPX 7000 showing massive two-way battle. In PINNED regime, resistance levels hold. CAG BEAR-DELUDED supports short-term pullback.",
+      "risk": "Breakout above 7000 could squeeze to 7050 quickly",
+      "instrument": "SPY $696 puts exp Apr 15",
+      "entry_zone": "$696.00-696.50",
+      "stop_invalidation": "$697.50",
+      "target": "$694.50",
+      "risk_reward": "1:2.5"
     },
     {
-      "idea": "Iron Condor targeting pinned range",
-      "ticker": "SPX",
-      "direction": "NEUTRAL",
-      "entry": 6994.48,
-      "target": 7000.0,
-      "stop": 6940.0,
-      "timeframe": "1-3d",
-      "conviction": "MEDIUM",
-      "risk_reward": "1:2"
+      "idea": "Buy QQQ dip for next-day bounce",
+      "ticker": "QQQ",
+      "type": "calls",
+      "timeframe": "next-day",
+      "thesis": "PINNED regime mean reversion after today's expected pullback. Tech momentum intact with 80% next-day accuracy recently.",
+      "risk": "Broader market weakness could override technicals",
+      "instrument": "QQQ $631 calls exp Apr 16",
+      "entry_zone": "$630.50-631.00",
+      "stop_invalidation": "$629.00",
+      "target": "$634.00",
+      "risk_reward": "1:2.0"
     }
   ],
   "notable_divergences": [
-    "ML models are bullish while CAG indicates a 'Bear-Deluded' contrarian edge."
+    {
+      "ticker": "MU",
+      "signal": "BEARISH",
+      "flow_direction": "bearish",
+      "detail": "$11.4M in put premium aligns with bearish signal - convergence not divergence",
+      "description": "Heavy put positioning ($11.4M) across multiple strikes confirms distribution after 7.5% surge",
+      "inputs_conflicting": "none - flow and technicals aligned",
+      "significance": "high",
+      "expirations": [
+        "2026-05-16",
+        "2026-06-20"
+      ]
+    }
   ],
   "earnings_warnings": {},
-  "magnitude_flags": [],
+  "magnitude_flags": [
+    {
+      "ticker": "SPX",
+      "flag": "OUTSIZED_MOVE_EXPECTED",
+      "basis": "$23.9M in premium at 7000 strike - largest single strike concentration"
+    }
+  ],
   "signal_attribution": {
-    "primary_driver": "GEX Regime & ML Consensus",
+    "primary_driver": "vol_regime",
     "weights": {
-      "flow": 0.25,
-      "macro": 0.1,
-      "technical": 0.3,
-      "ml_models": 0.35
+      "headlines": {
+        "weight": 0.1,
+        "values_cited": "25 headlines, Iran ceasefire progress, Cramer overbought warning",
+        "influence": "Supported bearish intraday via sentiment exhaustion but not primary"
+      },
+      "options_flow": {
+        "weight": 0.2,
+        "values_cited": "PC 0.553, SPX 7000 $23.9M two-way flow, MU $11.4M puts",
+        "influence": "Major strikes creating pivots and revealing institutional positioning"
+      },
+      "gex": {
+        "weight": 0.15,
+        "values_cited": "Net GEX $1.10B positive, flip $6800, call wall $7000",
+        "influence": "Positive gamma environment supporting mean reversion thesis"
+      },
+      "vix_structure": {
+        "weight": 0.1,
+        "values_cited": "VIX 18.02, contango +10.5% VX2/VX1",
+        "influence": "Contango confirms low stress environment supporting PINNED regime"
+      },
+      "vol_regime": {
+        "weight": 0.25,
+        "values_cited": "PINNED regime 47% confidence, 63% historical accuracy",
+        "influence": "Primary driver - dictates mean reversion strategy and tight targets"
+      },
+      "prediction_feedback": {
+        "weight": 0.1,
+        "values_cited": "Next-day 80% accuracy, intraday 46.7%, overall 50.2%",
+        "influence": "Boosted next-day confidence, reduced intraday confidence"
+      },
+      "event_trees": {
+        "weight": 0.05,
+        "values_cited": "CAG BEAR-DELUDED 0.71, Fear z=-1.12 extreme complacency",
+        "influence": "Contrarian bearish signal for intraday fade"
+      },
+      "price_data": {
+        "weight": 0.05,
+        "values_cited": "SPY $696.38 at key $700 psychological, QQQ $632 extended",
+        "influence": "Technical resistance levels confirming fade setup"
+      }
     },
     "weights_sum": 1.0,
-    "reasoning_chain": "Positive GEX and VIX contango create a pinned environment -> ML models suggest medium-term upside -> Call wall at 7000 limits immediate intraday gains -> Strategy focuses on buying the 6950 support."
+    "reasoning_chain": "PINNED volatility regime (25% weight) dictates mean reversion approach \u2192 Positive GEX $1.10B (15%) confirms dealers will compress volatility \u2192 SPX 7000 options battle (20%) creates strong pivot/resistance \u2192 CAG extreme complacency (5%) provides contrarian bearish edge \u2192 Result: Bearish intraday fade to $694-695, bullish next-day bounce to $698-699"
   },
-  "generated_at": "2026-04-15T16:10:02Z",
-  "next_update": "2026-04-15T17:10:02Z",
+  "generated_at": "2026-04-15T16:45:01Z",
+  "next_update": "2026-04-15T18:45:01Z",
   "prices_at_generation": {
-    "SPY": 6994.48,
-    "QQQ": 613.39
+    "SPY": 696.385,
+    "QQQ": 632.01,
+    "IWM": 268.0,
+    "AAPL": 264.77,
+    "NVDA": 197.78,
+    "TSLA": 388.63,
+    "META": 673.47,
+    "MSFT": 407.88,
+    "AMD": 254.07,
+    "AMZN": 248.15,
+    "NKY": 58134.24,
+    "KOSPI": 6091.39,
+    "TAIEX": 36722.14,
+    "TOPIX": 399.6,
+    "GOLD": 4832.0,
+    "SILVER": 79.505,
+    "WTI": 91.54,
+    "BRENT": 95.39,
+    "VIX": 18.01,
+    "10Y_YIELD": 4.285,
+    "30Y_YIELD": 4.892,
+    "3M_YIELD": 3.618,
+    "DXY": 98.047,
+    "captured_at": "2026-04-15T16:45:01Z",
+    "MU": 442.215,
+    "USO": 123.63
   },
-  "regime": "pinned",
+  "regime": "low_vol_uptrend",
   "signal_snapshot": {
-    "pc_ratio": 0.64,
+    "pc_ratio": 0.553,
     "flow_sentiment": "BULLISH",
-    "vix": 18.05,
-    "regime": "pinned",
-    "news_headlines": "No headlines",
-    "top_flow_summary": "QQQ P 550.0 $13.3M BUY; QQQ P 550.0 $10.3M SELL; SPX C 7000.0 $7.9M BUY; SPX P 7000.0 $6.5M SELL; SPX C 7000.0 $3.0M BUY; SPX P 7000.0 $2.4M SELL; SPX C 7000.0 $2.0M BUY; SPX C 7000.0 $2.0M BUY; SPX P"
+    "top_flow_summary": "SPX $12.3M C, SPX $11.6M P, SPX $3.1M P",
+    "vix": 18.01,
+    "news_headlines": [
+      "The Opportunity Cost Has Shifted",
+      "Simulations Plus: Better Quarter, Same Doubts",
+      "National Bank of Canada: This Big Five Extension Is Still Overvalued"
+    ],
+    "regime": "low_vol_uptrend"
   },
   "data_sources": {
-    "headlines_count": 0,
-    "flow_trades": 100,
-    "sweeps_detected": 20,
-    "model": "gemma4:31b-local",
-    "trends_count": 0,
-    "trends_sample": [],
+    "headlines_count": 25,
+    "trends_count": 12,
+    "trends_sample": [
+      "Iran Ceasefire Market Impact",
+      "AI Infrastructure & Data Center Boom",
+      "S&P 500 Rally & Tech Momentum"
+    ],
+    "flow_trades": 12037,
     "top_trades": 10,
-    "sentiment": "BULLISH"
+    "sentiment": "BULLISH",
+    "pc_ratio": 0.553,
+    "price_source": "Yahoo",
+    "feedback_patterns": 1,
+    "strike_clusters": true
   }
 }
