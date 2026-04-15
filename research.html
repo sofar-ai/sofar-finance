@@ -219,6 +219,14 @@
       var data = await res.json();
       var s = data.stats || {};
       var exps = data.experiments || [];
+      // Sort: needs_review and promoted first, then by date
+      exps.sort(function(a, b) {
+        var priority = {'promoted': 0, 'needs_review': 1, 'rejected': 2, 'failed': 3};
+        var pa = priority[a.decision] !== undefined ? priority[a.decision] : 4;
+        var pb = priority[b.decision] !== undefined ? priority[b.decision] : 4;
+        if (pa !== pb) return pa - pb;
+        return (b.created_at || '').localeCompare(a.created_at || '');
+      });
       expEl.innerHTML = '<div class="sd-card">' +
         '<div class="sd-stat-row"><span class="sd-stat-label">Total experiments</span><span class="sd-stat-val">' + (s.total || 0) + '</span></div>' +
         '<div class="sd-stat-row"><span class="sd-stat-label">Promoted</span><span class="sd-stat-val" style="color:#22c55e;">' + (s.promoted || 0) + '</span></div>' +
