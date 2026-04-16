@@ -547,3 +547,122 @@ const OptionsFlowPage = (() => {
 
   return { init, setFilter, loadDetail };
 })();
+
+// ── Neon DB Integration (persistent flow queries) ──────────────────────
+(function wireNeonFlow() {
+  async function fetchFromNeon(params) {
+    const qs = new URLSearchParams(params).toString();
+    try {
+      const res = await fetch('/api/flow-trades?' + qs);
+      if (!res.ok) return null;
+      return await res.json();
+    } catch { return null; }
+  }
+
+  function renderNeonTrades(data, filterLabel) {
+    const tape = document.getElementById('of-tape');
+    if (!tape) return;
+    tape.innerHTML = '';
+    if (filterLabel) {
+      tape.insertAdjacentHTML('beforeend',
+        '<div class="tape-empty" style="color:#22c55e;font-size:11px;padding:4px 8px;border-bottom:1px solid var(--border)">' +
+        '🔍 Showing: ' + filterLabel + ' (' + (data.trades || []).length + ' trades from DB)' +
+        ' <span style="cursor:pointer;color:#f59e0b;margin-left:8px" onclick="OptionsFlowPage._clearNeonFilter()">✕ Clear</span></div>');
+    }
+    const statusEl = document.getElementById('of-trade-count');
+    if (statusEl) statusEl.textContent = (data.total_trades || 0).toLocaleString();
+    const premEl = document.getElementById('of-total-premium');
+    if (premEl) {
+      const p = data.total_premium || 0;
+      premEl.textContent = p >= 1e9 ? '$' + (p/1e9).toFixed(2) + 'B' : p >= 1e6 ? '$' + (p/1e6).toFixed(1) + 'M' : '$' + p.toLocaleString();
+    }
+    if (!data.trades || !data.trades.length) {
+      tape.insertAdjacentHTML('beforeend', '<div class="tape-empty">No trades found for this filter</div>');
+      return;
+    }
+    data.trades.forEach(t => {
+      // Map DB fields to expected format for makeRow
+      const trade = {
+        symbol: t.symbol,
+        strike: t.strike,
+        expiration: t.expiration ? String(t.expiration).replace(/-/g, '') : null,
+        right: t.right,
+        premium: t.premium,
+        timestamp: t.timestamp,
+        size: t.size,
+        side: t.side,
+        sweep_id: t.sweep_id
+      };
+      const right = (trade.right || '').toUpperCase();
+      const isCall = right === 'C' || right === 'CALL';
+      const side = (trade.side || '').toUpperCase();
+      const isSweep = !!trade.sweep_id;
+      const isWhale = (trade.premium || 0) >= 1000000;
+      const flags = (isSweep ? '🔥' : '') + (isWhale ? '🐳' : '');
+      const sideClass = side === 'BUY' ? 'tf-side-buy' : side === 'SELL' ? 'tf-side-sell' : '';
+      const fmtPrem = (p) => {
+        if (!p) return '—';
+        if (p >= 1e6) return '$' + (p/1e6).toFixed(2) + 'M';
+        if (p >= 1000) return '$' + (p/1000).toFixed(0) + 'K';
+        return '$' + p.toFixed(0);
+      };
+      const fmtExp = (exp) => {
+        const s = String(exp);
+        return s.length === 8 ? s.slice(4,6) + '/' + s.slice(6,8) + '/' + s.slice(2,4) : s;
+      };
+      const fmtTime = (ts) => {
+        if (!ts) return '';
+        try { return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }); }
+        catch { return ''; }
+      };
+      const el = document.createElement('div');
+      el.className = 'tape-row tape-' + (isCall ? 'call' : 'put') + (isSweep ? ' tape-sweep' : '');
+      el.innerHTML =
+        '<span class="tape-flags">' + flags + '</span>' +
+        '<span class="tape-sym">' + (trade.symbol || '—') + '</span>' +
+        '<span class="tape-strike">' + (trade.strike != null ? (+trade.strike).toFixed(0) : '—') + '</span>' +
+        '<span class="tape-expiry">' + (trade.expiration ? fmtExp(trade.expiration) : '—') + '</span>' +
+        '<span class="tape-cp tape-cp-' + (isCall ? 'c' : 'p') + '">' + right + '</span>' +
+        '<span class="tape-prem">' + fmtPrem(trade.premium) + '</span>' +
+        '<span class="tape-time">' + fmtTime(trade.timestamp) + '</span>' +
+        '<span class="tape-size">' + (trade.size != null ? trade.size + 'x' : '—') + '</span>' +
+        '<span class="tape-side ' + sideClass + '">' + (side || '—') + '</span>';
+      tape.appendChild(el);
+    });
+  }
+
+  // Override flow signal click to fetch from Neon
+  const origSignals = OptionsFlowPage.updateFlowSignals;
+  const signalEl = document.getElementById('of-flow-signals');
+  if (signalEl) {
+    signalEl.addEventListener('click', async function(e) {
+      const row = e.target.closest('.of-signal-row');
+      if (!row) return;
+      const sym = row.querySelector('.of-signal-sym')?.textContent?.trim();
+      if (!sym) return;
+      const data = await fetchFromNeon({ symbol: sym, min_premium: 50000 });
+      if (data) renderNeonTrades(data, sym + ' flow');
+      OptionsFlowPage.loadDetail(sym);
+    });
+  }
+
+  // Override sweep click to fetch from Neon
+  const sweepEl = document.getElementById('of-sweeps');
+  if (sweepEl) {
+    sweepEl.addEventListener('click', async function(e) {
+      const row = e.target.closest('.of-sweep-row');
+      if (!row) return;
+      const sym = row.querySelector('.of-sweep-sym')?.textContent?.trim();
+      if (!sym) return;
+      const data = await fetchFromNeon({ symbol: sym, min_premium: 100000 });
+      if (data) renderNeonTrades(data, sym + ' sweeps');
+      OptionsFlowPage.loadDetail(sym);
+    });
+  }
+
+  // Clear filter — reload live tape
+  OptionsFlowPage._clearNeonFilter = function() {
+    document.getElementById('of-ticker-search').value = '';
+    OptionsFlowPage.setFilter('ticker', '');
+  };
+})();
