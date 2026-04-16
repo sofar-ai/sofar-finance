@@ -1,5 +1,10 @@
 import { neon } from '@neondatabase/serverless';
 const sql = neon(process.env.DATABASE_URL);
+
+function getETDate() {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -13,7 +18,7 @@ export default async function handler(req, res) {
       right,
       limit
     } = req.query;
-    const sessionDate = date || new Date().toISOString().slice(0, 10);
+    const sessionDate = date || getETDate();
     const minPrem = parseInt(min_premium) || 0;
     const maxRows = Math.min(parseInt(limit) || 500, 2000);
     let trades;
