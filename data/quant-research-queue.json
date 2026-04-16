@@ -1,139 +1,125 @@
 {
-  "generated_at": "2026-04-15T21:03:47.940197",
-  "source": "quant-research-scout",
+  "generated_at": "2026-04-15T21:57:05.405476",
+  "source": "quant-research-scout-v2",
   "model": "gemma4:26b",
-  "queries_used": [
-    "options implied volatility skew alpha prediction",
-    "dealer gamma exposure equity returns",
-    "options order flow information asymmetry",
-    "volatility risk premium term structure",
-    "put call ratio predictive power stock returns"
-  ],
-  "papers_found": 5,
-  "hypotheses_extracted": 5,
-  "papers": [
-    {
-      "source": "quantocracy",
-      "title": "What's the Optimal Stack? [Return Stacked]",
-      "url": "https://www.returnstacked.com/whats-the-optimal-stack/"
-    },
-    {
-      "source": "quantocracy",
-      "title": "A Historical Look At $SPX on Tax Day [Quantifiable Edges]",
-      "url": "https://quantifiableedges.com/a-historical-look-at-spx-on-tax-day/"
-    },
-    {
-      "source": "quantocracy",
-      "title": "The Many Facets of Stock Momentum: Distinguishing Factor and Stock Components [Alpha Architect]",
-      "url": "https://alphaarchitect.com/stock-specific-momentum/"
-    },
-    {
-      "source": "quantocracy",
-      "title": "Data transformations: Data shape and predictive features [Trading the Breaking]",
-      "url": "https://www.quantbeckman.com/p/with-code-data-transformations-data"
-    },
-    {
-      "source": "quantocracy",
-      "title": "Factor MAX: A New Signal for Predicting Factor Returns [Alpha Architect]",
-      "url": "https://alphaarchitect.com/factor-max/"
-    }
-  ],
+  "research_theme": "Cross-Sectional Volatility Surface Dynamics & Flow-Induced Gamma Imbalance",
+  "hypotheses_count": 5,
+  "cycle": 2,
   "hypotheses": [
     {
-      "title": "idiosyncratic_momentum_residual_zscore",
-      "source_paper": "https://alphaarchitect.com/stock-specific-momentum/",
+      "title": "gex_flip_sweep_convergence",
       "intel_type": "SIGINT",
-      "hypothesis": "Stocks exhibiting high residual momentum (stock return minus beta-adjusted index return) exhibit higher 21-day forward returns than stocks with high factor-driven momentum",
-      "signal_definition": "For AAPL, MSFT, etc., compute 60-day rolling beta relative to SPY; calculate residual return = R_i - (Beta_i * R_market); compute z-score of residual return over 252-day window",
-      "data_required": [
-        "prices_daily (SPY, AAPL, MSFT, AMZN, GOOGL, META, NVDA, TSLA, AMD)",
-        "signal_values (z-scores)"
+      "source_papers": [
+        "https://arxiv.org/pdf/2512.17923"
+      ],
+      "theoretical_basis": "When net GEX approaches the flip point, dealer hedging becomes 'unstable' (moving from volatility suppression to expansion). If this coincides with high-velocity 'sweep' trades (aggressive informed flow), the probability of a volatility breakout increases exponentially due to the feedback loop of dealer delta-hedging.",
+      "hypothesis": "When abs(gex_historical.net_gex / gex_historical.gex_flip_point) < 0.1 AND flow_trades.size (sweeps) exceeds 2-sigma of 10-day average, 1-day forward volatility (ATR) will expand.",
+      "signal_definition": "Calculate ratio R = gex_historical.net_gex / gex_historical.gex_flip_point. Identify 'sweeps' in flow_trades where sweep_id IS NOT NULL. Compute Z-score of sum(flow_trades.size) for sweeps over the last 4 hours. Signal triggers if abs(R) < 0.1 and Z-score > 2.0.",
+      "compute_approach": "Step 1: Query gex_historical for net_gex and gex_flip_point. Step 2: Query flow_trades for non-null sweep_id and sum size. Step 3: Compute rolling 10-day mean/std of sweep volume. Step 4: Return signal_values where condition met.",
+      "data_tables": [
+        "gex_historical",
+        "flow_trades"
       ],
       "data_available": true,
-      "expected_relationship": "positive correlation with 21d forward returns",
-      "expected_edge": "Higher Information Ratio by filtering out beta-driven momentum",
-      "compute_approach": "1) Compute 60d rolling beta for each ticker vs SPY, 2) Calculate daily residual returns, 3) Compute 252d rolling z-score of residuals, 4) Rank stocks by z-score, 5) Backtest long top decile",
+      "expected_edge": "High. Captures the exact moment dealer-induced liquidity vanishes.",
       "priority": "high",
-      "validation_plan": "Compare Sharpe of 'Residual Momentum' vs 'Raw Momentum' (simple 12m momentum) using 21d forward returns",
-      "id": "qr-20260415-002",
+      "novelty": "Combines structural market regime (GEX) with micro-structure aggression (Sweeps).",
+      "id": "qr-202604152157-001",
       "status": "pending",
-      "generated_at": "2026-04-15T21:03:47.940165"
+      "generated_at": "2026-04-15T21:57:05.405403",
+      "research_theme": "Cross-Sectional Volatility Surface Dynamics & Flow-Induced Gamma Imbalance"
     },
     {
-      "title": "credit_spread_extreme_expansion_zscore",
-      "source_paper": "https://alphaarchitect.com/factor-max/",
+      "title": "iv_skew_acceleration_index",
       "intel_type": "SIGINT",
-      "hypothesis": "Extreme expansion in high-yield credit spreads (hy_ig_spread) acts as a leading indicator for equity volatility expansion and negative returns",
-      "signal_definition": "Compute 252-day rolling z-score of the hy_ig_spread macro signal; trigger signal when z-score > 2.0",
-      "data_required": [
-        "macro_signals (hy_ig_spread)"
+      "source_papers": [
+        "https://arxiv.org/abs/2511.07571",
+        "https://arxiv.org/html/1904.12834"
+      ],
+      "theoretical_basis": "The curvature (smile) of the IV surface represents the market's pricing of tail risk. A rapid increase in the second derivative of the IV surface (skew acceleration) suggests that informed participants are aggressively buying OTM protection, signaling an impending regime shift before the VIX reacts.",
+      "hypothesis": "A positive change in the 2nd derivative of IV across strikes (curvature) for OTM puts relative to ATM strikes predicts an increase in realized volatility.",
+      "signal_definition": "For a given date and symbol, take IV from options_eod at 25-delta, 50-delta, and 75-delta strikes. Compute the difference in IV slopes: (IV_25d - IV_50d) - (IV_50d - IV_75d). Signal is the 5-day Z-score of this curvature value.",
+      "compute_approach": "Step 1: Query options_eod for iv, delta, strike, symbol, date. Step 2: Pivot data to get IV at specific delta levels per date. Step 3: Compute the second-order difference. Step 4: Apply rolling Z-score.",
+      "data_tables": [
+        "options_end"
       ],
       "data_available": true,
-      "expected_relationship": "negative correlation with 5d/10d forward SPY returns",
-      "expected_edge": "Detection of systemic liquidity/risk-off regime shifts",
-      "compute_approach": "1) Query hy_ig_spread, 2) Compute 252d rolling z-score, 3) Identify periods where z > 2, 4) Measure SPY returns and VIX levels during these periods",
+      "expected_edge": "Captures 'volatility of volatility' (vol-of-vol) embedded in the surface structure.",
       "priority": "high",
-      "validation_plan": "Test predictive power of spread z-score on SPY 5d and 21d forward returns; check for regime-dependent efficacy",
-      "id": "qr-20260415-003",
+      "novelty": "Moves beyond simple IV levels to the higher-order dynamics of the surface shape.",
+      "id": "qr-202604152157-002",
       "status": "pending",
-      "generated_at": "2026-04-15T21:03:47.940172"
+      "generated_at": "2026-04-15T21:57:05.405430",
+      "research_theme": "Cross-Sectional Volatility Surface Dynamics & Flow-Induced Gamma Imbalance"
     },
     {
-      "title": "tax_day_volatility_clustering",
-      "source_paper": "https://quantifiableedges.com/a-historical-look-at-spx-on-tax-day/",
+      "title": "vpin_gex_regime_shift",
       "intel_type": "SIGINT",
-      "hypothesis": "Increased realized volatility in SPY during the 5 trading days preceding April 15th predicts a negative return shock on April 15th-20th",
-      "signal_definition": "Calculate 5-day rolling standard deviation of SPY daily returns; identify windows where this value is > 1.5x the 60-day average; measure SPY returns for the subsequent 5 days",
-      "data_required": [
-        "prices_daily (SPY, returns)"
+      "source_papers": [
+        "https://papers.ssrn.com/abstract=2791243"
+      ],
+      "theoretical_basis": "VPIN (Volume-synchronized Probability of Informed trading) measures order flow toxicity. In a 'negative gamma' regime, high VPIN is extremely dangerous because the market maker's hedging (selling into weakness) amplifies the toxicity, leading to liquidity voids.",
+      "hypothesis": "In a 'negative' gex_regime, a spike in VPIN (proxied by flow_trades volume imbalance) will lead to a sharp increase in realized volatility.",
+      "signal_definition": "Proxy VPIN using: (sum(flow_trades.size where side='BUY') - sum(flow_trades.size where side='SELL')) / sum(flow_trades.size). Signal triggers when this imbalance exceeds 2-std and gex_historical.gex_regime = 'negative'.",
+      "compute_approach": "Step 1: Aggregate flow_trades by symbol and session_date to find net volume imbalance. Step 2: Query gex_historical for regime. Step 3: Compute Z-score of the imbalance. Step 4: Output signal if regime is negative and Z-score > threshold.",
+      "data_tables": [
+        "flow_trades",
+        "gex_historical"
       ],
       "data_available": true,
-      "expected_relationship": "negative correlation with 5d forward returns",
-      "expected_edge": "0.2 - 0.4 Sharpe improvement in seasonal strategy",
-      "compute_approach": "1) Query SPY daily returns, 2) Compute 5d rolling std dev, 3) Compute 60d rolling mean of that std dev, 4) Identify 'high vol' periods around April 15, 5) Regress forward 5d returns against signal",
-      "priority": "medium",
-      "validation_plan": "Test correlation with 5d/10d forward SPY returns specifically in the April window vs non-April windows",
-      "id": "qr-20260415-001",
+      "expected_edge": "Identifies the 'liquidity black hole' condition where toxicity and hedging-feedback loops overlap.",
+      "priority": "high",
+      "novelty": "Integrates microstructure toxicity (VPIN) with macro-structural hedging (GEX).",
+      "id": "qr-202604152157-005",
       "status": "pending",
-      "generated_at": "2026-04-15T21:03:47.940147"
+      "generated_at": "2026-04-15T21:57:05.405460",
+      "research_theme": "Cross-Sectional Volatility Surface Dynamics & Flow-Induced Gamma Imbalance"
     },
     {
-      "title": "volatility_feature_roc_transformation",
-      "source_paper": "https://www.quantbeckman.com/p/with-code-data-transformations-data",
-      "intel_type": "SIGINT",
-      "hypothesis": "The rate of change (ROC) of the IV skew (difference between OTM and ATM IV) is a more predictive feature for price direction than the absolute IV level",
-      "signal_definition": "Compute IV_skew = IV(25d_OTM) - IV(ATM); compute 5-day ROC of IV_skew; z-score the ROC against a 60-day window",
-      "data_required": [
-        "options_eod (SPY, iv, strike, expiration)"
+      "title": "dark_pool_gamma_imbalance",
+      "intel_type": "HUMINT",
+      "source_papers": [
+        "https://arxiv.org/pdf/2511.22766"
+      ],
+      "theoretical_basis": "Large institutional positions often hide in dark pools. If dark pool shorting (short_ratio) is increasing while dealer gamma (net_gex) is decreasing, it indicates a 'hidden' supply of bearish pressure that will force dealers to sell into a falling market, creating a self-reinforcing downward spiral.",
+      "hypothesis": "When dark_pool_volume.short_ratio is > 2-sigma AND gex_historical.net_gex is trending downward, price direction is negative.",
+      "signal_definition": "Compute Z-score of dark_pool_volume.short_ratio over 20 days. Check if gex_historical.net_gex < gex_historical.net_gex (lagged 1 day). Signal = 1 if both conditions are met.",
+      "compute_approach": "Step 1: Query dark_pool_volume for short_ratio. Step 2: Query gex_historical for net_gex. Step 3: Compute rolling Z-score for short_ratio. Step 4: Compute 1-day delta for net_gex. Step 5: Join on symbol and date.",
+      "data_tables": [
+        "dark_pool_volume",
+        "gex_historical"
       ],
       "data_available": true,
-      "expected_relationship": "negative correlation with 5d forward SPY returns when ROC is positive",
-      "expected_edge": "Capturing rapid shifts in dealer hedging demand",
-      "compute_approach": "1) Extract IV for ATM and 25d OTM strikes from options_eod, 2) Calculate IV_skew, 3) Compute 5d ROC of skew, 4) Z-score the ROC over 60d",
+      "expected_edge": "Detects the convergence of institutional 'hidden' selling and dealer-induced 'forced' selling.",
       "priority": "medium",
-      "validation_plan": "Test if ROC(skew) z-score has higher mutual information with 5d SPY returns than absolute IV or absolute skew",
-      "id": "qr-20260415-004",
+      "novelty": "Cross-references dark pool liquidity with the dealer hedging regime.",
+      "id": "qr-202604152157-003",
       "status": "pending",
-      "generated_at": "2026-04-15T21:03:47.940179"
+      "generated_at": "2026-04-15T21:57:05.405441",
+      "research_theme": "Cross-Sectional Volatility Surface Dynamics & Flow-Induced Gamma Imbalance"
     },
     {
-      "title": "cross_asset_momentum_stacking_zscore",
-      "source_paper": "https://www.returnstacked.com/whats-the-optimal-stack/",
-      "intel_type": "SIGINT",
-      "hypothesis": "A stacked momentum signal combining ES=F (Equity), NQ=F (Tech), and RB=F (Energy/Commodity) reduces drawdown compared to single-asset momentum",
-      "signal_definition": "Compute 21d momentum for ES=F, NQ=F, and RB=F; compute the z-score of the sum of these momentum components; weight by inverse volatility",
-      "data_required": [
-        "prices_daily (ES=F, NQ=F, RB=F)"
+      "title": "earnings_vol_surface_expansion",
+      "intel_type": "ELINT",
+      "source_papers": [
+        "https://arxiv.org/html/2509.05911v1"
+      ],
+      "theoretical_basis": "The 'volatility crush' after earnings is well known, but the 'pre-earnings expansion' of the IV surface (specifically the widening of the smile) acts as a leading indicator of the market's uncertainty regarding the magnitude of the earnings surprise.",
+      "hypothesis": "An increase in the IV spread between OTM calls and OTM puts (skew) in the 5 days leading up to an earnings date predicts higher-than-expected realized volatility on the earnings day.",
+      "signal_definition": "Identify symbols in earnings_calendar where date is within next 5 days. For these symbols, calculate (IV_call_OTM - IV_put_OTM) from options_eod. Signal is the rate of change (ROC) of this spread.",
+      "compute_approach": "Step 1: Query earnings_calendar for upcoming dates. Step 2: Query options_eod for IV at specific strikes for those symbols. Step 3: Calculate the spread. Step 4: Calculate ROC of the spread.",
+      "data_tables": [
+        "earnings_calendar",
+        "options_eod"
       ],
       "data_available": true,
-      "expected_relationship": "positive correlation with 21d forward aggregate return",
-      "expected_edge": "Reduced volatility and improved Sortino ratio via diversification of momentum sources",
-      "compute_approach": "1) Compute 21d returns for all three assets, 2) Compute 60d rolling volatility for each, 3) Create weighted sum: Sum(Return_i / Vol_i), 4) Z-score the resulting aggregate signal",
+      "expected_edge": "Uses the 'information asymmetry' of the earnings event to trade the expansion of the volatility surface.",
       "priority": "medium",
-      "validation_plan": "Compare the Sharpe ratio of the 'Stacked Momentum' signal against a 'Pure Equity Momentum' (ES=F only) signal",
-      "id": "qr-20260415-005",
+      "novelty": "Uses the IV surface as a proxy for the market's 'surprise' expectation.",
+      "id": "qr-202604152157-004",
       "status": "pending",
-      "generated_at": "2026-04-15T21:03:47.940185"
+      "generated_at": "2026-04-15T21:57:05.405451",
+      "research_theme": "Cross-Sectional Volatility Surface Dynamics & Flow-Induced Gamma Imbalance"
     }
   ]
 }
