@@ -1,0 +1,139 @@
+{
+  "generated_at": "2026-04-15T21:03:47.940197",
+  "source": "quant-research-scout",
+  "model": "gemma4:26b",
+  "queries_used": [
+    "options implied volatility skew alpha prediction",
+    "dealer gamma exposure equity returns",
+    "options order flow information asymmetry",
+    "volatility risk premium term structure",
+    "put call ratio predictive power stock returns"
+  ],
+  "papers_found": 5,
+  "hypotheses_extracted": 5,
+  "papers": [
+    {
+      "source": "quantocracy",
+      "title": "What's the Optimal Stack? [Return Stacked]",
+      "url": "https://www.returnstacked.com/whats-the-optimal-stack/"
+    },
+    {
+      "source": "quantocracy",
+      "title": "A Historical Look At $SPX on Tax Day [Quantifiable Edges]",
+      "url": "https://quantifiableedges.com/a-historical-look-at-spx-on-tax-day/"
+    },
+    {
+      "source": "quantocracy",
+      "title": "The Many Facets of Stock Momentum: Distinguishing Factor and Stock Components [Alpha Architect]",
+      "url": "https://alphaarchitect.com/stock-specific-momentum/"
+    },
+    {
+      "source": "quantocracy",
+      "title": "Data transformations: Data shape and predictive features [Trading the Breaking]",
+      "url": "https://www.quantbeckman.com/p/with-code-data-transformations-data"
+    },
+    {
+      "source": "quantocracy",
+      "title": "Factor MAX: A New Signal for Predicting Factor Returns [Alpha Architect]",
+      "url": "https://alphaarchitect.com/factor-max/"
+    }
+  ],
+  "hypotheses": [
+    {
+      "title": "idiosyncratic_momentum_residual_zscore",
+      "source_paper": "https://alphaarchitect.com/stock-specific-momentum/",
+      "intel_type": "SIGINT",
+      "hypothesis": "Stocks exhibiting high residual momentum (stock return minus beta-adjusted index return) exhibit higher 21-day forward returns than stocks with high factor-driven momentum",
+      "signal_definition": "For AAPL, MSFT, etc., compute 60-day rolling beta relative to SPY; calculate residual return = R_i - (Beta_i * R_market); compute z-score of residual return over 252-day window",
+      "data_required": [
+        "prices_daily (SPY, AAPL, MSFT, AMZN, GOOGL, META, NVDA, TSLA, AMD)",
+        "signal_values (z-scores)"
+      ],
+      "data_available": true,
+      "expected_relationship": "positive correlation with 21d forward returns",
+      "expected_edge": "Higher Information Ratio by filtering out beta-driven momentum",
+      "compute_approach": "1) Compute 60d rolling beta for each ticker vs SPY, 2) Calculate daily residual returns, 3) Compute 252d rolling z-score of residuals, 4) Rank stocks by z-score, 5) Backtest long top decile",
+      "priority": "high",
+      "validation_plan": "Compare Sharpe of 'Residual Momentum' vs 'Raw Momentum' (simple 12m momentum) using 21d forward returns",
+      "id": "qr-20260415-002",
+      "status": "pending",
+      "generated_at": "2026-04-15T21:03:47.940165"
+    },
+    {
+      "title": "credit_spread_extreme_expansion_zscore",
+      "source_paper": "https://alphaarchitect.com/factor-max/",
+      "intel_type": "SIGINT",
+      "hypothesis": "Extreme expansion in high-yield credit spreads (hy_ig_spread) acts as a leading indicator for equity volatility expansion and negative returns",
+      "signal_definition": "Compute 252-day rolling z-score of the hy_ig_spread macro signal; trigger signal when z-score > 2.0",
+      "data_required": [
+        "macro_signals (hy_ig_spread)"
+      ],
+      "data_available": true,
+      "expected_relationship": "negative correlation with 5d/10d forward SPY returns",
+      "expected_edge": "Detection of systemic liquidity/risk-off regime shifts",
+      "compute_approach": "1) Query hy_ig_spread, 2) Compute 252d rolling z-score, 3) Identify periods where z > 2, 4) Measure SPY returns and VIX levels during these periods",
+      "priority": "high",
+      "validation_plan": "Test predictive power of spread z-score on SPY 5d and 21d forward returns; check for regime-dependent efficacy",
+      "id": "qr-20260415-003",
+      "status": "pending",
+      "generated_at": "2026-04-15T21:03:47.940172"
+    },
+    {
+      "title": "tax_day_volatility_clustering",
+      "source_paper": "https://quantifiableedges.com/a-historical-look-at-spx-on-tax-day/",
+      "intel_type": "SIGINT",
+      "hypothesis": "Increased realized volatility in SPY during the 5 trading days preceding April 15th predicts a negative return shock on April 15th-20th",
+      "signal_definition": "Calculate 5-day rolling standard deviation of SPY daily returns; identify windows where this value is > 1.5x the 60-day average; measure SPY returns for the subsequent 5 days",
+      "data_required": [
+        "prices_daily (SPY, returns)"
+      ],
+      "data_available": true,
+      "expected_relationship": "negative correlation with 5d forward returns",
+      "expected_edge": "0.2 - 0.4 Sharpe improvement in seasonal strategy",
+      "compute_approach": "1) Query SPY daily returns, 2) Compute 5d rolling std dev, 3) Compute 60d rolling mean of that std dev, 4) Identify 'high vol' periods around April 15, 5) Regress forward 5d returns against signal",
+      "priority": "medium",
+      "validation_plan": "Test correlation with 5d/10d forward SPY returns specifically in the April window vs non-April windows",
+      "id": "qr-20260415-001",
+      "status": "pending",
+      "generated_at": "2026-04-15T21:03:47.940147"
+    },
+    {
+      "title": "volatility_feature_roc_transformation",
+      "source_paper": "https://www.quantbeckman.com/p/with-code-data-transformations-data",
+      "intel_type": "SIGINT",
+      "hypothesis": "The rate of change (ROC) of the IV skew (difference between OTM and ATM IV) is a more predictive feature for price direction than the absolute IV level",
+      "signal_definition": "Compute IV_skew = IV(25d_OTM) - IV(ATM); compute 5-day ROC of IV_skew; z-score the ROC against a 60-day window",
+      "data_required": [
+        "options_eod (SPY, iv, strike, expiration)"
+      ],
+      "data_available": true,
+      "expected_relationship": "negative correlation with 5d forward SPY returns when ROC is positive",
+      "expected_edge": "Capturing rapid shifts in dealer hedging demand",
+      "compute_approach": "1) Extract IV for ATM and 25d OTM strikes from options_eod, 2) Calculate IV_skew, 3) Compute 5d ROC of skew, 4) Z-score the ROC over 60d",
+      "priority": "medium",
+      "validation_plan": "Test if ROC(skew) z-score has higher mutual information with 5d SPY returns than absolute IV or absolute skew",
+      "id": "qr-20260415-004",
+      "status": "pending",
+      "generated_at": "2026-04-15T21:03:47.940179"
+    },
+    {
+      "title": "cross_asset_momentum_stacking_zscore",
+      "source_paper": "https://www.returnstacked.com/whats-the-optimal-stack/",
+      "intel_type": "SIGINT",
+      "hypothesis": "A stacked momentum signal combining ES=F (Equity), NQ=F (Tech), and RB=F (Energy/Commodity) reduces drawdown compared to single-asset momentum",
+      "signal_definition": "Compute 21d momentum for ES=F, NQ=F, and RB=F; compute the z-score of the sum of these momentum components; weight by inverse volatility",
+      "data_required": [
+        "prices_daily (ES=F, NQ=F, RB=F)"
+      ],
+      "data_available": true,
+      "expected_relationship": "positive correlation with 21d forward aggregate return",
+      "expected_edge": "Reduced volatility and improved Sortino ratio via diversification of momentum sources",
+      "compute_approach": "1) Compute 21d returns for all three assets, 2) Compute 60d rolling volatility for each, 3) Create weighted sum: Sum(Return_i / Vol_i), 4) Z-score the resulting aggregate signal",
+      "priority": "medium",
+      "validation_plan": "Compare the Sharpe ratio of the 'Stacked Momentum' signal against a 'Pure Equity Momentum' (ES=F only) signal",
+      "id": "qr-20260415-005",
+      "status": "pending",
+      "generated_at": "2026-04-15T21:03:47.940185"
+    }
+  ]
+}

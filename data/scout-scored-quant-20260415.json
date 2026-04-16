@@ -1,0 +1,47 @@
+[
+  {
+    "title": "idiosyncratic_momentum_residual_zscore",
+    "summary": "Stocks exhibiting high residual momentum (stock return minus beta-adjusted index return) exhibit higher 21-day forward returns than stocks with high factor-driven momentum",
+    "signal_definition": "For AAPL, MSFT, etc., compute 60-day rolling beta relative to SPY; calculate residual return = R_i - (Beta_i * R_market); compute z-score of residual return over 252-day window",
+    "compute_approach": "1) Compute 60d rolling beta for each ticker vs SPY, 2) Calculate daily residual returns, 3) Compute 252d rolling z-score of residuals, 4) Rank stocks by z-score, 5) Backtest long top decile",
+    "intel_type": "SIGINT",
+    "source": "https://alphaarchitect.com/stock-specific-momentum/",
+    "score": 8
+  },
+  {
+    "title": "credit_spread_extreme_expansion_zscore",
+    "summary": "Extreme expansion in high-yield credit spreads (hy_ig_spread) acts as a leading indicator for equity volatility expansion and negative returns",
+    "signal_definition": "Compute 252-day rolling z-score of the hy_ig_spread macro signal; trigger signal when z-score > 2.0",
+    "compute_approach": "1) Query hy_ig_spread, 2) Compute 252d rolling z-score, 3) Identify periods where z > 2, 4) Measure SPY returns and VIX levels during these periods",
+    "intel_type": "SIGINT",
+    "source": "https://alphaarchitect.com/factor-max/",
+    "score": 8
+  },
+  {
+    "title": "tax_day_volatility_clustering",
+    "summary": "Increased realized volatility in SPY during the 5 trading days preceding April 15th predicts a negative return shock on April 15th-20th",
+    "signal_definition": "Calculate 5-day rolling standard deviation of SPY daily returns; identify windows where this value is > 1.5x the 60-day average; measure SPY returns for the subsequent 5 days",
+    "compute_approach": "1) Query SPY daily returns, 2) Compute 5d rolling std dev, 3) Compute 60d rolling mean of that std dev, 4) Identify 'high vol' periods around April 15, 5) Regress forward 5d returns against signal",
+    "intel_type": "SIGINT",
+    "source": "https://quantifiableedges.com/a-historical-look-at-spx-on-tax-day/",
+    "score": 6
+  },
+  {
+    "title": "volatility_feature_roc_transformation",
+    "summary": "The rate of change (ROC) of the IV skew (difference between OTM and ATM IV) is a more predictive feature for price direction than the absolute IV level",
+    "signal_definition": "Compute IV_skew = IV(25d_OTM) - IV(ATM); compute 5-day ROC of IV_skew; z-score the ROC against a 60-day window",
+    "compute_approach": "1) Extract IV for ATM and 25d OTM strikes from options_eod, 2) Calculate IV_skew, 3) Compute 5d ROC of skew, 4) Z-score the ROC over 60d",
+    "intel_type": "SIGINT",
+    "source": "https://www.quantbeckman.com/p/with-code-data-transformations-data",
+    "score": 6
+  },
+  {
+    "title": "cross_asset_momentum_stacking_zscore",
+    "summary": "A stacked momentum signal combining ES=F (Equity), NQ=F (Tech), and RB=F (Energy/Commodity) reduces drawdown compared to single-asset momentum",
+    "signal_definition": "Compute 21d momentum for ES=F, NQ=F, and RB=F; compute the z-score of the sum of these momentum components; weight by inverse volatility",
+    "compute_approach": "1) Compute 21d returns for all three assets, 2) Compute 60d rolling volatility for each, 3) Create weighted sum: Sum(Return_i / Vol_i), 4) Z-score the resulting aggregate signal",
+    "intel_type": "SIGINT",
+    "source": "https://www.returnstacked.com/whats-the-optimal-stack/",
+    "score": 6
+  }
+]
