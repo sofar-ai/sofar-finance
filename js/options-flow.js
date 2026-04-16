@@ -585,7 +585,7 @@ const OptionsFlowPage = (() => {
       const trade = {
         symbol: t.symbol,
         strike: t.strike,
-        expiration: t.expiration ? String(t.expiration).replace(/-/g, '') : null,
+        expiration: t.expiration ? String(t.expiration).slice(0,10).replace(/-/g, '') : null,
         right: t.right,
         premium: t.premium,
         timestamp: t.timestamp,
