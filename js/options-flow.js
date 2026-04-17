@@ -445,14 +445,37 @@ const OptionsFlowPage = (() => {
     let data = null;
     let usingTape = false;
 
-    // Try flow-tape.json first (from daemon)
+    // Load flow-tape.json for panel data (metrics, sweeps, sectors)
     try {
-      const res = await fetch(`/data/flow-tape.json?v=${Date.now()}`);
+      const res = await fetch(\`/data/flow-tape.json?v=\${Date.now()}\`);
       if (res.ok) {
         data = await res.json();
         usingTape = true;
       }
     } catch {}
+    // Merge full day trades from Neon
+    try {
+      const nRes = await fetch('/api/flow-trades?limit=2000');
+      if (nRes.ok) {
+        const nData = await nRes.json();
+        if (nData.trades && nData.trades.length > 0) {
+          if (data && data.trades) {
+            const keys = new Set(data.trades.map(t =>
+              (t.symbol||'') + (t.strike||'') + (t.timestamp||'') + (t.size||'')
+            ));
+            for (const t of nData.trades) {
+              const k = (t.symbol||'') + (t.strike||'') + (t.timestamp||'') + (t.size||'');
+              if (!keys.has(k)) data.trades.push(t);
+            }
+          } else if (!data) {
+            data = { trades: nData.trades, market_open: true };
+            usingTape = true;
+          } else {
+            data.trades = nData.trades;
+          }
+        }
+      }
+    } catch(e) { console.log('Neon merge error:', e); }
 
     // Fallback to options-flow.json
     if (!data) {
