@@ -52,7 +52,7 @@ const OptionsFlowPage = (() => {
   function fmtTime(ts) {
     if (!ts) return '';
     try {
-      return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const d = new Date(ts); d.setHours(d.getHours() + 4); return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     } catch { return ''; }
   }
 
@@ -648,7 +648,7 @@ const OptionsFlowPage = (() => {
       };
       const fmtTime = (ts) => {
         if (!ts) return '';
-        try { return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }); }
+        try { const d = new Date(ts); d.setHours(d.getHours() + 4); return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }); }
         catch { return ''; }
       };
       const el = document.createElement('div');
