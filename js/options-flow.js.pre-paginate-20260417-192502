@@ -576,64 +576,6 @@ const OptionsFlowPage = (() => {
     });
 
     loadFlowData();
-    // ─── Scroll-to-load more ──────────────────────────────────────────────
-    if (!FlowData._scrollObserverInstalled) {
-      FlowData._scrollObserverInstalled = true;
-      const tape = document.getElementById('of-tape');
-      if (tape) {
-        // Sentinel appended at tape bottom; re-added after each rebuildTape
-        const installSentinel = () => {
-          let s = document.getElementById('of-tape-sentinel');
-          if (!s) {
-            s = document.createElement('div');
-            s.id = 'of-tape-sentinel';
-            s.style.cssText = 'height:40px;text-align:center;color:var(--text-muted);font-size:11px;padding:12px';
-            tape.appendChild(s);
-          }
-          if (FlowData.exhausted) {
-            s.textContent = '— end of filtered results —';
-          } else if (FlowData.loading) {
-            s.textContent = 'Loading more…';
-          } else if (FlowData.hasMore) {
-            s.textContent = '↓ scroll to load more';
-          } else {
-            s.textContent = '';
-          }
-        };
-        FlowData._installSentinel = installSentinel;
-        // Observe scroll near bottom of the tape container
-        tape.addEventListener('scroll', () => {
-          const scrollRemaining = tape.scrollHeight - tape.scrollTop - tape.clientHeight;
-          if (scrollRemaining < 300 && FlowData.hasMore && !FlowData.loading && !FlowData.exhausted) {
-            FlowData.loadMore().then(() => {
-              rebuildTape({ trades: allTrades, market_open: !FlowData.selectedDate });
-              installSentinel();
-            });
-          }
-        });
-      }
-    }
-    // ─── Date selector wiring ─────────────────────────────────────────────
-    const dateSel = document.getElementById('of-date-select');
-    if (dateSel) {
-      dateSel.addEventListener('change', async (e) => {
-        const v = e.target.value;
-        FlowData.selectedDate = (v === 'today') ? null : v;
-        // Update URL query param
-        const url = new URL(window.location);
-        if (FlowData.selectedDate) url.searchParams.set('date', FlowData.selectedDate);
-        else url.searchParams.delete('date');
-        history.replaceState({}, '', url);
-        await loadFlowData();
-      });
-      // Respect URL param on load
-      const urlDate = params.get('date');
-      if (urlDate) {
-        dateSel.value = urlDate;
-        FlowData.selectedDate = urlDate;
-      }
-    }
-
     panelTimer = setInterval(() => {
       if (!isPaused) loadFlowData();
     }, PANEL_TICK);
@@ -723,7 +665,6 @@ const OptionsFlowPage = (() => {
         '<span class="tape-side ' + sideClass + '">' + (side || '—') + '</span>';
       tape.appendChild(el);
     });
-    if (FlowData._installSentinel) FlowData._installSentinel();
   }
 
   // Override flow signal click to fetch from Neon
