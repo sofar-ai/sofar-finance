@@ -244,6 +244,78 @@
     updateClock();
     setInterval(updateClock, 1000);
     OptionsFlowPage.init();
+
+    // Flow Structure Analysis
+    async function loadFlowAnalysis() {
+      try {
+        const res = await fetch('/api/flow-analysis?action=latest');
+        const data = await res.json();
+        const bar = document.getElementById('flow-analysis-bar');
+        const faContent = document.getElementById('fa-content');
+        const faTimestamp = document.getElementById('fa-timestamp');
+        const faCrossAsset = document.getElementById('fa-cross-asset');
+
+        if (!data.analyses || data.analyses.length === 0) return;
+
+        bar.style.display = 'block';
+
+        // Find the non-cross-asset analyses and cross-asset
+        const tickers = data.analyses.filter(a => !a.is_cross_asset);
+        const crossAsset = data.analyses.find(a => a.is_cross_asset);
+
+        if (tickers.length > 0) {
+          // Show most recent ticker analysis
+          const latest = tickers[0];
+          const price = latest.reference_price ? ' @ ' + latest.reference_price.toFixed(2) : '';
+          const time = new Date(latest.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) + ' ET';
+
+          // Clean markdown for display
+          let text = latest.analysis || '';
+          text = text.replace(/#{1,4}\s*/g, '').replace(/\*\*/g, '').replace(/\*/g, '').replace(/---/g, '');
+
+          // Truncate for the bar — show first ~600 chars
+          if (text.length > 800) {
+            text = text.substring(0, 800) + '\n\n▸ Click to expand full analysis';
+          }
+
+          faContent.innerHTML = '<strong>' + latest.symbol + price + '</strong>\n' + text;
+          faTimestamp.textContent = time + ' · ' + latest.model;
+
+          // If multiple tickers, append brief summaries
+          if (tickers.length > 1) {
+            let extra = '';
+            for (let i = 1; i < tickers.length; i++) {
+              const t = tickers[i];
+              const tp = t.reference_price ? ' @ ' + t.reference_price.toFixed(2) : '';
+              let tText = (t.analysis || '').replace(/#{1,4}\s*/g, '').replace(/\*\*/g, '').replace(/\*/g, '');
+              if (tText.length > 300) tText = tText.substring(0, 300) + '...';
+              extra += '\n\n━━━ ' + t.symbol + tp + ' ━━━\n' + tText;
+            }
+            faContent.innerHTML += extra;
+          }
+        }
+
+        // Cross-asset synthesis
+        if (crossAsset && crossAsset.analysis) {
+          let crossText = crossAsset.analysis.replace(/#{1,4}\s*/g, '').replace(/\*\*/g, '').replace(/\*/g, '');
+          faCrossAsset.innerHTML = '<strong>🔗 Cross-Asset Synthesis</strong>\n' + crossText;
+
+          document.getElementById('fa-cross-asset-toggle').onclick = function() {
+            const el = document.getElementById('fa-cross-asset');
+            el.style.display = el.style.display === 'none' ? 'block' : 'none';
+            this.textContent = el.style.display === 'none' ? 'Cross-Asset View' : 'Hide Cross-Asset';
+          };
+        } else {
+          document.getElementById('fa-cross-asset-toggle').style.display = 'none';
+        }
+      } catch(e) {
+        console.log('Flow analysis fetch error:', e);
+      }
+    }
+
+    // Load immediately and refresh every 2 minutes
+    loadFlowAnalysis();
+    setInterval(loadFlowAnalysis, 120000);
   </script>
   <div id="refresh-modal" class="refresh-modal">
     <div class="refresh-modal-inner">
