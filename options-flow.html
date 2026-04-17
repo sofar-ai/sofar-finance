@@ -313,6 +313,45 @@
       }
     }
 
+    // Load analysis for a specific ticker
+    async function loadTickerAnalysis(ticker) {
+      try {
+        const res = await fetch('/api/flow-analysis?action=latest');
+        const data = await res.json();
+        const bar = document.getElementById('flow-analysis-bar');
+        const faContent = document.getElementById('fa-content');
+        const faTimestamp = document.getElementById('fa-timestamp');
+
+        if (!data.analyses || data.analyses.length === 0) return;
+        bar.style.display = 'block';
+
+        // Check if we have analysis for this ticker
+        const match = data.analyses.find(a => 
+          !a.is_cross_asset && (a.symbol === ticker || 
+          (ticker === 'SPX' && a.symbol === 'SPXW') ||
+          (ticker === 'SPXW' && a.symbol === 'SPX'))
+        );
+
+        if (match) {
+          const price = match.reference_price ? ' @ ' + match.reference_price.toFixed(2) : '';
+          const time = new Date(match.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) + ' ET';
+          let text = (match.analysis || '').replace(/#{1,4}\s*/g, '').replace(/\*\*/g, '').replace(/\*/g, '').replace(/---/g, '');
+          if (text.length > 800) text = text.substring(0, 800) + '\n\n▸ Full analysis in database';
+          faContent.innerHTML = '<strong>' + match.symbol + price + '</strong>\n' + text;
+          faTimestamp.textContent = time + ' · ' + match.model;
+        } else {
+          faContent.innerHTML = '<strong>' + ticker + '</strong>\nNo structure analysis available — below $5M threshold or not yet analyzed.\n\nShowing SPX/SPXW analysis by default.';
+          // Fall back to loading default
+          setTimeout(loadFlowAnalysis, 100);
+        }
+      } catch(e) {
+        console.log('Ticker analysis fetch error:', e);
+      }
+    }
+
+    // Expose to OptionsFlowPage
+    window.loadTickerAnalysis = loadTickerAnalysis;
+
     // Load immediately and refresh every 2 minutes
     loadFlowAnalysis();
     setInterval(loadFlowAnalysis, 120000);
