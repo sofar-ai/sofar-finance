@@ -260,7 +260,16 @@
         bar.style.display = 'block';
 
         // Find the non-cross-asset analyses and cross-asset
-        const tickers = data.analyses.filter(a => !a.is_cross_asset);
+        // Sort so SPX/SPXW come first
+        const tickers = data.analyses.filter(a => !a.is_cross_asset).sort((a, b) => {
+          const priority = ['SPX', 'SPXW', 'SPY', 'QQQ'];
+          const aIdx = priority.indexOf(a.symbol);
+          const bIdx = priority.indexOf(b.symbol);
+          if (aIdx >= 0 && bIdx >= 0) return aIdx - bIdx;
+          if (aIdx >= 0) return -1;
+          if (bIdx >= 0) return 1;
+          return 0;
+        });
         const crossAsset = data.analyses.find(a => a.is_cross_asset);
 
         if (tickers.length > 0) {
