@@ -20,7 +20,7 @@ export default async function handler(req, res) {
     } = req.query;
     const sessionDate = date || getETDate();
     const minPrem = parseInt(min_premium) || 0;
-    const maxRows = Math.min(parseInt(limit) || 500, 2000);
+    const maxRows = Math.min(parseInt(limit) || 2000, 5000);
     let trades;
     if (symbol && right) {
       trades = await sql`

@@ -455,7 +455,7 @@ const OptionsFlowPage = (() => {
     } catch {}
     // Load trades from Neon (full day, newest first)
     try {
-      const nRes = await fetch('/api/flow-trades?limit=500');
+      const nRes = await fetch('/api/flow-trades?limit=2000');
       if (nRes.ok) {
         const nData = await nRes.json();
         if (nData.trades && nData.trades.length > 0) {
