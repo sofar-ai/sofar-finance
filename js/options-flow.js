@@ -270,11 +270,41 @@ const OptionsFlowPage = (() => {
       .sort((a, b) => b.total - a.total).slice(0, 10);
     if (!sorted.length) { el.innerHTML = '<div class="of-empty">No data yet</div>'; return; }
     el.innerHTML = '';
+    // Calculate recent velocity (last 15 min vs prior 15 min)
+    const now = new Date();
+    const t15 = new Date(now - 15*60*1000);
+    const t30 = new Date(now - 30*60*1000);
+    const recentFlow = {};
+    const priorFlow = {};
+    allTrades.forEach(t => {
+      const sym = t.symbol; if (!sym) return;
+      const ts = new Date(t.ts);
+      const prem = t.premium || 0;
+      if (ts >= t15) recentFlow[sym] = (recentFlow[sym]||0) + prem;
+      else if (ts >= t30) priorFlow[sym] = (priorFlow[sym]||0) + prem;
+    });
+
     sorted.forEach(({ sym, total, callPct }) => {
+      const recent = recentFlow[sym] || 0;
+      const prior = priorFlow[sym] || 0;
+      let arrow = '';
+      let arrowColor = 'var(--text-muted)';
+      if (prior > 0) {
+        const velocity = (recent - prior) / prior;
+        if (velocity > 0.5) { arrow = '⬆'; arrowColor = '#22c55e'; }
+        else if (velocity > 0.1) { arrow = '↑'; arrowColor = '#22c55e80'; }
+        else if (velocity < -0.5) { arrow = '⬇'; arrowColor = '#ef4444'; }
+        else if (velocity < -0.1) { arrow = '↓'; arrowColor = '#ef444480'; }
+        else { arrow = '→'; }
+      } else if (recent > 0) {
+        arrow = '🔥'; // New flow, nothing to compare
+      }
+
       const row = document.createElement('div');
       row.className = 'of-ticker-row';
       row.innerHTML = `
         <span class="of-tk-sym">${sym}</span>
+        <span style="font-size:12px;color:${arrowColor};min-width:18px;text-align:center">${arrow}</span>
         <div class="of-tk-bar">
           <div class="of-tk-call" style="width:${(callPct*100).toFixed(0)}%"></div>
           <div class="of-tk-put"  style="width:${((1-callPct)*100).toFixed(0)}%"></div>
