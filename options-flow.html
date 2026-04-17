@@ -350,11 +350,16 @@
     }
 
     // Expose to OptionsFlowPage
-    window.loadTickerAnalysis = loadTickerAnalysis;
+    window.loadTickerAnalysis = function(t) { window._lastTickerClick = Date.now(); loadTickerAnalysis(t); };
 
     // Load immediately and refresh every 2 minutes
     loadFlowAnalysis();
-    setInterval(loadFlowAnalysis, 120000);
+    setInterval(function() {
+      // Only auto-refresh to default if user hasn't clicked a ticker in last 60s
+      if (!window._lastTickerClick || (Date.now() - window._lastTickerClick > 60000)) {
+        loadFlowAnalysis();
+      }
+    }, 120000);
   </script>
   <div id="refresh-modal" class="refresh-modal">
     <div class="refresh-modal-inner">
