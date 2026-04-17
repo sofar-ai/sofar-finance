@@ -464,9 +464,15 @@ const OptionsFlowPage = (() => {
               (t.symbol||'') + (t.strike||'') + (t.timestamp||'') + (t.size||'')
             ));
             for (const t of nData.trades) {
+              // Normalize Neon fields to match JSON format
+              if (t.expiration && t.expiration.length > 8) {
+                t.expiration = t.expiration.slice(0,10).replace(/-/g, '');
+              }
               const k = (t.symbol||'') + (t.strike||'') + (t.timestamp||'') + (t.size||'');
               if (!keys.has(k)) data.trades.push(t);
             }
+            // Sort newest first
+            data.trades.sort((a, b) => (b.timestamp||'').localeCompare(a.timestamp||''));
           } else if (!data) {
             data = { trades: nData.trades, market_open: true };
             usingTape = true;
