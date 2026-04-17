@@ -474,10 +474,10 @@ const OptionsFlowPage = (() => {
       allTrades = incomingTrades;
     } else {
       const existingKeys = new Set(allTrades.map(t => 
-        (t.symbol||'') + '|' + (t.strike||'') + '|' + (t.ts||'') + '|' + (t.size||'')
+        (t.symbol||'') + '|' + (t.strike||'') + '|' + (t.timestamp||t.ts||'') + '|' + (t.size||'')
       ));
       for (const t of incomingTrades) {
-        const key = (t.symbol||'') + '|' + (t.strike||'') + '|' + (t.ts||'') + '|' + (t.size||'');
+        const key = (t.symbol||'') + '|' + (t.strike||'') + '|' + (t.timestamp||t.ts||'') + '|' + (t.size||'');
         if (!existingKeys.has(key)) {
           allTrades.push(t);
         }
