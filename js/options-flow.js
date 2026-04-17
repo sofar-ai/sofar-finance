@@ -292,6 +292,7 @@ const OptionsFlowPage = (() => {
 
   // ── Per-Symbol Detail Panel ────────────────────────────────────────────
   function loadDetail(ticker) {
+    if (window.loadTickerAnalysis) window.loadTickerAnalysis(ticker);
     const el  = document.getElementById('of-greeks');
     const hdr = document.getElementById('of-greeks-ticker');
     if (!el) return;
@@ -467,8 +468,23 @@ const OptionsFlowPage = (() => {
       return;
     }
 
-    // Extract data
-    allTrades = data.trades || [];
+    // Extract data — merge new trades instead of replacing
+    const incomingTrades = data.trades || [];
+    if (allTrades.length === 0) {
+      allTrades = incomingTrades;
+    } else {
+      const existingKeys = new Set(allTrades.map(t => 
+        (t.symbol||'') + '|' + (t.strike||'') + '|' + (t.ts||'') + '|' + (t.size||'')
+      ));
+      for (const t of incomingTrades) {
+        const key = (t.symbol||'') + '|' + (t.strike||'') + '|' + (t.ts||'') + '|' + (t.size||'');
+        if (!existingKeys.has(key)) {
+          allTrades.push(t);
+        }
+      }
+      allTrades.sort((a, b) => (b.ts||'').localeCompare(a.ts||''));
+      if (allTrades.length > 5000) allTrades = allTrades.slice(0, 5000);
+    }
     symbolMetrics = data.symbol_metrics || {};
     sweepData = data.sweeps || [];
     sectorFlow = data.sector_flow || {};
