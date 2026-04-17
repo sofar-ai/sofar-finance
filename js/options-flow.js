@@ -292,6 +292,7 @@ const OptionsFlowPage = (() => {
 
   // ── Per-Symbol Detail Panel ────────────────────────────────────────────
   function loadDetail(ticker) {
+    if (window.loadTickerAnalysis) window.loadTickerAnalysis(ticker);
     const el  = document.getElementById('of-greeks');
     const hdr = document.getElementById('of-greeks-ticker');
     if (!el) return;
