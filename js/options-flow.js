@@ -447,41 +447,32 @@ const OptionsFlowPage = (() => {
 
     // Load flow-tape.json for panel data (metrics, sweeps, sectors)
     try {
-      const res = await fetch(`/data/flow-tape.json?v=\${Date.now()}`);
+      const res = await fetch('/data/flow-tape.json?v=' + Date.now());
       if (res.ok) {
         data = await res.json();
         usingTape = true;
       }
     } catch {}
-    // Merge full day trades from Neon
+    // Load trades from Neon (full day, newest first)
     try {
-      const nRes = await fetch('/api/flow-trades?limit=2000');
+      const nRes = await fetch('/api/flow-trades?limit=500');
       if (nRes.ok) {
         const nData = await nRes.json();
         if (nData.trades && nData.trades.length > 0) {
-          if (data && data.trades) {
-            const keys = new Set(data.trades.map(t =>
-              (t.symbol||'') + (t.strike||'') + (t.timestamp||'') + (t.size||'')
-            ));
-            for (const t of nData.trades) {
-              // Normalize Neon fields to match JSON format
-              if (t.expiration && t.expiration.length > 8) {
-                t.expiration = t.expiration.slice(0,10).replace(/-/g, '');
-              }
-              const k = (t.symbol||'') + (t.strike||'') + (t.timestamp||'') + (t.size||'');
-              if (!keys.has(k)) data.trades.push(t);
+          for (const t of nData.trades) {
+            if (t.expiration && t.expiration.length > 8) {
+              t.expiration = t.expiration.slice(0,10).replace(/-/g, '');
             }
-            // Sort newest first
-            data.trades.sort((a, b) => (b.timestamp||'').localeCompare(a.timestamp||''));
-          } else if (!data) {
+          }
+          if (data) {
+            data.trades = nData.trades;
+          } else {
             data = { trades: nData.trades, market_open: true };
             usingTape = true;
-          } else {
-            data.trades = nData.trades;
           }
         }
       }
-    } catch(e) { console.log('Neon merge error:', e); }
+    } catch(e) { console.log('Neon load error:', e); }
 
     // Fallback to options-flow.json
     if (!data) {
