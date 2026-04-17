@@ -447,7 +447,7 @@ const OptionsFlowPage = (() => {
 
     // Load flow-tape.json for panel data (metrics, sweeps, sectors)
     try {
-      const res = await fetch(\`/data/flow-tape.json?v=\${Date.now()}\`);
+      const res = await fetch(`/data/flow-tape.json?v=\${Date.now()}`);
       if (res.ok) {
         data = await res.json();
         usingTape = true;
