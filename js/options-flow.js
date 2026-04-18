@@ -376,14 +376,23 @@ const OptionsFlowPage = (() => {
     if (!el || !sectorFlow) return;
 
     let html = '<span class="of-sector-label">SECTOR FLOW</span>';
-    for (const [name, data] of Object.entries(sectorFlow)) {
-      const dir = data.net_direction || 'NEUTRAL';
-      const dirClass = dir === 'BULLISH' ? 'dir-bull' : dir === 'BEARISH' ? 'dir-bear' : 'dir-neut';
+    // Sort sectors by premium descending (biggest flow first)
+    const entries = Object.entries(sectorFlow).sort((a, b) => (b[1].premium || 0) - (a[1].premium || 0));
+    for (const [name, data] of entries) {
+      const dir = data.direction || data.net_direction || 'NEUTRAL';
+      const dirClass =
+        (dir === 'BULL' || dir === 'BULLISH' || dir === 'LEAN_BULL') ? 'dir-bull' :
+        (dir === 'BEAR' || dir === 'BEARISH' || dir === 'LEAN_BEAR') ? 'dir-bear' :
+        'dir-neut';
+      const displayDir = dir.replace('_', ' ');
+      const pcVal = data.pc_ratio != null ? data.pc_ratio.toFixed(2) : '—';
+      const premVal = data.premium ? '$' + (data.premium / 1e9).toFixed(2) + 'B' : '';
+      const displayName = name.replace(/_/g, ' ');
       html += `
-        <div class="of-sector-item">
-          <span style="color:var(--text-primary);font-weight:600;text-transform:uppercase">${name}</span>
-          <span class="of-sector-dir ${dirClass}">${dir}</span>
-          <span class="of-sector-pc">P/C ${(data.pc_ratio || 0).toFixed(2)}</span>
+        <div class="of-sector-item" title="${data.symbol_count || 0} symbols, ${(data.trades || 0).toLocaleString()} trades, ${premVal}">
+          <span style="color:var(--text-primary);font-weight:600;text-transform:uppercase">${displayName}</span>
+          <span class="of-sector-dir ${dirClass}">${displayDir}</span>
+          <span class="of-sector-pc">P/C ${pcVal}</span>
         </div>`;
     }
     el.innerHTML = html;
