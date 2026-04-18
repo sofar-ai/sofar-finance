@@ -167,8 +167,15 @@ const OptionsFlowPage = (() => {
     if (!el || !symbolMetrics) return;
 
     const entries = Object.entries(symbolMetrics)
-      .filter(([, m]) => m.total_trades > 0)
-      .sort((a, b) => Math.abs(b[1].pc_zscore || 0) - Math.abs(a[1].pc_zscore || 0));
+      .filter(([, m]) => (m.trade_count || m.total_trades || 0) > 0)
+      .sort((a, b) => {
+        // Primary: by |z-score| if baselines exist, else by total premium
+        const za = Math.abs(a[1].pc_zscore || 0);
+        const zb = Math.abs(b[1].pc_zscore || 0);
+        if (za > 0 || zb > 0) return zb - za;
+        return (b[1].total_premium || 0) - (a[1].total_premium || 0);
+      })
+      .slice(0, 25);
 
     if (!entries.length) {
       el.innerHTML = '<div class="of-empty">Awaiting flow signals…</div>';
@@ -255,18 +262,16 @@ const OptionsFlowPage = (() => {
   function updateTopTickers() {
     const el = document.getElementById('of-top-tickers');
     if (!el) return;
-    const stats = {};
-    allTrades.forEach(t => {
-      const sym = t.symbol; if (!sym) return;
-      if (!stats[sym]) stats[sym] = { c: 0, p: 0 };
-      const r = (t.right || '').toUpperCase();
-      const prem = t.premium || 0;
-      if (r === 'C') stats[sym].c += prem;
-      else if (r === 'P') stats[sym].p += prem;
-    });
-    const sorted = Object.entries(stats)
-      .map(([sym, s]) => ({ sym, total: s.c + s.p, callPct: s.c / (s.c + s.p || 1) }))
-      .sort((a, b) => b.total - a.total).slice(0, 10);
+    // Use full-session symbolMetrics from aggregates API (not the 500-row tape slice)
+    const sorted = Object.entries(symbolMetrics || {})
+      .map(([sym, m]) => {
+        const total = (m.call_premium || 0) + (m.put_premium || 0);
+        const callPct = total > 0 ? (m.call_premium || 0) / total : 0.5;
+        return { sym, total, callPct };
+      })
+      .filter(r => r.total > 0)
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 10);
     if (!sorted.length) { el.innerHTML = '<div class="of-empty">No data yet</div>'; return; }
     el.innerHTML = '';
     sorted.forEach(({ sym, total, callPct }) => {
