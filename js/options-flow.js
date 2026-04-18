@@ -568,28 +568,52 @@ const OptionsFlowPage = (() => {
   };
 
   async function loadPanelData() {
-    if (FlowData.selectedDate) {
-      const banner = document.getElementById('of-historical-banner');
-      if (banner) banner.style.display = 'flex';
-      return;
-    }
+    // Hide historical banner — panels work for any date via /api/flow-aggregates
     const banner = document.getElementById('of-historical-banner');
     if (banner) banner.style.display = 'none';
+    const qs = new URLSearchParams();
+    if (FlowData.selectedDate) qs.set('date', FlowData.selectedDate);
     try {
-      const res = await fetch('/data/flow-tape.json?v=' + Date.now());
+      const res = await fetch('/api/flow-aggregates' + (qs.toString() ? '?' + qs : ''));
       if (!res.ok) return;
       const data = await res.json();
-      symbolMetrics = data.symbol_metrics || {};
-      sweepData = data.sweeps || [];
+      symbolMetrics = {};
+      for (const row of (data.per_symbol || [])) {
+        symbolMetrics[row.symbol] = {
+          trade_count: row.trade_count,
+          total_premium: row.total_premium,
+          call_premium: row.call_premium,
+          put_premium: row.put_premium,
+          pc_ratio: row.pc_ratio,
+          pc_zscore: row.pc_zscore,
+          cvd: row.cvd,
+          buy_premium: row.buy_premium,
+          sell_premium: row.sell_premium,
+          sweep_count: row.sweep_count,
+          last_trade_ts: row.last_trade_ts,
+        };
+      }
+      sweepData = (data.sweeps || []).map(s => ({
+        sweep_id: s.sweep_id,
+        symbol: s.symbol,
+        total_premium: s.total_premium,
+        num_legs: s.trade_count,
+        direction: s.direction,
+        first_ts: s.first_ts,
+        last_ts: s.last_ts,
+      }));
       sectorFlow = data.sector_flow || {};
-      concentration = data.premium_concentration || null;
+      concentration = null;
+      window._sessionTotals = data.session_totals || null;
       updateTopTickers();
       updateFlowSignals();
       updateSweeps();
       updateSectorFlow();
       updateConcentration();
       updateSentiment();
-    } catch (e) { /* silent */ }
+    } catch (e) {
+      console.log('loadPanelData error:', e);
+    }
   }
 
   async function loadFlowData() {
