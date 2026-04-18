@@ -48,3 +48,60 @@ when we revisit the daemon insert path — compute session_date from the trade's
 ### Aggregate staleness indicator
 Frontend should show "data refreshed N seconds ago" based on `flow_session_metrics.last_refreshed_at`
 so users know if aggregates lag (e.g., during daemon restart windows).
+
+## Staging / Test Environment (PENDING — semi-high priority)
+
+### Problem
+All code changes go directly to production via the auto-bot commit+push → Vercel deploy pipeline. There's no pre-production validation step. Bugs like the `window.loadTickerAnalysis` infinite recursion, the `rebuildTape` missing `fetched_at`, and the 500-row slice were all caught by inspecting production — they should have been caught in staging.
+
+### Requirements
+- Separate Vercel deployment (preview branch or dedicated staging project)
+- Pointed at a Neon branch (not production DB) so test writes don't contaminate real flow_trades
+- Separate daemon instance (or simulated data) pushing to the staging Neon branch
+- URL like `https://staging.sofar-finance.vercel.app` or use Vercel's preview URLs
+- Clear indicator on the page that it's staging (banner, different theme, etc.)
+
+### Implementation options
+
+**Option 1: Vercel preview branches + Neon branch (recommended)**
+- Create a `staging` branch in the GitHub repo
+- Vercel auto-deploys every branch to a preview URL
+- Neon supports zero-copy branching of databases — spin up a `staging` branch of the Neon project
+- Set `DATABASE_URL` for staging deployment to point at the Neon staging branch
+- Promote to main only after testing
+
+**Option 2: Separate Vercel project**
+- Fork the repo to `sofar-finance-staging`
+- Separate Vercel project, separate domain
+- Same Neon branching pattern
+- More isolated but requires keeping two repos in sync
+
+**Option 3: Local-only dev loop**
+- `vercel dev` on local machine
+- Local Neon branch or a dedicated staging DB
+- Fastest iteration for frontend changes
+- Doesn't test the Vercel deployment path itself
+
+### What staging needs to test
+1. Frontend JS changes against real Neon data (read-only queries)
+2. API endpoint changes (`/api/flow-aggregates`, etc.)
+3. Daemon changes (would need to run daemon locally pointed at staging Neon)
+4. Migration SQL (new tables, triggers, functions)
+5. Schema changes to flow_trades / flow_session_metrics without risking production
+
+### Daemon staging consideration
+The live daemon on S1 is the only source of real-time options flow. Running a second daemon for staging would require either:
+- A second ThetaData connection (separate subscription quota — check terms)
+- Replaying historical data from rebuild-flow-history.py at a fast pace to simulate live
+- Proxying/teeing the production daemon's writes (read from flow_trades, publish to staging)
+
+For v1 staging, simplest path: staging gets read-only access to production Neon data for UI testing. Daemon changes still go through a careful production deploy. As we scale, proper daemon staging becomes worth it.
+
+### Priority ordering
+1. Vercel preview branch + Neon branch setup (1-2 hours)
+2. Clear staging indicator on the UI (~30 min)
+3. Document the deploy workflow: feature → staging branch → test → PR to main → auto-deploy
+4. Consider: auto-disable the auto-bot commit-push for branches other than main, so dev work doesn't leak
+
+### Blocker on Neon branching
+Need to check Neon's plan allows branching and how many branches — free tier has limits. Paid Launch plan allows more.
