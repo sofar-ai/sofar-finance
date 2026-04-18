@@ -148,13 +148,12 @@ const OptionsFlowPage = (() => {
       tape.insertAdjacentHTML('beforeend', '<div class="tape-empty" style="color:#f59e0b">\u26a0 Data may be stale</div>');
     }
 
-    // Sort trades by timestamp descending (newest first)
-    const sorted = [...(data.trades || [])].sort((a, b) => {
+    // Sort trades by timestamp descending (newest first).
+    // Server already applied filters and pagination; render all rows we have.
+    const rows = [...(data.trades || [])].sort((a, b) => {
       if (b.timestamp && a.timestamp) return b.timestamp.localeCompare(a.timestamp);
       return (b.premium || 0) - (a.premium || 0);
     });
-
-    const rows = sorted.filter(passes).slice(0, 500);
     if (!rows.length) {
       tape.insertAdjacentHTML('beforeend', '<div class="tape-empty">No trades match current filters</div>');
       return;
