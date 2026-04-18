@@ -1,9 +1,9 @@
-// POST /api/logout (also accepts GET for convenience)
-// Clears the sofar_auth cookie.
+// /api/logout — clears the sofar_auth cookie.
+// POST returns JSON. GET redirects to /login.html.
 
 const COOKIE_NAME = 'sofar_auth';
 
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
   const cookieAttrs = [
     `${COOKIE_NAME}=`,
     'Max-Age=0',
@@ -15,7 +15,6 @@ module.exports = async (req, res) => {
 
   res.setHeader('Set-Cookie', cookieAttrs);
 
-  // If GET request (user navigated to /api/logout in browser), redirect to login
   if (req.method === 'GET') {
     res.setHeader('Location', '/login.html');
     res.status(302).end();
@@ -23,4 +22,4 @@ module.exports = async (req, res) => {
   }
 
   res.status(200).json({ ok: true });
-};
+}
