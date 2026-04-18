@@ -586,7 +586,7 @@ const OptionsFlowPage = (() => {
 
   async function loadFlowData() {
     await Promise.all([FlowData.initialLoad(), loadPanelData()]);
-    rebuildTape({ trades: allTrades, market_open: !FlowData.selectedDate });
+    rebuildTape({ trades: allTrades, market_open: !FlowData.selectedDate, fetched_at: new Date().toISOString(), total_trades: (FlowData.totalMatching && FlowData.totalMatching.trades) || allTrades.length, total_premium: (FlowData.totalMatching && FlowData.totalMatching.premium) || 0 });
   }
 
   let _setFilterDebounce = null;
@@ -596,7 +596,7 @@ const OptionsFlowPage = (() => {
     clearTimeout(_setFilterDebounce);
     _setFilterDebounce = setTimeout(async () => {
       await FlowData.initialLoad();
-      rebuildTape({ trades: allTrades, market_open: !FlowData.selectedDate });
+      rebuildTape({ trades: allTrades, market_open: !FlowData.selectedDate, fetched_at: new Date().toISOString(), total_trades: (FlowData.totalMatching && FlowData.totalMatching.trades) || allTrades.length, total_premium: (FlowData.totalMatching && FlowData.totalMatching.premium) || 0 });
     }, 250);
   }
 
@@ -674,7 +674,7 @@ const OptionsFlowPage = (() => {
           const scrollRemaining = tape.scrollHeight - tape.scrollTop - tape.clientHeight;
           if (scrollRemaining < 300 && FlowData.hasMore && !FlowData.loading && !FlowData.exhausted) {
             FlowData.loadMore().then(() => {
-              rebuildTape({ trades: allTrades, market_open: !FlowData.selectedDate });
+              rebuildTape({ trades: allTrades, market_open: !FlowData.selectedDate, fetched_at: new Date().toISOString(), total_trades: (FlowData.totalMatching && FlowData.totalMatching.trades) || allTrades.length, total_premium: (FlowData.totalMatching && FlowData.totalMatching.premium) || 0 });
               installSentinel();
             });
           }
@@ -705,7 +705,7 @@ const OptionsFlowPage = (() => {
     panelTimer = setInterval(() => {
       if (!isPaused) {
         if (!FlowData.selectedDate) {
-          FlowData.refreshNewer().then(() => rebuildTape({trades: allTrades, market_open: true}));
+          FlowData.refreshNewer().then(() => rebuildTape({trades: allTrades, market_open: true, fetched_at: new Date().toISOString(), total_trades: (FlowData.totalMatching && FlowData.totalMatching.trades) || allTrades.length, total_premium: (FlowData.totalMatching && FlowData.totalMatching.premium) || 0}));
         }
       }
     }, PANEL_TICK);
