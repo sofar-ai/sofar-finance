@@ -441,95 +441,163 @@ const OptionsFlowPage = (() => {
   }
 
   // ── Main data load ─────────────────────────────────────────────────────
-  async function loadFlowData() {
-    let data = null;
-    let usingTape = false;
-
-    // Load flow-tape.json for panel data (metrics, sweeps, sectors)
-    try {
-      const res = await fetch('/data/flow-tape.json?v=' + Date.now());
-      if (res.ok) {
-        data = await res.json();
-        usingTape = true;
-      }
-    } catch {}
-    // Load trades from Neon (full day, newest first)
-    try {
-      const nRes = await fetch('/api/flow-trades?limit=2000');
-      if (nRes.ok) {
-        const nData = await nRes.json();
-        if (nData.trades && nData.trades.length > 0) {
-          for (const t of nData.trades) {
-            if (t.expiration && t.expiration.length > 8) {
-              t.expiration = t.expiration.slice(0,10).replace(/-/g, '');
-            }
-          }
-          if (data) {
-            data.trades = nData.trades;
-          } else {
-            data = { trades: nData.trades, market_open: true };
-            usingTape = true;
-          }
+  // ─── Data controller: pagination + filters + date selection ─────────────
+  const FlowData = {
+    cursor: null,
+    hasMore: false,
+    newestTs: null,
+    loading: false,
+    exhausted: false,
+    totalMatching: null,
+    selectedDate: null,
+    _activeRequestId: 0,
+    getFiltersForApi() {
+      const qs = new URLSearchParams();
+      if (this.selectedDate) qs.set('date', this.selectedDate);
+      if (filters.ticker)    qs.set('symbol', filters.ticker);
+      if (filters.type === 'CALL') qs.set('right', 'C');
+      if (filters.type === 'PUT')  qs.set('right', 'P');
+      const mp = parseInt(filters.minPremium) || 0;
+      if (mp > 0) qs.set('min_premium', mp);
+      if (filters.dte === '0-7')  { qs.set('dte_min','0'); qs.set('dte_max','7'); }
+      if (filters.dte === '7-30') { qs.set('dte_min','7'); qs.set('dte_max','30'); }
+      if (filters.dte === '30+')  { qs.set('dte_min','30'); }
+      if (filters.sweepsOnly)     qs.set('is_sweep', 'true');
+      return qs;
+    },
+    normalizeExpirations(trades) {
+      for (const t of trades) {
+        if (t.expiration && typeof t.expiration === 'string' && t.expiration.length > 8) {
+          t.expiration = t.expiration.slice(0,10).replace(/-/g, '');
         }
       }
-    } catch(e) { console.log('Neon load error:', e); }
-
-    // Fallback to options-flow.json
-    if (!data) {
+      return trades;
+    },
+    async initialLoad() {
+      this.cursor = null;
+      this.hasMore = false;
+      this.newestTs = null;
+      this.exhausted = false;
+      this.totalMatching = null;
+      allTrades = [];
+      const reqId = ++this._activeRequestId;
+      this.loading = true;
       try {
-        const res = await fetch(`/data/options-flow.json?v=${Date.now()}`);
-        if (res.ok) data = await res.json();
-      } catch {}
-    }
+        const qs = this.getFiltersForApi();
+        qs.set('limit', '500');
+        const res = await fetch('/api/flow-trades?' + qs.toString());
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        if (reqId !== this._activeRequestId) return;
+        allTrades = this.normalizeExpirations(data.trades || []);
+        this.cursor = data.next_cursor;
+        this.hasMore = data.has_more;
+        this.totalMatching = data.total_matching;
+        if (allTrades.length > 0) this.newestTs = allTrades[0].timestamp;
+        FlowData._updateCountBadge();
+      } catch (e) {
+        console.log('FlowData.initialLoad error:', e);
+      } finally {
+        this.loading = false;
+      }
+    },
+    async loadMore() {
+      if (this.loading || !this.hasMore || this.exhausted) return;
+      const reqId = ++this._activeRequestId;
+      this.loading = true;
+      try {
+        const qs = this.getFiltersForApi();
+        qs.set('limit', '500');
+        qs.set('before_ts', this.cursor);
+        qs.set('count', 'false');
+        const res = await fetch('/api/flow-trades?' + qs.toString());
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        if (reqId !== this._activeRequestId) return;
+        const more = this.normalizeExpirations(data.trades || []);
+        allTrades.push(...more);
+        this.cursor = data.next_cursor;
+        this.hasMore = data.has_more;
+        if (!data.has_more) this.exhausted = true;
+      } catch (e) {
+        console.log('FlowData.loadMore error:', e);
+      } finally {
+        this.loading = false;
+      }
+    },
+    async refreshNewer() {
+      if (this.selectedDate) return;
+      if (!this.newestTs) return;
+      try {
+        const qs = this.getFiltersForApi();
+        qs.set('limit', '500');
+        qs.set('after_ts', this.newestTs);
+        qs.set('count', 'false');
+        const res = await fetch('/api/flow-trades?' + qs.toString());
+        if (!res.ok) return;
+        const data = await res.json();
+        const newer = this.normalizeExpirations(data.trades || []);
+        if (newer.length === 0) return;
+        allTrades = newer.concat(allTrades);
+        this.newestTs = allTrades[0].timestamp;
+        if (this.totalMatching) {
+          this.totalMatching.trades += newer.length;
+          this.totalMatching.premium += newer.reduce((a,t) => a + (t.premium||0), 0);
+          FlowData._updateCountBadge();
+        }
+      } catch (e) { /* silent */ }
+    },
+    _updateCountBadge() {
+      const el = document.getElementById('of-trade-count');
+      const premEl = document.getElementById('of-total-premium');
+      if (this.totalMatching) {
+        if (el) el.textContent = this.totalMatching.trades.toLocaleString() + (allTrades.length < this.totalMatching.trades ? ` (showing ${allTrades.length.toLocaleString()})` : '');
+        if (premEl) premEl.textContent = '$' + (this.totalMatching.premium/1e6).toFixed(1) + 'M';
+      } else if (el) {
+        el.textContent = allTrades.length.toLocaleString();
+      }
+    },
+  };
 
-    if (!data) {
-      const tape = document.getElementById('of-tape');
-      if (tape) tape.innerHTML = '<div class="tape-empty">Awaiting flow data — check back during market hours</div>';
+  async function loadPanelData() {
+    if (FlowData.selectedDate) {
+      const banner = document.getElementById('of-historical-banner');
+      if (banner) banner.style.display = 'flex';
       return;
     }
-
-    // Extract data — merge new trades instead of replacing
-    const incomingTrades = data.trades || [];
-    if (allTrades.length === 0) {
-      allTrades = incomingTrades;
-    } else {
-      const existingKeys = new Set(allTrades.map(t => 
-        (t.symbol||'') + '|' + (t.strike||'') + '|' + (t.timestamp||t.ts||'') + '|' + (t.size||'')
-      ));
-      for (const t of incomingTrades) {
-        const key = (t.symbol||'') + '|' + (t.strike||'') + '|' + (t.timestamp||t.ts||'') + '|' + (t.size||'');
-        if (!existingKeys.has(key)) {
-          allTrades.push(t);
-        }
-      }
-      allTrades.sort((a, b) => (b.ts||'').localeCompare(a.ts||''));
-      if (allTrades.length > 5000) allTrades = allTrades.slice(0, 5000);
-    }
-    symbolMetrics = data.symbol_metrics || {};
-    sweepData = data.sweeps || [];
-    sectorFlow = data.sector_flow || {};
-    concentration = data.premium_concentration || null;
-
-    // Update all panels
-    rebuildTape(data);
-    updateTopTickers();
-    updateFlowSignals();
-    updateSweeps();
-    updateSectorFlow();
-    updateConcentration();
-    updateSentiment();
+    const banner = document.getElementById('of-historical-banner');
+    if (banner) banner.style.display = 'none';
+    try {
+      const res = await fetch('/data/flow-tape.json?v=' + Date.now());
+      if (!res.ok) return;
+      const data = await res.json();
+      symbolMetrics = data.symbol_metrics || {};
+      sweepData = data.sweeps || [];
+      sectorFlow = data.sector_flow || {};
+      concentration = data.premium_concentration || null;
+      updateTopTickers();
+      updateFlowSignals();
+      updateSweeps();
+      updateSectorFlow();
+      updateConcentration();
+      updateSentiment();
+    } catch (e) { /* silent */ }
   }
 
+  async function loadFlowData() {
+    await Promise.all([FlowData.initialLoad(), loadPanelData()]);
+    rebuildTape({ trades: allTrades, market_open: !FlowData.selectedDate });
+  }
+
+  let _setFilterDebounce = null;
   function setFilter(key, value) {
     filters[key] = value;
-    const fakeData = {
-      fetched_at: new Date().toISOString(),
-      market_open: true,
-      trades: allTrades,
-      total_trades: allTrades.length,
-      total_premium: allTrades.reduce((a, t) => a + (t.premium || 0), 0),
-    };
-    rebuildTape(fakeData);
+    // Debounce so typing in ticker search doesn't hammer the API
+    clearTimeout(_setFilterDebounce);
+    _setFilterDebounce = setTimeout(async () => {
+      await FlowData.initialLoad();
+      rebuildTape({ trades: allTrades, market_open: !FlowData.selectedDate });
+    }, 250);
   }
 
   function init() {
@@ -635,7 +703,11 @@ const OptionsFlowPage = (() => {
     }
 
     panelTimer = setInterval(() => {
-      if (!isPaused) loadFlowData();
+      if (!isPaused) {
+        if (!FlowData.selectedDate) {
+          FlowData.refreshNewer().then(() => rebuildTape({trades: allTrades, market_open: true}));
+        }
+      }
     }, PANEL_TICK);
   }
 
