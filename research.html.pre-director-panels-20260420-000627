@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Signal Discovery — SOFAR FINANCE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0d1117">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .sd-wrap     { display:flex; flex-direction:column; height:calc(100vh - 54px); overflow:hidden; }
+    .sd-panels   { display:grid; grid-template-columns:1fr 1fr; gap:0; flex:1; overflow:hidden; }
+    .sd-panel    { display:flex; flex-direction:column; overflow:hidden; border-right:1px solid #1a1f28; }
+    .sd-panel:last-child { border-right:none; }
+    .sd-panel-hdr{ padding:10px 14px 8px; border-bottom:1px solid #1a1f28; flex-shrink:0; background:#080b10; }
+    .sd-panel-title { font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:700; letter-spacing:.06em; color:#e2e8f0; display:flex; align-items:center; gap:8px; }
+    .sd-panel-count { font-size:9px; color:#475569; font-weight:400; }
+    .sd-scroll   { overflow-y:auto; padding:8px; flex:1; }
+    .sd-section  { margin-bottom:16px; }
+    .sd-section-title { font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#64748b; margin-bottom:8px; padding-bottom:4px; border-bottom:1px solid #1e2433; }
+    .sd-card     { background:#111827; border:1px solid #1e2433; border-radius:6px; padding:10px 12px; margin-bottom:6px; }
+    .sd-card:hover { border-color:#30363d; }
+    .sd-stat-row { display:flex; justify-content:space-between; align-items:center; padding:3px 0; font-family:'IBM Plex Mono',monospace; font-size:11px; }
+    .sd-stat-label { color:#8b949e; }
+    .sd-stat-val { color:#c9d1d9; font-weight:600; }
+    .sd-bar { height:4px; border-radius:2px; background:#1e2433; margin-top:2px; }
+    .sd-bar-fill { height:100%; border-radius:2px; background:#3b82f6; }
+    .sd-badge { display:inline-block; font-family:'IBM Plex Mono',monospace; font-size:9px; font-weight:700; padding:2px 6px; border-radius:3px; letter-spacing:.04em; }
+    .sd-badge-green { background:rgba(34,197,94,.12); color:#22c55e; border:1px solid rgba(34,197,94,.25); }
+    .sd-badge-red { background:rgba(239,68,68,.12); color:#ef4444; border:1px solid rgba(239,68,68,.25); }
+    .sd-badge-yellow { background:rgba(245,158,11,.12); color:#f59e0b; border:1px solid rgba(245,158,11,.25); }
+    .sd-badge-blue { background:rgba(59,130,246,.12); color:#3b82f6; border:1px solid rgba(59,130,246,.25); }
+    .sd-exp-card { background:#111827; border:1px solid #1e2433; border-radius:6px; padding:10px 12px; margin-bottom:6px; }
+    .sd-exp-title { font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; color:#c9d1d9; margin-bottom:4px; }
+    .sd-exp-detail { font-size:10px; color:#6b7280; margin-top:2px; }
+    .sd-input { background:#0d1117; border:1px solid #1e2433; color:#e2e8f0; font-family:'IBM Plex Mono',monospace; font-size:11px; padding:8px 10px; border-radius:4px; outline:none; width:100%; box-sizing:border-box; }
+    .sd-input:focus { border-color:#3b82f6; }
+    .sd-btn { font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:700; padding:6px 14px; border-radius:4px; border:none; cursor:pointer; letter-spacing:.05em; }
+    .sd-btn-primary { background:#3b82f6; color:#fff; }
+    .sd-btn-primary:hover { background:#2563eb; }
+    .sd-model-banner { background:linear-gradient(135deg,rgba(34,197,94,.08),rgba(59,130,246,.08)); border:1px solid rgba(34,197,94,.2); border-radius:8px; padding:14px 16px; margin-bottom:12px; }
+    .sd-model-stat { font-family:'IBM Plex Mono',monospace; font-size:20px; font-weight:700; color:#22c55e; }
+    .sd-model-label { font-family:'IBM Plex Mono',monospace; font-size:9px; color:#6b7280; letter-spacing:.08em; }
+    .sd-research-card { background:#111827; border:1px solid #1e2433; border-radius:6px; padding:10px 12px; margin-bottom:6px; }
+    .sd-research-title { font-size:11px; color:#c9d1d9; font-weight:500; margin-bottom:3px; }
+    .sd-research-source { font-family:'IBM Plex Mono',monospace; font-size:9px; color:#4b5563; }
+    .sd-research-score { font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:700; }
+    .sd-thesis-queue { margin-top:12px; }
+    @media(max-width:800px){ .sd-panels{grid-template-columns:1fr;} .sd-panel{max-height:50vh;} }
+  </style>
+</head>
+<body class="page-scrollable" style="height:100vh;overflow:hidden;">
+  <div id="nav-root"></div>
+  <script src="js/nav.js"></script>
+  <script>document.addEventListener('DOMContentLoaded',()=>NavComponent.setMeta('<span class="live-dot"></span>LIVE<span style="margin-left:8px" id="clock"></span>'));</script>
+  <div class="sd-wrap">
+    <div class="sd-panels">
+      <!-- LEFT: Signal Discovery -->
+      <div class="sd-panel">
+        <div class="sd-panel-hdr">
+          <div class="sd-panel-title">🧬 Signal Discovery Engine
+            <span class="sd-panel-count" id="sd-signal-count">Loading…</span>
+          </div>
+        </div>
+        <div class="sd-scroll" id="sd-left">
+          <!-- Model Banner -->
+          <div class="sd-model-banner">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <div>
+                <div class="sd-model-label">LIGHTGBM v6 WALK-FORWARD ACCURACY</div>
+                <div class="sd-model-stat" id="sd-accuracy">Loading...</div>
+              </div>
+              <div style="text-align:right;">
+                <div class="sd-model-label">FEATURES</div>
+                <div style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:#3b82f6;" id="sd-feature-count">—</div>
+              </div>
+              <div style="text-align:right;">
+                <div class="sd-model-label">TOTAL SIGNALS</div>
+                <div style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:#f59e0b;" id="sd-total-signals">—</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Signal Leaderboard -->
+          <div class="sd-section">
+            <div class="sd-section-title">📊 Signal Leaderboard (by LightGBM importance)</div>
+            <div id="sd-leaderboard">Loading...</div>
+          </div>
+
+          <!-- Experiment History -->
+          <div class="sd-section">
+            <div class="sd-section-title">🧪 Experiment History</div>
+            <div id="sd-experiments" style="max-height:500px;overflow-y:auto;">Loading...</div>
+          </div>
+
+          <!-- Thesis Queue -->
+          <div class="sd-section sd-thesis-queue">
+            <div class="sd-section-title">💡 Thesis Queue</div>
+            <div id="sd-theses">
+              <div style="color:#4b5563;font-size:11px;font-family:var(--font-mono);padding:8px;">No theses queued. Submit one below.</div>
+            </div>
+            <div style="margin-top:8px;">
+              <textarea class="sd-input" id="sd-thesis-input" rows="2" placeholder="Submit a signal hypothesis... e.g. 'Fertilizer stocks (MOS, NTR) rising = S&P bearish within 5 days'"></textarea>
+              <button class="sd-btn sd-btn-primary" style="margin-top:6px;" onclick="submitThesis()">Submit Thesis</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Research Feed -->
+      <div class="sd-panel">
+        <div class="sd-panel-hdr">
+          <div class="sd-panel-title">🔭 Research Feed
+            <span class="sd-panel-count" id="sd-research-count">Loading…</span>
+          </div>
+        </div>
+        <div class="sd-scroll" id="sd-right">
+          <!-- Model Progression -->
+          <div class="sd-section">
+            <div class="sd-section-title">📈 Model Progression</div>
+            <div class="sd-card">
+              <div class="sd-stat-row"><span class="sd-stat-label">Mar 20 — Linear v5</span><span class="sd-stat-val" style="color:#ef4444;">No edge</span></div>
+              <div class="sd-stat-row"><span class="sd-stat-label">Apr 11 — LightGBM v7 (7d)</span><span class="sd-stat-val" style="color:#3b82f6;">Sharpe 3.56</span></div>
+              <div class="sd-stat-row"><span class="sd-stat-label">Apr 11 — LightGBM v7 (14d)</span><span class="sd-stat-val" style="color:#3b82f6;">Sharpe 4.27</span></div>
+              <div class="sd-stat-row"><span class="sd-stat-label">Apr 11 — LightGBM v7 (21d) ★</span><span class="sd-stat-val" style="color:#22c55e;">Sharpe 4.80</span></div>
+              <div class="sd-stat-row"><span class="sd-stat-label">Apr 11 — LightGBM v7 (7-day)</span><span class="sd-stat-val" style="color:#3b82f6;">Sharpe 1.40</span></div>
+            </div>
+          </div>
+
+          <!-- Key Discoveries -->
+          <div class="sd-section">
+            <div class="sd-section-title">🔬 Key Discoveries</div>
+            <div class="sd-card">
+              <div style="font-size:11px;color:#c9d1d9;line-height:1.5;">
+                <strong style="color:#22c55e;">Lagged features dominate:</strong> Yesterday's Williams %R is the #1 feature. The model learned momentum trajectories, not snapshots.<br><br>
+                <strong style="color:#3b82f6;">Feature engineering > LLM creativity:</strong> 133 features (75 technical + 58 macro). 21-day champion model: Sharpe 4.80, 65.2% win rate. 7d and 14d models active as secondary horizons.<br><br>
+                <strong style="color:#f59e0b;">Multi-horizon validated:</strong> 21d champion (Sharpe 4.80, 65.2% WR) uses 133 combined tech+macro features. Macro signals only help at 21d horizon — zero edge at shorter timeframes.
+              </div>
+            </div>
+          </div>
+
+          <!-- Research Feed (scraped items) -->
+          <div class="sd-section">
+            <div class="sd-section-title">📰 Latest Research (scraped daily)</div>
+            <div id="sd-research-feed">Loading...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  // Load signal leaderboard from model metadata
+  (async function loadSignalData() {
+    try {
+      var res = await fetch('data/lgbm-prediction.json?t=' + Date.now());
+      if (!res.ok) return;
+      var pred = await res.json();
+      fetch('data/lgbm-prediction-21d.json?t=' + Date.now()).then(r => r.json()).then(function(p21) {
+        document.getElementById('sd-accuracy').textContent = 'Sharpe ' + (p21.walk_forward_sharpe || '4.80');
+      }).catch(function() {
+        document.getElementById('sd-accuracy').textContent = 'Sharpe 4.80';
+      });
+      document.getElementById('sd-feature-count').textContent = pred.signals_used || 75;
+    } catch(e) {}
+
+    // Load model metadata for feature importance
+    try {
+      // We'll use the prediction file's data + hardcoded top features from v6
+      var topFeatures = [
+        {name:'williams_r_lag1', imp:187, cat:'engineered'},
+        {name:'stochastic_k', imp:179, cat:'base'},
+        {name:'bb_position', imp:168, cat:'base'},
+        {name:'bb_position_lag1', imp:167, cat:'engineered'},
+        {name:'stochastic_k_lag1', imp:157, cat:'engineered'},
+        {name:'williams_r', imp:132, cat:'base'},
+        {name:'bb_position_mom2', imp:65, cat:'engineered'},
+        {name:'range_ratio', imp:41, cat:'base'},
+        {name:'stochastic_k_mom2', imp:27, cat:'engineered'},
+        {name:'rsi_5', imp:23, cat:'base'},
+        {name:'range_ratio_lag1', imp:17, cat:'engineered'},
+        {name:'willr_x_range', imp:16, cat:'interaction'},
+        {name:'cci_20_lag1', imp:14, cat:'engineered'},
+        {name:'rsi5_x_volratio', imp:14, cat:'interaction'},
+        {name:'cci_20', imp:12, cat:'base'},
+        {name:'rsi_5_lag1', imp:11, cat:'engineered'},
+        {name:'vol_ratio_lag1', imp:10, cat:'engineered'},
+        {name:'stochastic_k_lag2', imp:9, cat:'engineered'},
+        {name:'williams_r_mom2', imp:9, cat:'engineered'},
+        {name:'roc_5', imp:8, cat:'base'},
+      ];
+      var maxImp = topFeatures[0].imp;
+      var lb = document.getElementById('sd-leaderboard');
+      lb.innerHTML = topFeatures.map(function(f, i) {
+        var pct = Math.round(f.imp / maxImp * 100);
+        var catColor = f.cat === 'engineered' ? '#3b82f6' : f.cat === 'interaction' ? '#a855f7' : '#22c55e';
+        var catLabel = f.cat === 'engineered' ? 'ENG' : f.cat === 'interaction' ? 'INT' : 'BASE';
+        return '<div class="sd-stat-row">' +
+          '<span class="sd-stat-label" style="min-width:24px;color:#4b5563;">' + (i+1) + '.</span>' +
+          '<span class="sd-stat-label" style="flex:1;">' + f.name + '</span>' +
+          '<span class="sd-badge" style="background:' + catColor + '22;color:' + catColor + ';border:1px solid ' + catColor + '44;margin-right:6px;">' + catLabel + '</span>' +
+          '<span class="sd-stat-val" style="min-width:30px;text-align:right;">' + f.imp + '</span>' +
+          '</div>' +
+          '<div class="sd-bar"><div class="sd-bar-fill" style="width:' + pct + '%;background:' + catColor + ';"></div></div>';
+      }).join('');
+      document.getElementById('sd-signal-count').textContent = '80 signals · 75 in model';
+      document.getElementById('sd-total-signals').textContent = '80';
+    } catch(e) { console.warn(e); }
+  })();
+
+  // Load experiment history
+  (async function loadExperiments() {
+    var expEl = document.getElementById('sd-experiments');
+    try {
+      var res = await fetch('/api/experiments');
+      var data = await res.json();
+      var s = data.stats || {};
+      var exps = data.experiments || [];
+      // Sort: needs_review and promoted first, then by date
+      exps.sort(function(a, b) {
+        var priority = {'promoted': 0, 'needs_review': 1, 'rejected': 2, 'failed': 3};
+        var pa = priority[a.decision] !== undefined ? priority[a.decision] : 4;
+        var pb = priority[b.decision] !== undefined ? priority[b.decision] : 4;
+        if (pa !== pb) return pa - pb;
+        return (b.created_at || '').localeCompare(a.created_at || '');
+      });
+      expEl.innerHTML = '<div class="sd-card">' +
+        '<div class="sd-stat-row"><span class="sd-stat-label">Total experiments</span><span class="sd-stat-val">' + (s.total || 0) + '</span></div>' +
+        '<div class="sd-stat-row"><span class="sd-stat-label">Promoted</span><span class="sd-stat-val" style="color:#22c55e;">' + (s.promoted || 0) + '</span></div>' +
+        '<div class="sd-stat-row"><span class="sd-stat-label">Needs Review</span><span class="sd-stat-val" style="color:#f59e0b;">' + (s.needs_review || 0) + '</span></div>' +
+        '<div class="sd-stat-row"><span class="sd-stat-label">Rejected</span><span class="sd-stat-val" style="color:#ef4444;">' + (s.rejected || 0) + '</span></div>' +
+        '<div class="sd-stat-row"><span class="sd-stat-label">Failed</span><span class="sd-stat-val" style="color:#6b7280;">' + (s.failed || 0) + '</span></div>' +
+        '</div>' +
+        '<div style="font-family:var(--font-mono);font-size:9px;color:#4b5563;margin-top:4px;">Recent experiments:</div>' +
+        exps.filter(function(e) { return e.decision === 'needs_review' || e.decision === 'promoted'; }).concat(
+        exps.filter(function(e) { return e.decision !== 'needs_review' && e.decision !== 'promoted'; })
+      ).slice(0, 20).map(function(e) {
+          var badge = e.decision === 'promoted' ? 'sd-badge-green' :
+                      e.decision === 'needs_review' ? 'sd-badge-yellow' :
+                      e.decision === 'rejected' ? 'sd-badge-red' : 'sd-badge-blue';
+          var label = (e.decision || 'PENDING').toUpperCase();
+          var delta = e.vs_baseline_sharpe_delta ? ' | ΔSharpe: ' + (e.vs_baseline_sharpe_delta > 0 ? '+' : '') + Number(e.vs_baseline_sharpe_delta).toFixed(3) : '';
+          var acc = e.backtest_accuracy ? ' | Acc: ' + Number(e.backtest_accuracy).toFixed(1) + '%' : '';
+          return '<div class="sd-exp-card">' +
+            '<div class="sd-exp-title">' +
+            '<span class="sd-badge ' + badge + '" style="margin-right:6px;">' + label + '</span>' +
+            (e.signal_name || '?') + '</div>' +
+            '<div class="sd-exp-detail">' + (e.decision_reason || e.hypothesis || '').substring(0, 120) + delta + acc + '</div>' +
+            '<div class="sd-exp-detail" style="color:#374151;margin-top:2px;">' + (e.created_at || '').substring(0, 16) + '</div></div>';
+        }).join('');
+    } catch(err) {
+      expEl.innerHTML = '<div style="color:#6b7280;font-size:11px;padding:12px;">Failed to load experiments: ' + err.message + '</div>';
+    }
+  })();
+
+  // Load research feed (scored items)
+  (async function loadResearch() {
+    var feedEl = document.getElementById('sd-research-feed');
+    var count = document.getElementById('sd-research-count');
+    var loaded = false;
+    
+    // Try last 7 days
+    for (var d = 0; d < 7 && !loaded; d++) {
+      var dt = new Date();
+      dt.setDate(dt.getDate() - d);
+      var dateStr = dt.toISOString().split('T')[0];
+      try {
+        var res = await fetch('data/research-scored/scout-scored-' + dateStr + '.json?t=' + Date.now());
+        if (res.ok) {
+          var data = await res.json();
+          var items = (data.items || []).slice(0, 15);
+          count.textContent = items.length + ' items from ' + dateStr;
+          feedEl.innerHTML = items.map(function(item) {
+            var score = item.relevance_score || item.score || 0;
+            var scoreColor = score >= 7 ? '#22c55e' : score >= 4 ? '#f59e0b' : '#6b7280';
+            return '<div class="sd-research-card">' +
+              '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+              '<div class="sd-research-title">' + (item.title || 'Untitled').substring(0, 65) + '</div>' +
+              '<div class="sd-research-score" style="color:' + scoreColor + ';">' + score + '/10</div>' +
+              '</div>' +
+              '<div class="sd-research-source">' + (item.source || '') + (item.category ? ' · ' + item.category : '') + '</div>' +
+              '</div>';
+          }).join('');
+          loaded = true;
+        }
+      } catch(e) {}
+    }
+    if (!loaded) {
+      count.textContent = 'No recent data';
+      feedEl.innerHTML = '<div style="color:#4b5563;font-size:11px;font-family:var(--font-mono);padding:12px;">No scored research available. Summarizer runs daily at 11 AM ET.</div>';
+    }
+  })();
+
+  // Thesis queue — loads from thesis-queue.json
+  var thesisData = [];
+  
+  async function loadTheses() {
+    try {
+      var res = await fetch('data/thesis-queue.json?t=' + Date.now());
+      if (res.ok) {
+        var data = await res.json();
+        thesisData = data.theses || [];
+      }
+    } catch(e) {}
+    // Merge any localStorage theses (user-submitted this session)
+    var local = JSON.parse(localStorage.getItem('sofar-theses') || '[]');
+    for (var lt of local) {
+      if (!thesisData.find(function(t) { return t.text === lt.text; })) {
+        thesisData.unshift(lt);
+      }
+    }
+    renderTheses();
+  }
+
+  function submitThesis() {
+    var input = document.getElementById('sd-thesis-input');
+    var text = input.value.trim();
+    if (!text) return;
+    var thesis = {
+      id: 'thesis-' + Date.now(),
+      text: text,
+      status: 'pending',
+      submitted: new Date().toISOString(),
+      submitted_by: 'user'
+    };
+    thesisData.unshift(thesis);
+    // Save to localStorage for persistence until backend syncs
+    var local = JSON.parse(localStorage.getItem('sofar-theses') || '[]');
+    local.unshift(thesis);
+    localStorage.setItem('sofar-theses', JSON.stringify(local));
+    input.value = '';
+    renderTheses();
+  }
+
+  function renderTheses() {
+    var el = document.getElementById('sd-theses');
+    if (!thesisData.length) {
+      el.innerHTML = '<div style="color:#4b5563;font-size:11px;font-family:var(--font-mono);padding:8px;">No theses queued. Submit one below.</div>';
+      return;
+    }
+    el.innerHTML = thesisData.slice(0, 10).map(function(t) {
+      var badge = t.status === 'pending' ? '<span class="sd-badge sd-badge-yellow">PENDING</span>' :
+                  t.status === 'testing' ? '<span class="sd-badge sd-badge-blue">TESTING</span>' :
+                  t.status === 'promoted' ? '<span class="sd-badge sd-badge-green">PROMOTED</span>' :
+                  '<span class="sd-badge sd-badge-red">REJECTED</span>';
+      var notes = t.notes ? '<div class="sd-exp-detail" style="margin-top:2px;color:#4b5563;">' + t.notes + '</div>' : '';
+      return '<div class="sd-exp-card">' +
+        '<div class="sd-exp-title">' + badge + ' ' + t.text.substring(0, 80) + '</div>' +
+        '<div class="sd-exp-detail">' + (t.submitted_by || 'user') + ' · ' + new Date(t.submitted).toLocaleDateString() + '</div>' +
+        notes + '</div>';
+    }).join('');
+  }
+  loadTheses();
+  </script>
+</body>
+</html>
