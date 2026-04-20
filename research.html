@@ -10,8 +10,26 @@
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#0d1117">
   <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
     .sd-wrap     { display:flex; flex-direction:column; height:calc(100vh - 54px); overflow:hidden; }
+    .sd-director-banner { flex-shrink:0; border-bottom:1px solid #1a1f28; background:#080b10; max-height:32vh; display:flex; flex-direction:column; }
+    .sd-director-hdr { padding:8px 14px; border-bottom:1px solid #1a1f28; display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+    .sd-director-title { font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:700; letter-spacing:.06em; color:#e2e8f0; display:flex; align-items:center; gap:8px; }
+    .sd-director-meta { font-family:'IBM Plex Mono',monospace; font-size:9px; color:#475569; }
+    .sd-director-toggle { font-family:'IBM Plex Mono',monospace; font-size:9px; color:#3b82f6; cursor:pointer; padding:2px 8px; border:1px solid #1e2433; border-radius:3px; background:transparent; }
+    .sd-director-toggle:hover { background:#111827; }
+    .sd-director-content { padding:10px 16px; overflow-y:auto; flex:1; font-size:12px; color:#c9d1d9; line-height:1.55; }
+    .sd-director-content h1, .sd-director-content h2 { font-family:'Inter',sans-serif; font-size:13px; font-weight:600; color:#e2e8f0; margin:10px 0 4px; padding-bottom:3px; border-bottom:1px solid #1e2433; }
+    .sd-director-content h3 { font-family:'Inter',sans-serif; font-size:12px; font-weight:600; color:#cbd5e1; margin:8px 0 3px; }
+    .sd-director-content p { margin:4px 0; }
+    .sd-director-content ul, .sd-director-content ol { margin:4px 0; padding-left:20px; }
+    .sd-director-content li { margin:2px 0; }
+    .sd-director-content code { font-family:'IBM Plex Mono',monospace; background:#111827; padding:1px 5px; border-radius:3px; font-size:11px; color:#a5b4fc; }
+    .sd-director-content strong { color:#e2e8f0; }
+    .sd-director-content em { color:#94a3b8; }
+    .sd-director-content blockquote { border-left:3px solid #1e2433; padding-left:10px; margin:6px 0; color:#94a3b8; }
+    .sd-director-collapsed { max-height:0; }
     .sd-panels   { display:grid; grid-template-columns:1fr 1fr; gap:0; flex:1; overflow:hidden; }
     .sd-panel    { display:flex; flex-direction:column; overflow:hidden; border-right:1px solid #1a1f28; }
     .sd-panel:last-child { border-right:none; }
@@ -20,7 +38,8 @@
     .sd-panel-count { font-size:9px; color:#475569; font-weight:400; }
     .sd-scroll   { overflow-y:auto; padding:8px; flex:1; }
     .sd-section  { margin-bottom:16px; }
-    .sd-section-title { font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#64748b; margin-bottom:8px; padding-bottom:4px; border-bottom:1px solid #1e2433; }
+    .sd-section-title { font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#64748b; margin-bottom:8px; padding-bottom:4px; border-bottom:1px solid #1e2433; display:flex; justify-content:space-between; align-items:center; }
+    .sd-section-count { font-size:9px; color:#475569; font-weight:400; }
     .sd-card     { background:#111827; border:1px solid #1e2433; border-radius:6px; padding:10px 12px; margin-bottom:6px; }
     .sd-card:hover { border-color:#30363d; }
     .sd-stat-row { display:flex; justify-content:space-between; align-items:center; padding:3px 0; font-family:'IBM Plex Mono',monospace; font-size:11px; }
@@ -33,6 +52,8 @@
     .sd-badge-red { background:rgba(239,68,68,.12); color:#ef4444; border:1px solid rgba(239,68,68,.25); }
     .sd-badge-yellow { background:rgba(245,158,11,.12); color:#f59e0b; border:1px solid rgba(245,158,11,.25); }
     .sd-badge-blue { background:rgba(59,130,246,.12); color:#3b82f6; border:1px solid rgba(59,130,246,.25); }
+    .sd-badge-purple { background:rgba(168,85,247,.12); color:#a855f7; border:1px solid rgba(168,85,247,.25); }
+    .sd-badge-gray { background:rgba(107,114,128,.12); color:#9ca3af; border:1px solid rgba(107,114,128,.25); }
     .sd-exp-card { background:#111827; border:1px solid #1e2433; border-radius:6px; padding:10px 12px; margin-bottom:6px; }
     .sd-exp-title { font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; color:#c9d1d9; margin-bottom:4px; }
     .sd-exp-detail { font-size:10px; color:#6b7280; margin-top:2px; }
@@ -41,6 +62,21 @@
     .sd-btn { font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:700; padding:6px 14px; border-radius:4px; border:none; cursor:pointer; letter-spacing:.05em; }
     .sd-btn-primary { background:#3b82f6; color:#fff; }
     .sd-btn-primary:hover { background:#2563eb; }
+    .sd-pipeline-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; margin-bottom:12px; }
+    .sd-pipeline-cell { background:#111827; border:1px solid #1e2433; border-radius:6px; padding:8px 6px; text-align:center; }
+    .sd-pipeline-cell-num { font-family:'IBM Plex Mono',monospace; font-size:18px; font-weight:700; }
+    .sd-pipeline-cell-label { font-family:'IBM Plex Mono',monospace; font-size:8px; color:#6b7280; letter-spacing:.06em; text-transform:uppercase; margin-top:2px; }
+    .sd-hyp-card { background:#111827; border:1px solid #1e2433; border-radius:6px; padding:8px 10px; margin-bottom:5px; }
+    .sd-hyp-id { font-family:'IBM Plex Mono',monospace; font-size:9px; color:#475569; }
+    .sd-hyp-text { font-size:11px; color:#cbd5e1; margin:3px 0; line-height:1.4; }
+    .sd-hyp-meta { font-family:'IBM Plex Mono',monospace; font-size:9px; color:#64748b; display:flex; gap:8px; flex-wrap:wrap; }
+    .sd-pilot-card { background:#111827; border:1px solid #1e2433; border-radius:6px; padding:8px 10px; margin-bottom:5px; }
+    .sd-pilot-name { font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; color:#a5b4fc; }
+    .sd-pilot-meta { font-family:'IBM Plex Mono',monospace; font-size:9px; color:#64748b; margin-top:3px; }
+    .sd-escalation-card { background:rgba(245,158,11,.05); border:1px solid rgba(245,158,11,.2); border-radius:6px; padding:8px 10px; margin-bottom:5px; }
+    .sd-empty { color:#475569; font-size:11px; font-family:'IBM Plex Mono',monospace; padding:12px; text-align:center; font-style:italic; }
+    .sd-error { color:#ef4444; font-size:11px; font-family:'IBM Plex Mono',monospace; padding:12px; }
+    .sd-loading { color:#475569; font-size:11px; font-family:'IBM Plex Mono',monospace; padding:12px; }
     .sd-model-banner { background:linear-gradient(135deg,rgba(34,197,94,.08),rgba(59,130,246,.08)); border:1px solid rgba(34,197,94,.2); border-radius:8px; padding:14px 16px; margin-bottom:12px; }
     .sd-model-stat { font-family:'IBM Plex Mono',monospace; font-size:20px; font-weight:700; color:#22c55e; }
     .sd-model-label { font-family:'IBM Plex Mono',monospace; font-size:9px; color:#6b7280; letter-spacing:.08em; }
@@ -49,7 +85,7 @@
     .sd-research-source { font-family:'IBM Plex Mono',monospace; font-size:9px; color:#4b5563; }
     .sd-research-score { font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:700; }
     .sd-thesis-queue { margin-top:12px; }
-    @media(max-width:800px){ .sd-panels{grid-template-columns:1fr;} .sd-panel{max-height:50vh;} }
+    @media(max-width:800px){ .sd-panels{grid-template-columns:1fr;} .sd-panel{max-height:50vh;} .sd-pipeline-grid{grid-template-columns:repeat(3,1fr);} }
   </style>
 </head>
 <body class="page-scrollable" style="height:100vh;overflow:hidden;">
@@ -57,20 +93,56 @@
   <script src="js/nav.js"></script>
   <script>document.addEventListener('DOMContentLoaded',()=>NavComponent.setMeta('<span class="live-dot"></span>LIVE<span style="margin-left:8px" id="clock"></span>'));</script>
   <div class="sd-wrap">
+    <!-- DIRECTOR BRIEF BANNER -->
+    <div class="sd-director-banner" id="sd-director-banner">
+      <div class="sd-director-hdr">
+        <div class="sd-director-title">🎯 <span id="sd-director-type">Director</span>
+          <span class="sd-director-meta" id="sd-director-meta">Loading…</span>
+        </div>
+        <button class="sd-director-toggle" onclick="toggleDirector()">
+          <span id="sd-director-toggle-label">collapse</span>
+        </button>
+      </div>
+      <div class="sd-director-content" id="sd-director-content">
+        <div class="sd-loading">Loading latest brief…</div>
+      </div>
+    </div>
     <div class="sd-panels">
-      <!-- LEFT: Signal Discovery -->
+      <!-- LEFT: Signal Discovery + Hypothesis Pipeline -->
       <div class="sd-panel">
         <div class="sd-panel-hdr">
-          <div class="sd-panel-title">🧬 Signal Discovery Engine
+          <div class="sd-panel-title">🧬 Research Pipeline
             <span class="sd-panel-count" id="sd-signal-count">Loading…</span>
           </div>
         </div>
         <div class="sd-scroll" id="sd-left">
-          <!-- Model Banner -->
+          <!-- Hypothesis Pipeline Counters -->
+          <div class="sd-section">
+            <div class="sd-section-title">📊 Hypothesis Pipeline
+              <span class="sd-section-count" id="sd-pipeline-updated">—</span>
+            </div>
+            <div class="sd-pipeline-grid" id="sd-pipeline-counters">
+              <div class="sd-pipeline-cell"><div class="sd-pipeline-cell-num" style="color:#3b82f6;" id="sd-cnt-proposed">—</div><div class="sd-pipeline-cell-label">Proposed</div></div>
+              <div class="sd-pipeline-cell"><div class="sd-pipeline-cell-num" style="color:#a855f7;" id="sd-cnt-pending">—</div><div class="sd-pipeline-cell-label">Pending</div></div>
+              <div class="sd-pipeline-cell"><div class="sd-pipeline-cell-num" style="color:#f59e0b;" id="sd-cnt-experimenting">—</div><div class="sd-pipeline-cell-label">Testing</div></div>
+              <div class="sd-pipeline-cell"><div class="sd-pipeline-cell-num" style="color:#22c55e;" id="sd-cnt-results">—</div><div class="sd-pipeline-cell-label">Results</div></div>
+              <div class="sd-pipeline-cell"><div class="sd-pipeline-cell-num" style="color:#ef4444;" id="sd-cnt-rejected">—</div><div class="sd-pipeline-cell-label">Rejected</div></div>
+            </div>
+          </div>
+          <!-- Proposed Hypotheses Awaiting Gate -->
+          <div class="sd-section">
+            <div class="sd-section-title">🚦 Awaiting Director Gate
+              <span class="sd-section-count" id="sd-awaiting-count">—</span>
+            </div>
+            <div id="sd-awaiting-list">
+              <div class="sd-loading">Loading…</div>
+            </div>
+          </div>
+          <!-- Champion Model Banner -->
           <div class="sd-model-banner">
             <div style="display:flex;justify-content:space-between;align-items:center;">
               <div>
-                <div class="sd-model-label">LIGHTGBM v6 WALK-FORWARD ACCURACY</div>
+                <div class="sd-model-label">LIGHTGBM v6 WALK-FORWARD</div>
                 <div class="sd-model-stat" id="sd-accuracy">Loading...</div>
               </div>
               <div style="text-align:right;">
@@ -78,29 +150,26 @@
                 <div style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:#3b82f6;" id="sd-feature-count">—</div>
               </div>
               <div style="text-align:right;">
-                <div class="sd-model-label">TOTAL SIGNALS</div>
+                <div class="sd-model-label">SIGNALS</div>
                 <div style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:#f59e0b;" id="sd-total-signals">—</div>
               </div>
             </div>
           </div>
-
           <!-- Signal Leaderboard -->
           <div class="sd-section">
-            <div class="sd-section-title">📊 Signal Leaderboard (by LightGBM importance)</div>
+            <div class="sd-section-title">📊 Signal Leaderboard (LightGBM importance)</div>
             <div id="sd-leaderboard">Loading...</div>
           </div>
-
           <!-- Experiment History -->
           <div class="sd-section">
             <div class="sd-section-title">🧪 Experiment History</div>
             <div id="sd-experiments" style="max-height:500px;overflow-y:auto;">Loading...</div>
           </div>
-
-          <!-- Thesis Queue -->
+          <!-- Thesis Queue (legacy localStorage — DB migration is separate TODO) -->
           <div class="sd-section sd-thesis-queue">
-            <div class="sd-section-title">💡 Thesis Queue</div>
+            <div class="sd-section-title">💡 Thesis Queue (manual entry)</div>
             <div id="sd-theses">
-              <div style="color:#4b5563;font-size:11px;font-family:var(--font-mono);padding:8px;">No theses queued. Submit one below.</div>
+              <div class="sd-empty">No theses queued. Submit one below.</div>
             </div>
             <div style="margin-top:8px;">
               <textarea class="sd-input" id="sd-thesis-input" rows="2" placeholder="Submit a signal hypothesis... e.g. 'Fertilizer stocks (MOS, NTR) rising = S&P bearish within 5 days'"></textarea>
@@ -109,15 +178,32 @@
           </div>
         </div>
       </div>
-
-      <!-- RIGHT: Research Feed -->
+      <!-- RIGHT: Data Sources + Escalations + Research Feed -->
       <div class="sd-panel">
         <div class="sd-panel-hdr">
-          <div class="sd-panel-title">🔭 Research Feed
+          <div class="sd-panel-title">🔭 Data &amp; Research
             <span class="sd-panel-count" id="sd-research-count">Loading…</span>
           </div>
         </div>
         <div class="sd-scroll" id="sd-right">
+          <!-- Pilot Data Sources -->
+          <div class="sd-section">
+            <div class="sd-section-title">🛰️ Pilot Data Sources
+              <span class="sd-section-count" id="sd-pilot-count">—</span>
+            </div>
+            <div id="sd-pilot-list">
+              <div class="sd-loading">Loading…</div>
+            </div>
+          </div>
+          <!-- Data Scout Escalations -->
+          <div class="sd-section">
+            <div class="sd-section-title">⚠️ Data Scout Escalations
+              <span class="sd-section-count" id="sd-escalation-count">—</span>
+            </div>
+            <div id="sd-escalation-list">
+              <div class="sd-loading">Loading…</div>
+            </div>
+          </div>
           <!-- Model Progression -->
           <div class="sd-section">
             <div class="sd-section-title">📈 Model Progression</div>
@@ -129,19 +215,17 @@
               <div class="sd-stat-row"><span class="sd-stat-label">Apr 11 — LightGBM v7 (7-day)</span><span class="sd-stat-val" style="color:#3b82f6;">Sharpe 1.40</span></div>
             </div>
           </div>
-
           <!-- Key Discoveries -->
           <div class="sd-section">
             <div class="sd-section-title">🔬 Key Discoveries</div>
             <div class="sd-card">
               <div style="font-size:11px;color:#c9d1d9;line-height:1.5;">
                 <strong style="color:#22c55e;">Lagged features dominate:</strong> Yesterday's Williams %R is the #1 feature. The model learned momentum trajectories, not snapshots.<br><br>
-                <strong style="color:#3b82f6;">Feature engineering > LLM creativity:</strong> 133 features (75 technical + 58 macro). 21-day champion model: Sharpe 4.80, 65.2% win rate. 7d and 14d models active as secondary horizons.<br><br>
+                <strong style="color:#3b82f6;">Feature engineering > LLM creativity:</strong> 133 features (75 technical + 58 macro). 21-day champion model: Sharpe 4.80, 65.2% win rate.<br><br>
                 <strong style="color:#f59e0b;">Multi-horizon validated:</strong> 21d champion (Sharpe 4.80, 65.2% WR) uses 133 combined tech+macro features. Macro signals only help at 21d horizon — zero edge at shorter timeframes.
               </div>
             </div>
           </div>
-
           <!-- Research Feed (scraped items) -->
           <div class="sd-section">
             <div class="sd-section-title">📰 Latest Research (scraped daily)</div>
@@ -151,9 +235,257 @@
       </div>
     </div>
   </div>
-
   <script>
-  // Load signal leaderboard from model metadata
+  // ─────────────────────────────────────────────────────────────────────
+  // Director Brief Banner
+  // ─────────────────────────────────────────────────────────────────────
+  var directorCollapsed = false;
+  function toggleDirector() {
+    directorCollapsed = !directorCollapsed;
+    var content = document.getElementById('sd-director-content');
+    var label = document.getElementById('sd-director-toggle-label');
+    if (directorCollapsed) {
+      content.style.display = 'none';
+      label.textContent = 'expand';
+    } else {
+      content.style.display = 'block';
+      label.textContent = 'collapse';
+    }
+  }
+  async function loadDirectorBrief() {
+    var typeEl = document.getElementById('sd-director-type');
+    var metaEl = document.getElementById('sd-director-meta');
+    var contentEl = document.getElementById('sd-director-content');
+    try {
+      // Pick brief type by time of day:
+      // before 16:00 ET → show morning brief
+      // 16:00 ET onward → show evening brief
+      // Try preferred type first, fall back to other
+      var nowEt = new Date(new Date().toLocaleString('en-US', {timeZone: 'America/New_York'}));
+      var preferred = nowEt.getHours() >= 16 ? 'evening' : 'morning';
+      var fallback = preferred === 'evening' ? 'morning' : 'evening';
+      var data = null;
+      var briefType = null;
+      // Try preferred
+      var res = await fetch('/api/director-summary?type=' + preferred + '&action=latest');
+      if (res.ok) {
+        var d = await res.json();
+        if (d && d.summary) { data = d.summary; briefType = preferred; }
+      }
+      // Fall back to other type
+      if (!data) {
+        res = await fetch('/api/director-summary?type=' + fallback + '&action=latest');
+        if (res.ok) {
+          var d2 = await res.json();
+          if (d2 && d2.summary) { data = d2.summary; briefType = fallback; }
+        }
+      }
+      // Last resort: any latest
+      if (!data) {
+        res = await fetch('/api/director-summary?action=latest');
+        if (res.ok) {
+          var d3 = await res.json();
+          if (d3 && d3.summary) { data = d3.summary; briefType = d3.summary.type || 'unknown'; }
+        }
+      }
+      if (!data) {
+        typeEl.textContent = 'Director Brief';
+        metaEl.textContent = 'no brief available yet';
+        contentEl.innerHTML = '<div class="sd-empty">No Director brief found. Morning Director runs 07:30 ET weekdays, Evening at 16:30 ET. Check back after the next scheduled run.</div>';
+        return;
+      }
+      // Header
+      typeEl.textContent = (briefType === 'evening' ? 'Evening' : briefType === 'morning' ? 'Morning' : 'Latest') + ' Director';
+      var dateLabel = data.date || (data.created_at ? data.created_at.substring(0, 10) : '');
+      var timeLabel = data.created_at ? data.created_at.substring(11, 16) : '';
+      metaEl.textContent = dateLabel + (timeLabel ? ' · ' + timeLabel + ' UTC' : '');
+      // Render markdown
+      var md = data.markdown || data.brief || data.content || '';
+      if (md) {
+        contentEl.innerHTML = marked.parse(md);
+      } else {
+        contentEl.innerHTML = '<div class="sd-empty">Brief content empty.</div>';
+      }
+    } catch (err) {
+      typeEl.textContent = 'Director';
+      metaEl.textContent = 'error';
+      contentEl.innerHTML = '<div class="sd-error">Failed to load Director brief: ' + err.message + '</div>';
+    }
+  }
+  // ─────────────────────────────────────────────────────────────────────
+  // Hypothesis Pipeline Counters + Awaiting Gate List
+  // ─────────────────────────────────────────────────────────────────────
+  async function loadHypothesisPipeline() {
+    try {
+      // Stats endpoint
+      var statsRes = await fetch('/api/hypotheses?action=stats');
+      var statsByStatus = {};
+      if (statsRes.ok) {
+        var s = await statsRes.json();
+        if (s && s.by_status) {
+          // Expect format: [{status: 'proposed', count: N}, ...] OR {proposed: N, ...}
+          if (Array.isArray(s.by_status)) {
+            for (var row of s.by_status) {
+              statsByStatus[row.status] = row.count || row.n || 0;
+            }
+          } else {
+            statsByStatus = s.by_status;
+          }
+        } else if (s && s.stats) {
+          statsByStatus = s.stats;
+        }
+      }
+      // Render counters
+      document.getElementById('sd-cnt-proposed').textContent = statsByStatus.proposed || 0;
+      document.getElementById('sd-cnt-pending').textContent = statsByStatus.pending_experiment || 0;
+      document.getElementById('sd-cnt-experimenting').textContent = statsByStatus.experimenting || 0;
+      document.getElementById('sd-cnt-results').textContent = statsByStatus.results_ready || 0;
+      document.getElementById('sd-cnt-rejected').textContent = statsByStatus.rejected || 0;
+      document.getElementById('sd-pipeline-updated').textContent = 'updated ' + new Date().toLocaleTimeString('en-US', {hour12: false, hour: '2-digit', minute: '2-digit'});
+      // Total signal count for header
+      var total = Object.values(statsByStatus).reduce(function(a, b) { return (a||0) + (b||0); }, 0);
+      document.getElementById('sd-signal-count').textContent = total + ' hypotheses';
+      // Awaiting gate list
+      var listRes = await fetch('/api/hypotheses?status=proposed&limit=20');
+      var listEl = document.getElementById('sd-awaiting-list');
+      var countEl = document.getElementById('sd-awaiting-count');
+      if (!listRes.ok) {
+        listEl.innerHTML = '<div class="sd-error">API ' + listRes.status + '</div>';
+        countEl.textContent = '';
+        return;
+      }
+      var d = await listRes.json();
+      var hypotheses = d.hypotheses || d.rows || [];
+      countEl.textContent = hypotheses.length + ' awaiting';
+      if (!hypotheses.length) {
+        listEl.innerHTML = '<div class="sd-empty">No hypotheses awaiting Director gate. Quant scout runs 23:00 ET daily.</div>';
+        return;
+      }
+      listEl.innerHTML = hypotheses.map(function(h) {
+        var priority = (h.priority || 'normal').toLowerCase();
+        var prClass = priority === 'urgent' ? 'sd-badge-red' : priority === 'high' ? 'sd-badge-yellow' : priority === 'low' ? 'sd-badge-gray' : 'sd-badge-blue';
+        var proposer = h.proposer || 'unknown';
+        var prClass2 = proposer === 'quant-scout' ? 'sd-badge-purple' : proposer === 'human' ? 'sd-badge-green' : proposer === 'human-web' ? 'sd-badge-green' : 'sd-badge-gray';
+        var tagsHtml = '';
+        if (h.tags && Array.isArray(h.tags) && h.tags.length) {
+          tagsHtml = h.tags.slice(0, 3).map(function(t) { return '<span class="sd-badge sd-badge-gray">' + t + '</span>'; }).join(' ');
+        }
+        var created = h.created_at ? new Date(h.created_at).toLocaleString('en-US', {month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'}) : '';
+        return '<div class="sd-hyp-card">' +
+          '<div class="sd-hyp-id">' + (h.hypothesis_id || h.id || '?') + '</div>' +
+          '<div class="sd-hyp-text">' + escapeHtml((h.text || h.hypothesis || '').substring(0, 200)) + '</div>' +
+          '<div class="sd-hyp-meta">' +
+            '<span class="sd-badge ' + prClass2 + '">' + proposer + '</span>' +
+            '<span class="sd-badge ' + prClass + '">' + priority + '</span>' +
+            tagsHtml +
+            (created ? '<span style="margin-left:auto;">' + created + '</span>' : '') +
+          '</div>' +
+        '</div>';
+      }).join('');
+    } catch (err) {
+      document.getElementById('sd-awaiting-list').innerHTML = '<div class="sd-error">Failed to load: ' + err.message + '</div>';
+    }
+  }
+  // ─────────────────────────────────────────────────────────────────────
+  // Pilot Data Sources + Data Scout Escalations
+  // ─────────────────────────────────────────────────────────────────────
+  async function loadDataGapsAndPilots() {
+    // Pilot sources — try /api/data-gaps with action=pilots, fall back to action=stats
+    var pilotEl = document.getElementById('sd-pilot-list');
+    var pilotCount = document.getElementById('sd-pilot-count');
+    var escEl = document.getElementById('sd-escalation-list');
+    var escCount = document.getElementById('sd-escalation-count');
+    try {
+      // Pilots: expect /api/data-gaps?action=pilots OR /api/data-gaps?status=pilot
+      var pilotRes = await fetch('/api/data-gaps?action=pilots');
+      var pilots = [];
+      if (pilotRes.ok) {
+        var pd = await pilotRes.json();
+        pilots = pd.pilots || pd.sources || pd.rows || [];
+      }
+      // Render pilots
+      pilotCount.textContent = pilots.length + ' pilot' + (pilots.length === 1 ? '' : 's');
+      if (!pilots.length) {
+        pilotEl.innerHTML = '<div class="sd-empty">No pilot data sources. Data Scout runs 17:15 ET weekdays. Director will route NEEDS_DATA gaps automatically.</div>';
+      } else {
+        pilotEl.innerHTML = pilots.map(function(p) {
+          var src = p.source || '?';
+          var ident = p.identifier || '?';
+          var target = p.target_table || '';
+          var rows = p.total_rows != null ? Number(p.total_rows).toLocaleString() : '—';
+          var started = p.pilot_started_at ? new Date(p.pilot_started_at).toLocaleDateString() : '';
+          var status = (p.status || 'pilot').toLowerCase();
+          var statusClass = status === 'approved' ? 'sd-badge-green' : status === 'rejected' ? 'sd-badge-red' : status === 'monitor' ? 'sd-badge-yellow' : 'sd-badge-blue';
+          return '<div class="sd-pilot-card">' +
+            '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+              '<div class="sd-pilot-name">' + escapeHtml(src) + ':' + escapeHtml(ident) + '</div>' +
+              '<span class="sd-badge ' + statusClass + '">' + status + '</span>' +
+            '</div>' +
+            '<div class="sd-pilot-meta">→ ' + escapeHtml(target) + ' · ' + rows + ' rows · started ' + started + '</div>' +
+            (p.description ? '<div style="font-size:10px;color:#94a3b8;margin-top:4px;line-height:1.4;">' + escapeHtml(p.description.substring(0, 150)) + '</div>' : '') +
+          '</div>';
+        }).join('');
+      }
+    } catch (err) {
+      pilotEl.innerHTML = '<div class="sd-error">Failed to load pilots: ' + err.message + '</div>';
+      pilotCount.textContent = 'error';
+    }
+    // Escalations: gaps in needs_human_routing / needs_paid_source / quality_review states
+    try {
+      var escRes = await fetch('/api/data-gaps?action=escalations');
+      var escalations = [];
+      if (escRes.ok) {
+        var ed = await escRes.json();
+        escalations = ed.escalations || ed.gaps || ed.rows || [];
+      } else {
+        // Fall back: try fetching all gaps and filter client-side
+        var allRes = await fetch('/api/data-gaps?limit=50');
+        if (allRes.ok) {
+          var ad = await allRes.json();
+          var allGaps = ad.gaps || ad.rows || [];
+          var escStatuses = ['needs_human_routing', 'needs_paid_source', 'quality_review', 'failed_transient'];
+          escalations = allGaps.filter(function(g) { return escStatuses.includes(g.status); });
+        }
+      }
+      escCount.textContent = escalations.length + ' open';
+      if (!escalations.length) {
+        escEl.innerHTML = '<div class="sd-empty">No escalations. Data Scout is handling all Tier-1 gaps.</div>';
+      } else {
+        escEl.innerHTML = escalations.map(function(g) {
+          var status = (g.status || '').toLowerCase();
+          var statusClass = status === 'needs_paid_source' ? 'sd-badge-yellow' : status === 'quality_review' ? 'sd-badge-yellow' : 'sd-badge-red';
+          var attempts = g.scout_attempts != null ? g.scout_attempts : g.ingestion_attempts != null ? g.ingestion_attempts : '—';
+          return '<div class="sd-escalation-card">' +
+            '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+              '<div class="sd-hyp-id">gap_id ' + (g.gap_id || g.id || '?') + '</div>' +
+              '<span class="sd-badge ' + statusClass + '">' + status + '</span>' +
+            '</div>' +
+            '<div class="sd-hyp-text">' + escapeHtml((g.data_description || '').substring(0, 200)) + '</div>' +
+            '<div class="sd-hyp-meta">' +
+              (g.suggested_source ? '<span class="sd-badge sd-badge-gray">' + escapeHtml(g.suggested_source) + ':' + escapeHtml(g.suggested_identifier || '?') + '</span>' : '') +
+              '<span>attempts: ' + attempts + '</span>' +
+              (g.blocking_hypothesis ? '<span>blocks: ' + escapeHtml(g.blocking_hypothesis.substring(0, 30)) + '</span>' : '') +
+            '</div>' +
+          '</div>';
+        }).join('');
+      }
+    } catch (err) {
+      escEl.innerHTML = '<div class="sd-error">Failed to load escalations: ' + err.message + '</div>';
+      escCount.textContent = 'error';
+    }
+  }
+  // ─────────────────────────────────────────────────────────────────────
+  // Helpers
+  // ─────────────────────────────────────────────────────────────────────
+  function escapeHtml(s) {
+    if (s == null) return '';
+    return String(s).replace(/[&<>"']/g, function(c) {
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+  // ─────────────────────────────────────────────────────────────────────
+  // Existing: Signal data + leaderboard
+  // ─────────────────────────────────────────────────────────────────────
   (async function loadSignalData() {
     try {
       var res = await fetch('data/lgbm-prediction.json?t=' + Date.now());
@@ -166,10 +498,7 @@
       });
       document.getElementById('sd-feature-count').textContent = pred.signals_used || 75;
     } catch(e) {}
-
-    // Load model metadata for feature importance
     try {
-      // We'll use the prediction file's data + hardcoded top features from v6
       var topFeatures = [
         {name:'williams_r_lag1', imp:187, cat:'engineered'},
         {name:'stochastic_k', imp:179, cat:'base'},
@@ -206,12 +535,12 @@
           '</div>' +
           '<div class="sd-bar"><div class="sd-bar-fill" style="width:' + pct + '%;background:' + catColor + ';"></div></div>';
       }).join('');
-      document.getElementById('sd-signal-count').textContent = '80 signals · 75 in model';
       document.getElementById('sd-total-signals').textContent = '80';
     } catch(e) { console.warn(e); }
   })();
-
-  // Load experiment history
+  // ─────────────────────────────────────────────────────────────────────
+  // Existing: Experiment history
+  // ─────────────────────────────────────────────────────────────────────
   (async function loadExperiments() {
     var expEl = document.getElementById('sd-experiments');
     try {
@@ -219,7 +548,6 @@
       var data = await res.json();
       var s = data.stats || {};
       var exps = data.experiments || [];
-      // Sort: needs_review and promoted first, then by date
       exps.sort(function(a, b) {
         var priority = {'promoted': 0, 'needs_review': 1, 'rejected': 2, 'failed': 3};
         var pa = priority[a.decision] !== undefined ? priority[a.decision] : 4;
@@ -255,14 +583,13 @@
       expEl.innerHTML = '<div style="color:#6b7280;font-size:11px;padding:12px;">Failed to load experiments: ' + err.message + '</div>';
     }
   })();
-
-  // Load research feed (scored items)
+  // ─────────────────────────────────────────────────────────────────────
+  // Existing: Research feed
+  // ─────────────────────────────────────────────────────────────────────
   (async function loadResearch() {
     var feedEl = document.getElementById('sd-research-feed');
     var count = document.getElementById('sd-research-count');
     var loaded = false;
-    
-    // Try last 7 days
     for (var d = 0; d < 7 && !loaded; d++) {
       var dt = new Date();
       dt.setDate(dt.getDate() - d);
@@ -293,10 +620,10 @@
       feedEl.innerHTML = '<div style="color:#4b5563;font-size:11px;font-family:var(--font-mono);padding:12px;">No scored research available. Summarizer runs daily at 11 AM ET.</div>';
     }
   })();
-
-  // Thesis queue — loads from thesis-queue.json
+  // ─────────────────────────────────────────────────────────────────────
+  // Existing: Thesis queue (legacy localStorage)
+  // ─────────────────────────────────────────────────────────────────────
   var thesisData = [];
-  
   async function loadTheses() {
     try {
       var res = await fetch('data/thesis-queue.json?t=' + Date.now());
@@ -305,7 +632,6 @@
         thesisData = data.theses || [];
       }
     } catch(e) {}
-    // Merge any localStorage theses (user-submitted this session)
     var local = JSON.parse(localStorage.getItem('sofar-theses') || '[]');
     for (var lt of local) {
       if (!thesisData.find(function(t) { return t.text === lt.text; })) {
@@ -314,7 +640,6 @@
     }
     renderTheses();
   }
-
   function submitThesis() {
     var input = document.getElementById('sd-thesis-input');
     var text = input.value.trim();
@@ -327,18 +652,16 @@
       submitted_by: 'user'
     };
     thesisData.unshift(thesis);
-    // Save to localStorage for persistence until backend syncs
     var local = JSON.parse(localStorage.getItem('sofar-theses') || '[]');
     local.unshift(thesis);
     localStorage.setItem('sofar-theses', JSON.stringify(local));
     input.value = '';
     renderTheses();
   }
-
   function renderTheses() {
     var el = document.getElementById('sd-theses');
     if (!thesisData.length) {
-      el.innerHTML = '<div style="color:#4b5563;font-size:11px;font-family:var(--font-mono);padding:8px;">No theses queued. Submit one below.</div>';
+      el.innerHTML = '<div class="sd-empty">No theses queued. Submit one below.</div>';
       return;
     }
     el.innerHTML = thesisData.slice(0, 10).map(function(t) {
@@ -354,6 +677,17 @@
     }).join('');
   }
   loadTheses();
+  // ─────────────────────────────────────────────────────────────────────
+  // Initial load + auto-refresh every 60s for live panels
+  // ─────────────────────────────────────────────────────────────────────
+  loadDirectorBrief();
+  loadHypothesisPipeline();
+  loadDataGapsAndPilots();
+  setInterval(function() {
+    loadDirectorBrief();
+    loadHypothesisPipeline();
+    loadDataGapsAndPilots();
+  }, 60000);
   </script>
 </body>
 </html>
