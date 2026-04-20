@@ -24,6 +24,17 @@ Single source of truth for project state. Edit this file as work is completed or
 
 ## High Priority
 
+- [ ] **CRITICAL: Re-create FDWs with rotated passwords**
+  *After today's password rotation, both FDWs (market_fdw in research/production, 
+  research_fdw in production) fail with `password authentication failed for user 
+  neondb_owner`. Until fixed, any cross-DB query via FDW returns auth error.
+  Need to: DROP SERVER market_fdw CASCADE; CREATE SERVER market_fdw WITH new 
+  password; same for research_fdw. Then verify schemas re-import correctly. 
+  Check IMPORT FOREIGN SCHEMA after re-creation. Estimated: 30 min if straightforward, 
+  longer if user mappings need rebuild. Verified broken 2026-04-20 00:55 EDT.*
+
+
+
 ### Security (carry-over from Vercel breach response)
 
 - [ ] Rotate `ANTHROPIC_API_KEY`
