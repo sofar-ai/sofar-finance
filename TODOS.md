@@ -24,6 +24,24 @@ Single source of truth for project state. Edit this file as work is completed or
 
 ## High Priority
 
+- [ ] **Benchmark heavy reasoning models for ai-synthesis morning slots**
+  *Tonight (2026-04-20) confirmed local Ollama on Mac unworkable at production
+  prompt size: qwen3.5:122b >20 min, qwen3:235b heavily contended with Director
+  + flow analyzer. Test script at /tmp/synth-bench/bench-real.py uses real
+  intraday-synthesis-local.py prompt (~5K chars). Models to pull and benchmark
+  during off-hours: GLM-4.7-Thinking (358B, ~134GB — won't coexist with 235b on
+  256GB Mac, may need to swap), Kimi K2.5 (reasoning specialist, 256K context),
+  DeepSeek V3.2-Exp (Q-index 57, MoE 37B active). If any completes in <5 min
+  with quality matching Claude, migrate morning crons. Otherwise keep on Claude.*
+
+- [ ] **Reschedule morning AI synthesis crons if migrating to local**
+  *Current: 8:45 AM + 10:00 AM. Hourly intraday cron starts 10:10. Any local
+  model >5 min runtime collides with 10:10. Options: (a) eliminate 10:00 cron
+  (let 10:10 hourly cover that slot), (b) move to 9:50 AM, (c) stay on Claude
+  for both anchors. Decision pending model benchmark above.*
+
+
+
 - [ ] **CRITICAL: Re-create FDWs with rotated passwords**
   *After today's password rotation, both FDWs (market_fdw in research/production, 
   research_fdw in production) fail with `password authentication failed for user 
