@@ -2,7 +2,7 @@
 
 Single source of truth for project state. Edit this file as work is completed or new items are identified. Future session handovers should reference this file rather than duplicate its content.
 
-**Last updated:** 2026-04-20 (added validation rigor items)
+**Last updated:** 2026-04-20 (added Director hallucination + scout fixes + completion log)
 
 **Conventions:**
 - `[ ]` = open
@@ -34,6 +34,49 @@ Single source of truth for project state. Edit this file as work is completed or
   longer if user mappings need rebuild. Verified broken 2026-04-20 00:55 EDT.*
 
 
+
+
+- [ ] **Director hallucination investigation**
+  *Sunday morning brief (run_id=morning-2026-04-20, generated 17:01 UTC Sunday) 
+  contained fabricated tactical levels: SPY 707 gamma pin, AMD $290 ceiling, 
+  AVGO $405, MU $450, "$276M from SPXW Apr 17 6950P sales", SPX 7000-7150 range. 
+  All invented — markets were closed Sunday, no flow data. Brief also stated 
+  "0 experiments overnight" and "daemon does not execute Sat/Sun runs" — both 
+  false. HALLUCINATION_FIX_V1 patch not preventing this. Either: prompt instructions 
+  ignored by qwen3:235b when context sparse, or context-gathering query bug returning 
+  empty data, OR brief ran before tonight's multi-DB fix. Tomorrow's 07:30 ET brief 
+  is the test — should now reflect actual overnight work. If still hallucinating, 
+  investigate Director prompt + context queries. Critical for system trust.*
+
+
+- [ ] **score-news-sentiment db= audit (multi-DB regression)**
+  *Same regression class as flow-intelligence. score-news-sentiment.py inserts to 
+  signal_values without db= argument → defaults to production DB per db.py. Should 
+  write to market DB (where signal_values canonically lives). Verified Friday's 
+  sentiment data exists in BOTH market AND production with identical row counts 
+  (1,998 rows, latest 2026-04-17) — likely Saturday-migration artifact. After fix, 
+  Friday's data may need consolidation. Apply MULTIDB_EXPLICIT_V1 pattern.*
+
+
+- [ ] **Quant scout: save raw LLM output on parse failure**
+  *5-min fix. Modify extract_json error handler to dump full LLM response to 
+  ~/logs/quant-scout-failed-output-YYYYMMDD-HHMM.txt before raising. Currently 
+  we only see "JSON parse failed at line N column M" with no way to inspect 
+  what was produced. Last failure 2026-04-19 23:04 EDT.*
+
+- [ ] **Quant scout: route Phase 3 synthesis to Mac qwen3:235b**
+  *Phase 3 (LLM hypothesis synthesis) currently uses gemma4:26b on S1 — produces 
+  malformed JSON ~30% of the time. Mac qwen3:235b produces vastly cleaner JSON 
+  for complex synthesis tasks AND is 95% idle. Same pattern as Director-on-Mac. 
+  Add OLLAMA_URL env var read for synthesis-only, fall back to S1 for other phases. 
+  Estimated: 1 hour. Eliminates Phase 3 failures, fills idle Mac compute.*
+
+- [ ] **Build promotion automation: experiments → published_signals**
+  *Stage 5 of pipeline is empty (0 lifetime). No script moves Director-promoted 
+  experiments into published_signals table. Need cron + criteria: e.g. experiments 
+  with decision='promoted' AND vs_baseline_sharpe_delta > 0.10 AND age > N weeks 
+  → INSERT into published_signals with attribution metadata. This is the contract 
+  layer between research and trading. Closely related to paper portfolio tracker.*
 
 ### Security (carry-over from Vercel breach response)
 
@@ -275,6 +318,47 @@ Single source of truth for project state. Edit this file as work is completed or
 *Move items here when done. Prune after ~30 days.*
 
 ### 2026-04-19 (Sunday)
+
+- [x] **Daemon multi-DB regression: explicit db= routing (MULTIDB_EXPLICIT_V1)**
+  *Replaced earlier MULTIDB_DEFAULT_RESEARCH_V1 monkey-patch with proper fix: 
+  every execute_query/execute_many call has explicit db= argument. 14 calls to 
+  research, 4 to market. Sandbox shim default changed from research → market 
+  (sandboxed signal code reads market data tables). Verified: 19 experiments 
+  in research DB within 1 hour of restart, 0 in production.*
+
+- [x] **48 orphaned experiments migrated production → research**
+  *Created migrate-orphaned-experiments.py with --dry-run/--delete-from-prod flags. 
+  All 48 copied (40 failed + 8 pending decision). Production cleaned to 0 post-Apr 16.*
+
+- [x] **flow-intelligence multi-DB regression fix (MULTIDB_EXPLICIT_V1)**
+  *6 execute_query calls had no db= argument, defaulting to production DB. Fixed 
+  with explicit db='market' on all 6. Also fixed pre-existing NameError bug in 
+  send_discord (DISCORD_ENABLED referenced but never defined — alerts silently 
+  crashing for 3 days). Restarted, verified.*
+
+- [x] **research.html: 5 new agent visibility panels (FRONTEND_PATCH_V1)**
+  *Director brief banner (markdown via local marked.js), Hypothesis Pipeline counters, 
+  Awaiting Director Gate list, Pilot Data Sources, Data Scout Escalations. 
+  Auto-refresh every 60s. Three rounds of API field-name debugging (summary_markdown, 
+  client-side filter for escalations, placeholder for pilots until /api/data-source-registry 
+  exists).*
+
+- [x] **Cron typo fix: research-summarizer path**
+  *Cron line "/scriptsresearch-summarizer.py" missing slash → daily 3 AM ET 
+  cron broken since whenever line was added. Fixed via crontab edit. Both 
+  summarizer crons now correct path.*
+
+- [x] **feedparser installed**
+  *Both research-scout-scraper and research-lab-scraper failing since Apr 17 with 
+  ModuleNotFoundError. pip install --user feedparser==6.0.12. Will resurrect 
+  Tuesday 02:30 ET (lab) and Monday 10:30 ET (news scrapers).*
+
+- [x] **Pre-market system check (uncovered multi-DB regression)**
+  *Standard diagnostic block run before tonight's autonomous cycle. Caught the 
+  daemon writing to production DB instead of research DB. Catalyzed all the 
+  multi-DB fixes. Should be run before every market open.*
+
+
 
 - [x] **Quant Research Scout DB integration**
   *Sentinel: HYPOTHESES_DB_WRITE_V1. Scout now inserts hypotheses to research DB with proposer='quant-scout', status='proposed'. Verified: 5 hypotheses (qr-202604191525-001 through 005) inserted on first run.*
