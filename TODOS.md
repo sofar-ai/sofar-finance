@@ -2,7 +2,7 @@
 
 Single source of truth for project state. Edit this file as work is completed or new items are identified. Future session handovers should reference this file rather than duplicate its content.
 
-**Last updated:** 2026-04-20 (added Director hallucination + scout fixes + completion log)
+**Last updated:** 2026-04-20 07:26 (Monday morning fixes + spam patch + observability gaps)
 
 **Conventions:**
 - `[ ]` = open
@@ -149,6 +149,27 @@ Single source of truth for project state. Edit this file as work is completed or
   *Every second logs `WS Status: CONNECTED` (60+ lines/min, ~26MB/day). Change
   to log only on status CHANGE, not every heartbeat. Or rate-limit to once per
   60s. Separate from data flow — daemon is healthy, just noisy.*
+
+
+- [ ] **Monitor: stale-prediction alert suppression**
+  *Monitor at 5:50 AM ET fires "Model disagreement" escalation reading Friday's
+  LGBM predictions (3 days old, appropriate until tonight's 6 PM pipeline refreshes).
+  Fires every morning with same underlying data. Should either: (a) fire only when
+  prediction file mtime is newer than last alert, or (b) add staleness caveat to
+  alert body ("predictions from Fri close, refreshes 6 PM ET"). Low urgency —
+  alerts are directionally correct, just presented as if they're fresh.*
+
+- [ ] **Flow tape daemon: reduce WS Status log spam**
+  *Every second logs `WS Status: CONNECTED` — ~26MB/day growth. Change to log
+  only on CHANGE (disconnected → connected or vice versa), or rate-limit to
+  once per 60s. Separate from data flow — daemon is healthy, just noisy.*
+
+- [ ] **Cron health dashboard or Discord heartbeat**
+  *Tonight's issues (feedparser missing for 3 days, cron path typo undetected,
+  score-news-sentiment Discord NameError for 3 days, flow-tape stale creds for
+  14h) all failed silently. Need: either a daily "cron status" Discord post
+  listing last-fire time + output status for each cron, or a dashboard panel
+  showing the same. ~2 hour build.*
 
 ## Medium Priority
 
@@ -330,6 +351,29 @@ Single source of truth for project state. Edit this file as work is completed or
 ## Recently Completed
 
 *Move items here when done. Prune after ~30 days.*
+
+
+### 2026-04-20 (Monday morning)
+
+- [x] **Flow tape daemon: credential refresh**
+  *Daemon running 14h with stale DB credentials after Sunday's password rotation.
+  AGG REFRESH ERROR loop, 889 auth failures in log, 0 trades landed Monday morning.
+  Fix: systemctl restart picked up new /etc/neon-market.env. Verified 11 trades/5min
+  post-restart, no auth errors since. Market data flowing cleanly.*
+
+- [x] **Flow intelligence: Discord re-enabled**
+  *DISCORD_ENABLED flipped True + webhook path corrected from the ".disabled-flow-intel"
+  placeholder to /etc/discord-webhook.env. Restarted. First post fires 8:00 AM ET
+  during 15-min RTH cycle. Used for flow health monitoring (if silence > 30min during
+  market hours, something broke).*
+
+- [x] **Research daemon: Discord spam fix (SPAM_FIX_V1)**
+  *4:30 AM pre-report block was re-entering on every loop iteration during 4:30-5:00
+  AM window. 22,700 "No experiments completed tonight" log lines this morning,
+  Discord rate-limited at 429. Fix: morning_report_sent flag + 5min sleep inside
+  the window. Flag resets when daemon enters sleep-until-19:00 branch. Verified
+  4/4 patches applied, syntax OK, restarted.*
+
 
 ### 2026-04-19 (Sunday)
 
