@@ -2,7 +2,7 @@
 
 Single source of truth for project state. Edit this file as work is completed or new items are identified. Future session handovers should reference this file rather than duplicate its content.
 
-**Last updated:** 2026-04-19 (Sunday evening)
+**Last updated:** 2026-04-20 (added validation rigor items)
 
 **Conventions:**
 - `[ ]` = open
@@ -105,6 +105,28 @@ Single source of truth for project state. Edit this file as work is completed or
 
 - [ ] Build paper portfolio tracking for promoted scout signals
   *New table `scout_signal_paper_performance` in research DB. Daemon-promoted signals get N weeks (proposed: 12) of paper tracking before eligible for `published_signals`. Real-world OOS validation beyond backtest.*
+
+
+### Validation rigor (signal quality improvements)
+
+- [ ] **Multi-horizon validation in daemon**
+  *Currently `validate_signal()` only tests 21d horizon. Add 7d and 14d horizons. 
+  Promotion criterion: improves Sharpe in ≥2 horizons OR ranks top-5 in ≥1 horizon. 
+  Reduces false positives, catches signals that work at different timescales. 
+  ~30 min added per experiment cycle (3x LightGBM runs vs 1x). Estimated build: 2-3 hours.*
+
+- [ ] **Regime stratification in validation**
+  *Split walk-forward years into bull (SPY > 200dma) / bear / high-vol (VIX > 25) / 
+  low-vol regimes. Compute Sharpe within each regime. Reject signals that only work 
+  in one regime. Adds ~50% compute per experiment. Estimated build: 4-5 hours.*
+
+- [ ] **Paper portfolio tracker for promoted signals (out-of-sample validation)**
+  *New table `scout_signal_paper_performance` in research DB. Daily cron at 16:30 ET 
+  pulls promoted signals, computes actual returns vs predicted using market close prices.
+  After N=12 weeks of OOS performance, signals graduate to `published_signals` table 
+  (the contract between research and trading). Closes the loop between Director-promoted 
+  experiments and real-money eligibility. Critical for Renaissance-style discipline 
+  (no signal trades real money without OOS proof). Estimated build: 4-6 hours.*
 
 ### Frontend (research.html)
 
