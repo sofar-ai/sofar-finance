@@ -136,6 +136,20 @@ Single source of truth for project state. Edit this file as work is completed or
 
 ---
 
+
+- [ ] **Build Hermes Discord mute/unmute toggle**
+  *File-based state: /home/bot1/state/discord-mute.json controls which daemons post.
+  Helper lib ~/scripts/discord_state.py with is_muted(daemon_name) and set_muted().
+  Each daemon's send_discord() adds `if is_muted('name'): return` check.
+  Hermes command handler parses `@hermes mute <daemon>`, `@hermes unmute <daemon>`,
+  `@hermes mute all`, `@hermes status`. No restart needed on toggle. Build: 1-2 hours.
+  Defer until we've observed actual Discord signal-to-noise ratio from flow-intel.*
+
+- [ ] **Flow tape daemon: reduce WS Status log spam**
+  *Every second logs `WS Status: CONNECTED` (60+ lines/min, ~26MB/day). Change
+  to log only on status CHANGE, not every heartbeat. Or rate-limit to once per
+  60s. Separate from data flow — daemon is healthy, just noisy.*
+
 ## Medium Priority
 
 ### Director quality improvements
