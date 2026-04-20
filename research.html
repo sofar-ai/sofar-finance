@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <!-- FRONTEND_PATCH_V1: marked-local + summary_markdown + client-filter -->
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Signal Discovery — SOFAR FINANCE</title>
@@ -300,7 +301,7 @@
       var timeLabel = data.created_at ? data.created_at.substring(11, 16) : '';
       metaEl.textContent = dateLabel + (timeLabel ? ' · ' + timeLabel + ' UTC' : '');
       // Render markdown
-      var md = data.markdown || data.brief || data.content || '';
+      var md = data.summary_markdown || data.markdown || data.brief || data.content || '';
       if (md) {
         contentEl.innerHTML = marked.parse(md);
       } else {
@@ -397,16 +398,13 @@
     var escCount = document.getElementById('sd-escalation-count');
     try {
       // Pilots: expect /api/data-gaps?action=pilots OR /api/data-gaps?status=pilot
-      var pilotRes = await fetch('/api/data-gaps?action=pilots');
+      // FRONTEND_PATCH_V1: /api/data-gaps doesn't query data_source_registry.
+      // No endpoint exists yet to query the pilot registry — TODO add /api/data-source-registry
       var pilots = [];
-      if (pilotRes.ok) {
-        var pd = await pilotRes.json();
-        pilots = pd.pilots || pd.sources || pd.rows || [];
-      }
       // Render pilots
       pilotCount.textContent = pilots.length + ' pilot' + (pilots.length === 1 ? '' : 's');
       if (!pilots.length) {
-        pilotEl.innerHTML = '<div class="sd-empty">No pilot data sources. Data Scout runs 17:15 ET weekdays. Director will route NEEDS_DATA gaps automatically.</div>';
+        pilotEl.innerHTML = '<div class="sd-empty">Pilot registry endpoint not deployed yet. Data Scout has ingested fred:DGS10 (visible to Director context). Frontend visibility pending /api/data-source-registry.</div>';
       } else {
         pilotEl.innerHTML = pilots.map(function(p) {
           var src = p.source || '?';
@@ -432,20 +430,14 @@
     }
     // Escalations: gaps in needs_human_routing / needs_paid_source / quality_review states
     try {
-      var escRes = await fetch('/api/data-gaps?action=escalations');
+      // FRONTEND_PATCH_V1: API ignores ?action= filter. Always filter client-side.
+      var escStatuses = ['needs_human_routing', 'needs_paid_source', 'quality_review', 'failed_transient'];
+      var escRes = await fetch('/api/data-gaps?limit=100');
       var escalations = [];
       if (escRes.ok) {
         var ed = await escRes.json();
-        escalations = ed.escalations || ed.gaps || ed.rows || [];
-      } else {
-        // Fall back: try fetching all gaps and filter client-side
-        var allRes = await fetch('/api/data-gaps?limit=50');
-        if (allRes.ok) {
-          var ad = await allRes.json();
-          var allGaps = ad.gaps || ad.rows || [];
-          var escStatuses = ['needs_human_routing', 'needs_paid_source', 'quality_review', 'failed_transient'];
-          escalations = allGaps.filter(function(g) { return escStatuses.includes(g.status); });
-        }
+        var allGaps = ed.gaps || ed.escalations || ed.rows || [];
+        escalations = allGaps.filter(function(g) { return escStatuses.includes(g.status); });
       }
       escCount.textContent = escalations.length + ' open';
       if (!escalations.length) {
