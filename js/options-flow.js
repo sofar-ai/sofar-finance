@@ -237,16 +237,20 @@ const OptionsFlowPage = (() => {
       const isCall = right === 'C';
       const premClass = isBuy ? 'sweep-buy' : 'sweep-sell';
 
+      // FRONTEND_FIXES_V1 — sweep render uses actual API fields:
+      // total_premium, num_legs (mapped from trade_count), direction, exchanges
+      // Removed s.strike/s.right/s.side which don't exist in flow_sweep_rollups.
+      const dirIcon = (s.direction === 'BUY') ? '↑' : (s.direction === 'SELL') ? '↓' : '↔';
+      const exchCount = Array.isArray(s.exchanges) ? s.exchanges.length : 0;
       const row = document.createElement('div');
       row.className = 'of-sweep-row';
       row.innerHTML = `
         <span class="of-sweep-icon">\ud83d\udd25</span>
         <span class="of-sweep-sym">${s.symbol || '—'}</span>
         <span class="of-sweep-detail">
-          ${(+s.strike).toFixed(0)} ${isCall ? 'C' : 'P'}
-          · ${s.num_legs || 0} fills
-          · ${(s.exchanges || []).length} exch
-          · ${s.duration_ms || 0}ms
+          ${dirIcon} ${s.direction || 'MIX'}
+          · ${s.num_legs || 0} legs
+          · ${exchCount} exch
         </span>
         <span class="of-sweep-prem ${premClass}">${fmtPrem(s.total_premium)}</span>
       `;
@@ -262,23 +266,29 @@ const OptionsFlowPage = (() => {
   function updateTopTickers() {
     const el = document.getElementById('of-top-tickers');
     if (!el) return;
-    // Use full-session symbolMetrics from aggregates API (not the 500-row tape slice)
+    // FRONTEND_FIXES_V1 — top 25 (was 10), include company_name from API.
+    // Cmd+F by name works because company name is in the DOM.
     const sorted = Object.entries(symbolMetrics || {})
       .map(([sym, m]) => {
         const total = (m.call_premium || 0) + (m.put_premium || 0);
         const callPct = total > 0 ? (m.call_premium || 0) / total : 0.5;
-        return { sym, total, callPct };
+        return { sym, total, callPct, company_name: m.company_name || null };
       })
       .filter(r => r.total > 0)
       .sort((a, b) => b.total - a.total)
-      .slice(0, 10);
+      .slice(0, 25);
     if (!sorted.length) { el.innerHTML = '<div class="of-empty">No data yet</div>'; return; }
     el.innerHTML = '';
-    sorted.forEach(({ sym, total, callPct }) => {
+    sorted.forEach(({ sym, total, callPct, company_name }) => {
       const row = document.createElement('div');
       row.className = 'of-ticker-row';
+      // Company name shown small + muted next to symbol; sym remains primary.
+      const nameSpan = company_name
+        ? `<span class="of-tk-name" title="${company_name}">${company_name}</span>`
+        : '';
       row.innerHTML = `
         <span class="of-tk-sym">${sym}</span>
+        ${nameSpan}
         <div class="of-tk-bar">
           <div class="of-tk-call" style="width:${(callPct*100).toFixed(0)}%"></div>
           <div class="of-tk-put"  style="width:${((1-callPct)*100).toFixed(0)}%"></div>
@@ -585,6 +595,7 @@ const OptionsFlowPage = (() => {
       symbolMetrics = {};
       for (const row of (data.per_symbol || [])) {
         symbolMetrics[row.symbol] = {
+          company_name: row.company_name || null,    // FRONTEND_FIXES_V1
           trade_count: row.trade_count,
           total_premium: row.total_premium,
           call_premium: row.call_premium,
@@ -598,12 +609,16 @@ const OptionsFlowPage = (() => {
           last_trade_ts: row.last_trade_ts,
         };
       }
+      // FRONTEND_FIXES_V1 — pass through direction, exchanges, duration_ms
+      // for the new sweep render that uses these instead of strike/right/side.
       sweepData = (data.sweeps || []).map(s => ({
         sweep_id: s.sweep_id,
         symbol: s.symbol,
         total_premium: s.total_premium,
         num_legs: s.trade_count,
         direction: s.direction,
+        exchanges: s.exchanges || [],
+        duration_ms: s.duration_ms || 0,
         first_ts: s.first_ts,
         last_ts: s.last_ts,
       }));
@@ -777,5 +792,96 @@ const OptionsFlowPage = (() => {
       OptionsFlowPage.setFilter('ticker', sym);
       OptionsFlowPage.loadDetail(sym);
     });
+  }
+
+  // ─── FRONTEND_FIXES_V1 — collapse-by-default analysis bar + sticky nav ───
+  // Logic:
+  //   • #fa-content has class .fa-collapsed by default (CSS hides body)
+  //   • Click on #fa-header-row toggles the class
+  //   • When expanded, scan #fa-content for ticker section markers and build
+  //     #fa-ticker-nav with jump-to anchors
+  //   • Summary span shows comma-separated ticker list when collapsed
+  function setupFlowAnalysisCollapse() {
+    const headerRow = document.getElementById('fa-header-row');
+    const content   = document.getElementById('fa-content');
+    const tickerNav = document.getElementById('fa-ticker-nav');
+    const toggleIcon= document.getElementById('fa-toggle-icon');
+    const summary   = document.getElementById('fa-summary');
+    if (!headerRow || !content) return;
+
+    // Toggle on header click — but ignore clicks on the nested cross-asset link
+    headerRow.addEventListener('click', (e) => {
+      if (e.target.id === 'fa-cross-asset-toggle') return;
+      const isCollapsed = content.classList.toggle('fa-collapsed');
+      tickerNav.style.display = isCollapsed ? 'none' : '';
+      toggleIcon.textContent  = isCollapsed ? '▸' : '▾';
+    });
+
+    // Observe #fa-content for changes (qwen analyzer writes here async).
+    // When content updates, refresh summary + ticker nav.
+    const observer = new MutationObserver(() => refreshFromContent());
+    observer.observe(content, { childList: true, characterData: true, subtree: true });
+    refreshFromContent();
+
+    function refreshFromContent() {
+      const text = content.innerText || content.textContent || '';
+      // Parse tickers from analyzer output. Section markers look like:
+      //   "SPX @ 7105.60" or "META @ 670.84" at line start
+      // Capture symbol before @
+      const tickerRe = /^([A-Z]{1,6})\s*@\s*[\d.]+/gm;
+      const found = [];
+      const seen = new Set();
+      let m;
+      while ((m = tickerRe.exec(text)) !== null) {
+        const sym = m[1];
+        if (!seen.has(sym)) {
+          seen.add(sym);
+          found.push(sym);
+        }
+      }
+      // Update summary line (collapsed view)
+      if (found.length) {
+        summary.textContent = found.join(' · ') + '  ' + (found.length > 1 ? `(${found.length} tickers)` : '');
+      } else if (text.trim() && !text.startsWith('Awaiting')) {
+        // Fallback summary: first ~80 chars of content
+        summary.textContent = text.replace(/\s+/g, ' ').trim().slice(0, 100) + '…';
+      }
+      // Build ticker nav (expanded view)
+      if (found.length && tickerNav) {
+        tickerNav.innerHTML = found.map(sym =>
+          `<button class="fa-nav-btn" data-ticker="${sym}">${sym}</button>`
+        ).join('');
+        tickerNav.querySelectorAll('.fa-nav-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const sym = btn.dataset.ticker;
+            scrollToTickerSection(sym);
+          });
+        });
+      }
+    }
+
+    function scrollToTickerSection(sym) {
+      // Find first text node containing "SYM @"
+      const text = content.innerText || '';
+      const lines = text.split('\n');
+      let lineIdx = -1;
+      const re = new RegExp('^' + sym + '\\s*@');
+      for (let i = 0; i < lines.length; i++) {
+        if (re.test(lines[i])) { lineIdx = i; break; }
+      }
+      if (lineIdx < 0) return;
+      // Approximate scroll: map line index to vertical position
+      const lineHeight = parseFloat(getComputedStyle(content).lineHeight) || 16.5;
+      const targetTop = content.offsetTop + (lineIdx * lineHeight) - 60;
+      window.scrollTo({ top: targetTop, behavior: 'smooth' });
+    }
+  }
+
+  // Wait for DOM if needed
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupFlowAnalysisCollapse);
+  } else {
+    setupFlowAnalysisCollapse();
   }
 })();
