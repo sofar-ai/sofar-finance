@@ -1,0 +1,903 @@
+/**
+ * Options Flow Page — reads from flow-tape.json (produced by flow-tape-daemon.py)
+ * Falls back to options-flow.json if flow-tape.json not available.
+ * Panels: Live Tape, Flow Signals (P/C Z-score, CVD, Flips), Sweep Alerts,
+ *         Top Tickers, Per-Symbol Detail, Sector Flow, Premium Concentration.
+ */
+const OptionsFlowPage = (() => {
+  const STALE_MIN  = 5;
+  const PANEL_TICK = 15 * 1000;  // refresh every 15s
+  let allTrades     = [];
+  let symbolMetrics = {};
+  let sweepData     = [];
+  let sectorFlow    = {};
+  let concentration = null;
+  let isPaused      = false;
+  let panelTimer    = null;
+  let contractHits  = {};
+  let filters = {
+    ticker: '', type: 'ALL', minPremium: 0, dte: 'ANY', sweepsOnly: false,
+  };
+
+  // ── Helpers ────────────────────────────────────────────────────────────
+  function timeSince(isoStr) {
+    if (!isoStr) return null;
+    const diffMin = Math.floor((Date.now() - new Date(isoStr).getTime()) / 60000);
+    if (diffMin < 1)  return 'just now';
+    if (diffMin < 60) return `${diffMin} min ago`;
+    const h = Math.floor(diffMin / 60);
+    return `${h}h ${diffMin % 60}m ago`;
+  }
+  function isStale(isoStr) {
+    if (!isoStr) return false;
+    return (Date.now() - new Date(isoStr).getTime()) > STALE_MIN * 60000;
+  }
+  function calcDTE(exp) {
+    const s = String(exp);
+    if (s.length !== 8) return null;
+    const d = new Date(+s.slice(0,4), +s.slice(4,6)-1, +s.slice(6,8));
+    const t = new Date(); t.setHours(0,0,0,0);
+    return Math.ceil((d - t) / 86400000);
+  }
+  function fmtPrem(p) {
+    if (!p) return '—';
+    if (p >= 1e6)  return `$${(p/1e6).toFixed(2)}M`;
+    if (p >= 1000) return `$${(p/1000).toFixed(0)}K`;
+    return `$${(+p).toFixed(0)}`;
+  }
+  function fmtExp(exp) {
+    const s = String(exp);
+    return s.length === 8 ? `${s.slice(4,6)}/${s.slice(6,8)}/${s.slice(2,4)}` : s;
+  }
+  function fmtTime(ts) {
+    if (!ts) return '';
+    try {
+      return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    } catch { return ''; }
+  }
+
+  // ── Filter ─────────────────────────────────────────────────────────────
+  function passes(trade) {
+    if (filters.ticker && (trade.symbol || '').toUpperCase() !== filters.ticker) return false;
+    const r = (trade.right || '').toUpperCase();
+    if (filters.type === 'CALL' && r !== 'C') return false;
+    if (filters.type === 'PUT'  && r !== 'P') return false;
+    if (filters.minPremium > 0 && (trade.premium || 0) < filters.minPremium) return false;
+    if (filters.sweepsOnly && !trade.sweep_id) return false;
+    if (filters.dte !== 'ANY' && trade.expiration != null) {
+      const dte = trade.dte != null ? trade.dte : calcDTE(trade.expiration);
+      if (dte != null) {
+        if (filters.dte === '0-7'  && !(dte >= 0 && dte <= 7))  return false;
+        if (filters.dte === '7-30' && !(dte > 7  && dte <= 30)) return false;
+        if (filters.dte === '30+'  && dte <= 30)                 return false;
+      }
+    }
+    return true;
+  }
+
+  // ── Tape ───────────────────────────────────────────────────────────────
+  function makeRow(trade) {
+    const right   = (trade.right || '?').toUpperCase();
+    const isCall  = right === 'C' || right === 'CALL';
+    const side    = (trade.side || '').toUpperCase();
+
+    let sideLabel = side || '—';
+    const sideClass = (sideLabel === 'BUY') ? 'tf-side-buy'
+                    : (sideLabel === 'SELL') ? 'tf-side-sell' : '';
+
+    const isSweep = !!trade.sweep_id;
+    const isWhale = (trade.premium || 0) >= 1_000_000;
+    const isOTM   = trade.is_otm;
+    const flags   = `${isSweep ? '🔥' : ''}${isWhale ? '🐳' : ''}${isOTM ? '' : ''}`;
+
+    const el = document.createElement('div');
+    el.className = `tape-row tape-${isCall ? 'call' : 'put'}${isSweep ? ' tape-sweep' : ''}`;
+    el.innerHTML = `
+      <span class="tape-flags">${flags}</span>
+      <span class="tape-sym">${trade.symbol || '—'}</span>
+      <span class="tape-strike">${trade.strike != null ? (+trade.strike).toFixed(0) : '—'}</span>
+      <span class="tape-expiry">${trade.expiration ? fmtExp(trade.expiration) : '—'}</span>
+      <span class="tape-cp tape-cp-${isCall?'c':'p'}">${right}</span>
+      <span class="tape-prem">${fmtPrem(trade.premium)}</span>
+      <span class="tape-time">${fmtTime(trade.timestamp)}</span>
+      <span class="tape-size">${trade.size != null ? `${trade.size}x` : '—'}</span>
+      <span class="tape-side ${sideClass}">${sideLabel}</span>
+    `;
+    return el;
+  }
+
+  function rebuildTape(data) {
+    const tape = document.getElementById('of-tape');
+    if (!tape) return;
+    tape.innerHTML = '';
+
+    const since = timeSince(data.fetched_at);
+    const stale = isStale(data.fetched_at);
+
+    // Update status elements
+    const statusEl = document.getElementById('of-last-update');
+    if (statusEl) {
+      statusEl.textContent = since || '—';
+      statusEl.style.color = stale ? '#f59e0b' : '';
+    }
+
+    const countEl = document.getElementById('of-trade-count');
+    if (countEl) countEl.textContent = (data.total_trades || 0).toLocaleString();
+
+    const premEl = document.getElementById('of-total-premium');
+    if (premEl) premEl.textContent = fmtPrem(data.total_premium || 0);
+
+    const wsEl = document.getElementById('of-ws-status');
+    if (wsEl) {
+      if (!data.fetched_at) {
+        wsEl.textContent = 'No data'; wsEl.style.color = '#9ca3af';
+      } else if (stale) {
+        wsEl.textContent = 'Stale'; wsEl.style.color = '#f59e0b';
+      } else {
+        wsEl.textContent = 'Live'; wsEl.style.color = '#22c55e';
+      }
+    }
+
+    if (!data.fetched_at) {
+      tape.innerHTML = '<div class="tape-empty">Awaiting flow tape — daemon starts at market open</div>';
+      return;
+    }
+    if (!data.market_open) {
+      tape.insertAdjacentHTML('beforeend', '<div class="tape-empty" style="color:#f59e0b">Market Closed — showing last session data</div>');
+    } else if (stale) {
+      tape.insertAdjacentHTML('beforeend', '<div class="tape-empty" style="color:#f59e0b">\u26a0 Data may be stale</div>');
+    }
+
+    // Sort trades by timestamp descending (newest first).
+    // Server already applied filters and pagination; render all rows we have.
+    const rows = [...(data.trades || [])].sort((a, b) => {
+      if (b.timestamp && a.timestamp) return b.timestamp.localeCompare(a.timestamp);
+      return (b.premium || 0) - (a.premium || 0);
+    });
+    if (!rows.length) {
+      tape.insertAdjacentHTML('beforeend', '<div class="tape-empty">No trades match current filters</div>');
+      return;
+    }
+    rows.forEach(t => tape.appendChild(makeRow(t)));
+  }
+
+  // ── Flow Signals Panel ─────────────────────────────────────────────────
+  function updateFlowSignals() {
+    const el = document.getElementById('of-flow-signals');
+    if (!el || !symbolMetrics) return;
+
+    const entries = Object.entries(symbolMetrics)
+      .filter(([, m]) => (m.trade_count || m.total_trades || 0) > 0)
+      .sort((a, b) => {
+        // Primary: by |z-score| if baselines exist, else by total premium
+        const za = Math.abs(a[1].pc_zscore || 0);
+        const zb = Math.abs(b[1].pc_zscore || 0);
+        if (za > 0 || zb > 0) return zb - za;
+        return (b[1].total_premium || 0) - (a[1].total_premium || 0);
+      })
+      .slice(0, 25);
+
+    if (!entries.length) {
+      el.innerHTML = '<div class="of-empty">Awaiting flow signals…</div>';
+      return;
+    }
+
+    el.innerHTML = '';
+    entries.forEach(([sym, m]) => {
+      const z = m.pc_zscore || 0;
+      let zClass = 'z-neutral';
+      if (Math.abs(z) >= 2.0) zClass = z > 0 ? 'z-hot' : 'z-cool';
+      else if (Math.abs(z) >= 1.0) zClass = 'z-warm';
+
+      const cvd = m.cvd || 0;
+      const cvdColor = cvd > 0 ? 'var(--green)' : cvd < 0 ? 'var(--red)' : 'var(--text-muted)';
+
+      let flipHtml = '';
+      if (m.flip_direction) {
+        const flipClass = m.flip_direction.includes('BULL') ? 'flip-bull' : 'flip-bear';
+        const flipLabel = m.flip_direction.includes('BULL') ? 'BULL FLIP' : 'BEAR FLIP';
+        flipHtml = `<span class="of-signal-flip ${flipClass}">${flipLabel}</span>`;
+      }
+
+      const row = document.createElement('div');
+      row.className = 'of-signal-row';
+      row.innerHTML = `
+        <span class="of-signal-sym">${sym}</span>
+        <span class="of-signal-pc">${(m.pc_ratio || 0).toFixed(2)}</span>
+        <span class="of-signal-zscore ${zClass}">${z >= 0 ? '+' : ''}${z.toFixed(1)}\u03c3</span>
+        <span class="of-signal-cvd" style="color:${cvdColor}">${cvd > 0 ? '+' : ''}${cvd.toLocaleString()}</span>
+        ${flipHtml}
+      `;
+      row.addEventListener('click', () => {
+        document.getElementById('of-ticker-search').value = sym;
+        setFilter('ticker', sym);
+        loadDetail(sym);
+      });
+      el.appendChild(row);
+    });
+  }
+
+  // ── Sweep Alerts Panel ─────────────────────────────────────────────────
+  function updateSweeps() {
+    const el = document.getElementById('of-sweeps');
+    if (!el) return;
+
+    if (!sweepData || !sweepData.length) {
+      el.innerHTML = '<div class="of-empty">No sweeps detected</div>';
+      return;
+    }
+
+    el.innerHTML = '';
+    // Show most recent sweeps first
+    const sorted = [...sweepData].sort((a, b) => (b.total_premium || 0) - (a.total_premium || 0));
+
+    sorted.forEach(s => {
+      const isBuy = (s.side || '').toUpperCase() === 'BUY';
+      const right = (s.right || '').toUpperCase();
+      const isCall = right === 'C';
+      const premClass = isBuy ? 'sweep-buy' : 'sweep-sell';
+
+      // FRONTEND_FIXES_V1 — sweep render uses actual API fields:
+      // total_premium, num_legs (mapped from trade_count), direction, exchanges
+      // Removed s.strike/s.right/s.side which don't exist in flow_sweep_rollups.
+      const dirIcon = (s.direction === 'BUY') ? '↑' : (s.direction === 'SELL') ? '↓' : '↔';
+      const exchCount = Array.isArray(s.exchanges) ? s.exchanges.length : 0;
+      const row = document.createElement('div');
+      row.className = 'of-sweep-row';
+      row.innerHTML = `
+        <span class="of-sweep-icon">\ud83d\udd25</span>
+        <span class="of-sweep-sym">${s.symbol || '—'}</span>
+        <span class="of-sweep-detail">
+          ${dirIcon} ${s.direction || 'MIX'}
+          · ${s.num_legs || 0} legs
+          · ${exchCount} exch
+        </span>
+        <span class="of-sweep-prem ${premClass}">${fmtPrem(s.total_premium)}</span>
+      `;
+      row.addEventListener('click', () => {
+        document.getElementById('of-ticker-search').value = s.symbol;
+        setFilter('ticker', s.symbol);
+      });
+      el.appendChild(row);
+    });
+  }
+
+  // ── Top Tickers Panel ──────────────────────────────────────────────────
+  function updateTopTickers() {
+    const el = document.getElementById('of-top-tickers');
+    if (!el) return;
+    // FRONTEND_FIXES_V1 — top 25 (was 10), include company_name from API.
+    // Cmd+F by name works because company name is in the DOM.
+    const sorted = Object.entries(symbolMetrics || {})
+      .map(([sym, m]) => {
+        const total = (m.call_premium || 0) + (m.put_premium || 0);
+        const callPct = total > 0 ? (m.call_premium || 0) / total : 0.5;
+        return { sym, total, callPct, company_name: m.company_name || null };
+      })
+      .filter(r => r.total > 0)
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 25);
+    if (!sorted.length) { el.innerHTML = '<div class="of-empty">No data yet</div>'; return; }
+    el.innerHTML = '';
+    sorted.forEach(({ sym, total, callPct, company_name }) => {
+      const row = document.createElement('div');
+      row.className = 'of-ticker-row';
+      // Company name shown small + muted next to symbol; sym remains primary.
+      const nameSpan = company_name
+        ? `<span class="of-tk-name" title="${company_name}">${company_name}</span>`
+        : '';
+      row.innerHTML = `
+        <span class="of-tk-sym">${sym}</span>
+        ${nameSpan}
+        <div class="of-tk-bar">
+          <div class="of-tk-call" style="width:${(callPct*100).toFixed(0)}%"></div>
+          <div class="of-tk-put"  style="width:${((1-callPct)*100).toFixed(0)}%"></div>
+        </div>
+        <span class="of-tk-total">${fmtPrem(total)}</span>
+      `;
+      row.addEventListener('click', () => {
+        document.getElementById('of-ticker-search').value = sym;
+        setFilter('ticker', sym);
+        loadDetail(sym);
+      });
+      el.appendChild(row);
+    });
+  }
+
+  // ── Per-Symbol Detail Panel ────────────────────────────────────────────
+  function loadDetail(ticker) {
+    if (window.loadTickerAnalysis) window.loadTickerAnalysis(ticker);
+    const el  = document.getElementById('of-greeks');
+    const hdr = document.getElementById('of-greeks-ticker');
+    if (!el) return;
+    if (hdr) hdr.textContent = ticker;
+
+    // Get daemon metrics for this symbol
+    const m = symbolMetrics[ticker];
+    const tTrades = allTrades.filter(t => t.symbol === ticker);
+
+    if (!tTrades.length && !m) {
+      el.innerHTML = '<div class="of-empty">No data for ' + ticker + '</div>';
+      return;
+    }
+
+    // Calculate from trades if no daemon metrics
+    const calls = tTrades.filter(t => (t.right||'').toUpperCase() === 'C');
+    const puts  = tTrades.filter(t => (t.right||'').toUpperCase() === 'P');
+    const callPrem = calls.reduce((a, t) => a + (t.premium||0), 0);
+    const putPrem  = puts.reduce( (a, t) => a + (t.premium||0), 0);
+
+    const pcRatio   = m ? m.pc_ratio : (calls.length ? puts.length / calls.length : 0);
+    const pcZscore  = m ? m.pc_zscore : 0;
+    const pcBase    = m ? m.pc_baseline : 0.7;
+    const cvd       = m ? m.cvd : 0;
+    const otmCall   = m ? m.otm_call_premium : 0;
+    const otmPut    = m ? m.otm_put_premium : 0;
+    const flipDir   = m ? m.flip_direction : '';
+    const flipTs    = m ? m.last_flip_ts : '';
+
+    let flipHtml = '';
+    if (flipDir) {
+      const fc = flipDir.includes('BULL') ? 'var(--green)' : 'var(--red)';
+      flipHtml = `
+        <div class="of-greek-item" style="grid-column:span 2">
+          <div class="of-greek-label">FLOW FLIP</div>
+          <div class="of-greek-value" style="color:${fc};font-size:14px">${flipDir.replace('_', ' ')}</div>
+          <div style="font-size:10px;color:var(--text-muted)">${flipTs ? timeSince(flipTs) : ''}</div>
+        </div>`;
+    }
+
+    el.innerHTML = `
+      <div class="of-greeks-grid">
+        <div class="of-greek-item">
+          <div class="of-greek-label">Call Premium</div>
+          <div class="of-greek-value greek-pos">${fmtPrem(callPrem)}</div>
+        </div>
+        <div class="of-greek-item">
+          <div class="of-greek-label">Put Premium</div>
+          <div class="of-greek-value greek-neg">${fmtPrem(putPrem)}</div>
+        </div>
+        <div class="of-greek-item">
+          <div class="of-greek-label">P/C Ratio</div>
+          <div class="of-greek-value">${pcRatio.toFixed(2)} <span style="font-size:10px;color:var(--text-muted)">base: ${pcBase.toFixed(2)}</span></div>
+        </div>
+        <div class="of-greek-item">
+          <div class="of-greek-label">Z-Score</div>
+          <div class="of-greek-value" style="color:${Math.abs(pcZscore) >= 2 ? 'var(--red)' : Math.abs(pcZscore) >= 1 ? 'var(--accent)' : 'var(--text-primary)'}">${pcZscore >= 0 ? '+' : ''}${pcZscore.toFixed(2)}\u03c3</div>
+        </div>
+        <div class="of-greek-item">
+          <div class="of-greek-label">CVD (Net Buy)</div>
+          <div class="of-greek-value" style="color:${cvd > 0 ? 'var(--green)' : cvd < 0 ? 'var(--red)' : 'var(--text-muted)'}">${cvd > 0 ? '+' : ''}${cvd.toLocaleString()}</div>
+        </div>
+        <div class="of-greek-item">
+          <div class="of-greek-label">Trades</div>
+          <div class="of-greek-value">${tTrades.length}</div>
+        </div>
+        <div class="of-greek-item">
+          <div class="of-greek-label">OTM Calls</div>
+          <div class="of-greek-value greek-pos">${fmtPrem(otmCall)}</div>
+        </div>
+        <div class="of-greek-item">
+          <div class="of-greek-label">OTM Puts</div>
+          <div class="of-greek-value greek-neg">${fmtPrem(otmPut)}</div>
+        </div>
+        ${flipHtml}
+      </div>`;
+  }
+
+  // ── Sector Flow Strip ──────────────────────────────────────────────────
+  function updateSectorFlow() {
+    const el = document.getElementById('of-sector-strip');
+    if (!el || !sectorFlow) return;
+
+    let html = '<span class="of-sector-label">SECTOR FLOW</span>';
+    // Sort sectors by premium descending (biggest flow first)
+    const entries = Object.entries(sectorFlow).sort((a, b) => (b[1].premium || 0) - (a[1].premium || 0));
+    for (const [name, data] of entries) {
+      const dir = data.direction || data.net_direction || 'NEUTRAL';
+      const dirClass =
+        (dir === 'BULL' || dir === 'BULLISH' || dir === 'LEAN_BULL') ? 'dir-bull' :
+        (dir === 'BEAR' || dir === 'BEARISH' || dir === 'LEAN_BEAR') ? 'dir-bear' :
+        'dir-neut';
+      const displayDir = dir.replace('_', ' ');
+      const pcVal = data.pc_ratio != null ? data.pc_ratio.toFixed(2) : '—';
+      const premVal = data.premium ? '$' + (data.premium / 1e9).toFixed(2) + 'B' : '';
+      const displayName = name.replace(/_/g, ' ');
+      html += `
+        <div class="of-sector-item" title="${data.symbol_count || 0} symbols, ${(data.trades || 0).toLocaleString()} trades, ${premVal}">
+          <span style="color:var(--text-primary);font-weight:600;text-transform:uppercase">${displayName}</span>
+          <span class="of-sector-dir ${dirClass}">${displayDir}</span>
+          <span class="of-sector-pc">P/C ${pcVal}</span>
+        </div>`;
+    }
+    el.innerHTML = html;
+  }
+
+  // ── Premium Concentration Alert ────────────────────────────────────────
+  function updateConcentration() {
+    const wrap = document.getElementById('of-concentration-wrap');
+    if (!wrap) return;
+
+    if (!concentration || !concentration.symbol) {
+      wrap.style.display = 'none';
+      return;
+    }
+
+    wrap.style.display = 'block';
+    wrap.innerHTML = `
+      <div class="of-concentration">
+        <span class="of-concentration-icon">\u26a0\ufe0f</span>
+        <span class="of-concentration-text">
+          <strong>Premium Concentration:</strong>
+          ${(concentration.concentration_pct || 0).toFixed(0)}% of total flow in
+          <strong>${concentration.symbol}</strong>
+          (${fmtPrem(concentration.premium)})
+        </span>
+      </div>`;
+  }
+
+  // ── Sentiment Strip ────────────────────────────────────────────────────
+  function updateSentiment() {
+    // Use aggregated metrics from flow-tape if available
+    let totalCallPrem = 0, totalPutPrem = 0;
+    allTrades.forEach(t => {
+      const r = (t.right || '').toUpperCase();
+      if (r === 'C') totalCallPrem += (t.premium || 0);
+      else if (r === 'P') totalPutPrem += (t.premium || 0);
+    });
+
+    const total = totalCallPrem + totalPutPrem;
+    const callPct = total ? (totalCallPrem / total * 100).toFixed(0) : 50;
+    const pcRatio = totalCallPrem > 0 ? totalPutPrem / totalCallPrem : 0;
+
+    let sent, sentColor;
+    if (pcRatio > 1.2) { sent = 'BEARISH'; sentColor = '#ef4444'; }
+    else if (pcRatio < 0.6) { sent = 'BULLISH'; sentColor = '#22c55e'; }
+    else { sent = 'NEUTRAL'; sentColor = '#f59e0b'; }
+
+    const pcEl   = document.getElementById('of-sent-ratio');
+    const sentEl = document.getElementById('of-sent-text');
+    const barEl  = document.getElementById('of-sent-bar');
+    if (pcEl)   pcEl.textContent = pcRatio.toFixed(2);
+    if (sentEl) { sentEl.textContent = sent; sentEl.style.color = sentColor; }
+    if (barEl)  barEl.innerHTML = `<div class="sent-call" style="width:${callPct}%"></div><div class="sent-put" style="width:${100-callPct}%"></div>`;
+  }
+
+  // ── Main data load ─────────────────────────────────────────────────────
+  // ─── Data controller: pagination + filters + date selection ─────────────
+  const FlowData = {
+    cursor: null,
+    hasMore: false,
+    newestTs: null,
+    loading: false,
+    exhausted: false,
+    totalMatching: null,
+    selectedDate: null,
+    _activeRequestId: 0,
+    getFiltersForApi() {
+      const qs = new URLSearchParams();
+      if (this.selectedDate) qs.set('date', this.selectedDate);
+      if (filters.ticker)    qs.set('symbol', filters.ticker);
+      if (filters.type === 'CALL') qs.set('right', 'C');
+      if (filters.type === 'PUT')  qs.set('right', 'P');
+      const mp = parseInt(filters.minPremium) || 0;
+      if (mp > 0) qs.set('min_premium', mp);
+      if (filters.dte === '0-7')  { qs.set('dte_min','0'); qs.set('dte_max','7'); }
+      if (filters.dte === '7-30') { qs.set('dte_min','7'); qs.set('dte_max','30'); }
+      if (filters.dte === '30+')  { qs.set('dte_min','30'); }
+      if (filters.sweepsOnly)     qs.set('is_sweep', 'true');
+      return qs;
+    },
+    normalizeExpirations(trades) {
+      for (const t of trades) {
+        if (t.expiration && typeof t.expiration === 'string' && t.expiration.length > 8) {
+          t.expiration = t.expiration.slice(0,10).replace(/-/g, '');
+        }
+      }
+      return trades;
+    },
+    async initialLoad() {
+      this.cursor = null;
+      this.hasMore = false;
+      this.newestTs = null;
+      this.exhausted = false;
+      this.totalMatching = null;
+      allTrades = [];
+      const reqId = ++this._activeRequestId;
+      this.loading = true;
+      try {
+        const qs = this.getFiltersForApi();
+        qs.set('limit', '500');
+        const res = await fetch('/api/flow-trades?' + qs.toString());
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        if (reqId !== this._activeRequestId) return;
+        allTrades = this.normalizeExpirations(data.trades || []);
+        this.cursor = data.next_cursor;
+        this.hasMore = data.has_more;
+        this.totalMatching = data.total_matching;
+        if (allTrades.length > 0) this.newestTs = allTrades[0].timestamp;
+        FlowData._updateCountBadge();
+      } catch (e) {
+        console.log('FlowData.initialLoad error:', e);
+      } finally {
+        this.loading = false;
+      }
+    },
+    async loadMore() {
+      if (this.loading || !this.hasMore || this.exhausted) return;
+      const reqId = ++this._activeRequestId;
+      this.loading = true;
+      try {
+        const qs = this.getFiltersForApi();
+        qs.set('limit', '500');
+        qs.set('before_ts', this.cursor);
+        qs.set('count', 'false');
+        const res = await fetch('/api/flow-trades?' + qs.toString());
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        if (reqId !== this._activeRequestId) return;
+        const more = this.normalizeExpirations(data.trades || []);
+        allTrades.push(...more);
+        this.cursor = data.next_cursor;
+        this.hasMore = data.has_more;
+        if (!data.has_more) this.exhausted = true;
+      } catch (e) {
+        console.log('FlowData.loadMore error:', e);
+      } finally {
+        this.loading = false;
+      }
+    },
+    async refreshNewer() {
+      if (this.selectedDate) return;
+      if (!this.newestTs) return;
+      try {
+        const qs = this.getFiltersForApi();
+        qs.set('limit', '500');
+        qs.set('after_ts', this.newestTs);
+        qs.set('count', 'false');
+        const res = await fetch('/api/flow-trades?' + qs.toString());
+        if (!res.ok) return;
+        const data = await res.json();
+        const newer = this.normalizeExpirations(data.trades || []);
+        if (newer.length === 0) return;
+        allTrades = newer.concat(allTrades);
+        this.newestTs = allTrades[0].timestamp;
+        if (this.totalMatching) {
+          this.totalMatching.trades += newer.length;
+          this.totalMatching.premium += newer.reduce((a,t) => a + (t.premium||0), 0);
+          FlowData._updateCountBadge();
+        }
+      } catch (e) { /* silent */ }
+    },
+    _updateCountBadge() {
+      const el = document.getElementById('of-trade-count');
+      const premEl = document.getElementById('of-total-premium');
+      if (this.totalMatching) {
+        if (el) el.textContent = this.totalMatching.trades.toLocaleString() + (allTrades.length < this.totalMatching.trades ? ` (showing ${allTrades.length.toLocaleString()})` : '');
+        if (premEl) premEl.textContent = '$' + (this.totalMatching.premium/1e6).toFixed(1) + 'M';
+      } else if (el) {
+        el.textContent = allTrades.length.toLocaleString();
+      }
+    },
+  };
+
+  async function loadPanelData() {
+    // Hide historical banner — panels work for any date via /api/flow-aggregates
+    const banner = document.getElementById('of-historical-banner');
+    if (banner) banner.style.display = 'none';
+    const qs = new URLSearchParams();
+    if (FlowData.selectedDate) qs.set('date', FlowData.selectedDate);
+    try {
+      const res = await fetch('/api/flow-aggregates' + (qs.toString() ? '?' + qs : ''));
+      if (!res.ok) return;
+      const data = await res.json();
+      symbolMetrics = {};
+      for (const row of (data.per_symbol || [])) {
+        symbolMetrics[row.symbol] = {
+          company_name: row.company_name || null,    // FRONTEND_FIXES_V1
+          trade_count: row.trade_count,
+          total_premium: row.total_premium,
+          call_premium: row.call_premium,
+          put_premium: row.put_premium,
+          pc_ratio: row.pc_ratio,
+          pc_zscore: row.pc_zscore,
+          cvd: row.cvd,
+          buy_premium: row.buy_premium,
+          sell_premium: row.sell_premium,
+          sweep_count: row.sweep_count,
+          last_trade_ts: row.last_trade_ts,
+        };
+      }
+      // FRONTEND_FIXES_V1 — pass through direction, exchanges, duration_ms
+      // for the new sweep render that uses these instead of strike/right/side.
+      sweepData = (data.sweeps || []).map(s => ({
+        sweep_id: s.sweep_id,
+        symbol: s.symbol,
+        total_premium: s.total_premium,
+        num_legs: s.trade_count,
+        direction: s.direction,
+        exchanges: s.exchanges || [],
+        duration_ms: s.duration_ms || 0,
+        first_ts: s.first_ts,
+        last_ts: s.last_ts,
+      }));
+      sectorFlow = data.sector_flow || {};
+      concentration = null;
+      window._sessionTotals = data.session_totals || null;
+      updateTopTickers();
+      updateFlowSignals();
+      updateSweeps();
+      updateSectorFlow();
+      updateConcentration();
+      updateSentiment();
+    } catch (e) {
+      console.log('loadPanelData error:', e);
+    }
+  }
+
+  async function loadFlowData() {
+    await Promise.all([FlowData.initialLoad(), loadPanelData()]);
+    rebuildTape({ trades: allTrades, market_open: !FlowData.selectedDate, fetched_at: new Date().toISOString(), total_trades: (FlowData.totalMatching && FlowData.totalMatching.trades) || allTrades.length, total_premium: (FlowData.totalMatching && FlowData.totalMatching.premium) || 0 });
+  }
+
+  let _setFilterDebounce = null;
+  function setFilter(key, value) {
+    filters[key] = value;
+    // Debounce so typing in ticker search doesn't hammer the API
+    clearTimeout(_setFilterDebounce);
+    _setFilterDebounce = setTimeout(async () => {
+      await FlowData.initialLoad();
+      rebuildTape({ trades: allTrades, market_open: !FlowData.selectedDate, fetched_at: new Date().toISOString(), total_trades: (FlowData.totalMatching && FlowData.totalMatching.trades) || allTrades.length, total_premium: (FlowData.totalMatching && FlowData.totalMatching.premium) || 0 });
+    }, 250);
+  }
+
+  function init() {
+    // URL params
+    const params = new URLSearchParams(location.search);
+    const pre = params.get('ticker');
+    if (pre) {
+      filters.ticker = pre.toUpperCase();
+      const inp = document.getElementById('of-ticker-search');
+      if (inp) inp.value = pre.toUpperCase();
+    }
+
+    // Filter wiring
+    document.getElementById('of-ticker-search')?.addEventListener('input', e => {
+      setFilter('ticker', e.target.value.trim().toUpperCase());
+    });
+    document.querySelectorAll('.of-type-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.of-type-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        setFilter('type', btn.dataset.type);
+      });
+    });
+    document.getElementById('of-min-premium')?.addEventListener('change', e => setFilter('minPremium', +e.target.value));
+    document.getElementById('of-dte')?.addEventListener('change', e => setFilter('dte', e.target.value));
+    document.getElementById('of-sweeps-only')?.addEventListener('change', e => setFilter('sweepsOnly', e.target.checked));
+
+    // Tape pause on hover
+    const tape = document.getElementById('of-tape');
+    if (tape) {
+      tape.addEventListener('mouseenter', () => isPaused = true);
+      tape.addEventListener('mouseleave', () => isPaused = false);
+    }
+
+    // Top tickers click → load detail
+    document.getElementById('of-top-tickers')?.addEventListener('click', e => {
+      const sym = e.target.closest('.of-ticker-row')?.querySelector('.of-tk-sym')?.textContent;
+      if (sym) loadDetail(sym);
+    });
+
+    // Filter toggle (mobile)
+    document.getElementById('of-filter-toggle')?.addEventListener('click', () => {
+      document.querySelector('.of-filter-bar')?.classList.toggle('filter-open');
+    });
+
+    loadFlowData();
+    // ─── Scroll-to-load more ──────────────────────────────────────────────
+    if (!FlowData._scrollObserverInstalled) {
+      FlowData._scrollObserverInstalled = true;
+      const tape = document.getElementById('of-tape');
+      if (tape) {
+        // Sentinel appended at tape bottom; re-added after each rebuildTape
+        const installSentinel = () => {
+          let s = document.getElementById('of-tape-sentinel');
+          if (!s) {
+            s = document.createElement('div');
+            s.id = 'of-tape-sentinel';
+            s.style.cssText = 'height:40px;text-align:center;color:var(--text-muted);font-size:11px;padding:12px';
+            tape.appendChild(s);
+          }
+          if (FlowData.exhausted) {
+            s.textContent = '— end of filtered results —';
+          } else if (FlowData.loading) {
+            s.textContent = 'Loading more…';
+          } else if (FlowData.hasMore) {
+            s.textContent = '↓ scroll to load more';
+          } else {
+            s.textContent = '';
+          }
+        };
+        FlowData._installSentinel = installSentinel;
+        // Observe scroll near bottom of the tape container
+        tape.addEventListener('scroll', () => {
+          const scrollRemaining = tape.scrollHeight - tape.scrollTop - tape.clientHeight;
+          if (scrollRemaining < 300 && FlowData.hasMore && !FlowData.loading && !FlowData.exhausted) {
+            FlowData.loadMore().then(() => {
+              rebuildTape({ trades: allTrades, market_open: !FlowData.selectedDate, fetched_at: new Date().toISOString(), total_trades: (FlowData.totalMatching && FlowData.totalMatching.trades) || allTrades.length, total_premium: (FlowData.totalMatching && FlowData.totalMatching.premium) || 0 });
+              installSentinel();
+            });
+          }
+        });
+      }
+    }
+    // ─── Date selector wiring ─────────────────────────────────────────────
+    const dateSel = document.getElementById('of-date-select');
+    if (dateSel) {
+      dateSel.addEventListener('change', async (e) => {
+        const v = e.target.value;
+        FlowData.selectedDate = (v === 'today') ? null : v;
+        // Update URL query param
+        const url = new URL(window.location);
+        if (FlowData.selectedDate) url.searchParams.set('date', FlowData.selectedDate);
+        else url.searchParams.delete('date');
+        history.replaceState({}, '', url);
+        await loadFlowData();
+      });
+      // Respect URL param on load
+      const urlDate = params.get('date');
+      if (urlDate) {
+        dateSel.value = urlDate;
+        FlowData.selectedDate = urlDate;
+      }
+    }
+
+    panelTimer = setInterval(() => {
+      if (!isPaused) {
+        if (!FlowData.selectedDate) {
+          FlowData.refreshNewer().then(() => rebuildTape({trades: allTrades, market_open: true, fetched_at: new Date().toISOString(), total_trades: (FlowData.totalMatching && FlowData.totalMatching.trades) || allTrades.length, total_premium: (FlowData.totalMatching && FlowData.totalMatching.premium) || 0}));
+        }
+      }
+    }, PANEL_TICK);
+  }
+
+  return { init, setFilter, loadDetail };
+})();
+
+
+// ── Panel click handlers: ticker drilldown via the new FlowData controller ──
+(function wirePanelClicks() {
+  const signalEl = document.getElementById('of-flow-signals');
+  if (signalEl) {
+    signalEl.addEventListener('click', (e) => {
+      const row = e.target.closest('.of-signal-row');
+      if (!row) return;
+      const sym = row.querySelector('.of-signal-sym')?.textContent?.trim();
+      if (!sym) return;
+      document.getElementById('of-ticker-search').value = sym;
+      OptionsFlowPage.setFilter('ticker', sym);
+      OptionsFlowPage.loadDetail(sym);
+    });
+  }
+  const sweepEl = document.getElementById('of-sweeps');
+  if (sweepEl) {
+    sweepEl.addEventListener('click', (e) => {
+      const row = e.target.closest('.of-sweep-row');
+      if (!row) return;
+      const sym = row.querySelector('.of-sweep-sym')?.textContent?.trim();
+      if (!sym) return;
+      document.getElementById('of-ticker-search').value = sym;
+      OptionsFlowPage.setFilter('ticker', sym);
+      OptionsFlowPage.loadDetail(sym);
+    });
+  }
+
+  // ─── FRONTEND_FIXES_V1 — collapse-by-default analysis bar + sticky nav ───
+  // Logic:
+  //   • #fa-content has class .fa-collapsed by default (CSS hides body)
+  //   • Click on #fa-header-row toggles the class
+  //   • When expanded, scan #fa-content for ticker section markers and build
+  //     #fa-ticker-nav with jump-to anchors
+  //   • Summary span shows comma-separated ticker list when collapsed
+  function setupFlowAnalysisCollapse() {
+    const headerRow = document.getElementById('fa-header-row');
+    const content   = document.getElementById('fa-content');
+    const tickerNav = document.getElementById('fa-ticker-nav');
+    const toggleIcon= document.getElementById('fa-toggle-icon');
+    const summary   = document.getElementById('fa-summary');
+    if (!headerRow || !content) return;
+
+    // Toggle on header click — but ignore clicks on the nested cross-asset link
+    headerRow.addEventListener('click', (e) => {
+      if (e.target.id === 'fa-cross-asset-toggle') return;
+      const isCollapsed = content.classList.toggle('fa-collapsed');
+      tickerNav.style.display = isCollapsed ? 'none' : '';
+      toggleIcon.textContent  = isCollapsed ? '▸' : '▾';
+    });
+
+    // Observe #fa-content for changes (qwen analyzer writes here async).
+    // When content updates, refresh summary + ticker nav.
+    const observer = new MutationObserver(() => refreshFromContent());
+    observer.observe(content, { childList: true, characterData: true, subtree: true });
+    refreshFromContent();
+
+    function refreshFromContent() {
+      const text = content.innerText || content.textContent || '';
+      // SMART_TAG_REGEX_V3 — handles all analyzer heading variants in flow_analysis:
+      //   "### SPX Options Flow Analysis (2026-04-21 13:12 ET)"
+      //   "### NVDA Options Flow Analysis: Institutional Pivot ..."
+      //   "### AMZN Options Flow Analysis (2026-04-21 12:45 ET | Ref: $252.3)"
+      //   "### CROSS_ASSET Options Flow Analysis"  (synthesized by FLOW_ANALYSIS_CONCAT_V1)
+      // Symbol up to 11 chars (CROSS_ASSET) with underscore, optional " @ price".
+      const tickerRe = /^#{2,4}\s+([A-Z][A-Z0-9_]{0,10})(?:\s+@\s+[\d.]+)?\s+Options\s+Flow\s+Analysis/gm;
+      const found = [];
+      const seen = new Set();
+      let m;
+      while ((m = tickerRe.exec(text)) !== null) {
+        const sym = m[1];
+        if (!seen.has(sym)) {
+          seen.add(sym);
+          found.push(sym);
+        }
+      }
+      // Update summary line (collapsed view)
+      if (found.length) {
+        summary.textContent = found.join(' · ') + '  ' + (found.length > 1 ? `(${found.length} tickers)` : '');
+      } else if (text.trim() && !text.startsWith('Awaiting')) {
+        // Fallback summary: first ~80 chars of content
+        summary.textContent = text.replace(/\s+/g, ' ').trim().slice(0, 100) + '…';
+      }
+      // Build ticker nav (expanded view)
+      if (found.length && tickerNav) {
+        tickerNav.innerHTML = found.map(sym =>
+          `<button class="fa-nav-btn" data-ticker="${sym}">${sym}</button>`
+        ).join('');
+        tickerNav.querySelectorAll('.fa-nav-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const sym = btn.dataset.ticker;
+            scrollToTickerSection(sym);
+          });
+        });
+      }
+    }
+
+    function scrollToTickerSection(sym) {
+      // SMART_TAG_SCROLL_V4 — find rendered <h3>/<h4> element, not line-index math.
+      // Line-counting drifts because marked.js emits varying-height elements
+      // (h3 ~30px, p ~66px wrapped, li variable). DOM query is exact.
+      const headings = content.querySelectorAll('h1, h2, h3, h4, h5, h6');
+      const re = new RegExp('^' + sym + '(?:\\s+@\\s+[\\d.]+)?\\s+Options\\s+Flow\\s+Analysis', 'i');
+      let target = null;
+      for (const h of headings) {
+        if (re.test(h.textContent.trim())) { target = h; break; }
+      }
+      if (!target) {
+        // Fallback: plain-text scan if marked didn't render headings
+        const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT);
+        let node;
+        while ((node = walker.nextNode())) {
+          if (re.test(node.textContent.trim())) {
+            target = node.parentElement;
+            break;
+          }
+        }
+      }
+      if (!target) return;
+      // Account for sticky nav: offset target by approx nav height + breathing room
+      const navEl = document.getElementById('fa-ticker-nav');
+      const navH = navEl ? navEl.getBoundingClientRect().height : 0;
+      const y = target.getBoundingClientRect().top + window.scrollY - navH - 20;
+      window.scrollTo({ top: y, behavior: 'smooth' });
+    }
+  }
+
+  // Wait for DOM if needed
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupFlowAnalysisCollapse);
+  } else {
+    setupFlowAnalysisCollapse();
+  }
+})();
