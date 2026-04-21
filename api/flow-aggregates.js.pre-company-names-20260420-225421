@@ -44,20 +44,13 @@ export default async function handler(req, res) {
     );
 
     // ── 1. Per-symbol session metrics ─────────────────────────────────
-    // COMPANY_NAMES_API_V1 — left-join ticker_names so company_name flows
-    // through to top_tickers and per_symbol output. Unknown symbols return
-    // company_name=NULL; demand-insertion below registers them for next FMP run.
     const sessionMetrics = await sql`
-      SELECT m.symbol, m.trade_count, m.total_premium, m.call_premium, m.put_premium,
-             m.call_count, m.put_count, m.buy_premium, m.sell_premium,
-             m.buy_count, m.sell_count,
-             m.cvd, m.pc_ratio, m.sweep_count,
-             m.first_trade_ts, m.last_trade_ts, m.last_refreshed_at,
-             tn.company_name
-      FROM flow_session_metrics m
-      LEFT JOIN ticker_names tn ON tn.symbol = m.symbol
-      WHERE m.session_date = ${sessionDate}
-      ORDER BY m.total_premium DESC
+      SELECT symbol, trade_count, total_premium, call_premium, put_premium,
+             call_count, put_count, buy_premium, sell_premium, buy_count, sell_count,
+             cvd, pc_ratio, sweep_count, first_trade_ts, last_trade_ts, last_refreshed_at
+      FROM flow_session_metrics
+      WHERE session_date = ${sessionDate}
+      ORDER BY total_premium DESC
     `;
 
     // ── 2. Session totals ─────────────────────────────────────────────
@@ -140,38 +133,15 @@ export default async function handler(req, res) {
       };
     }
 
-    // ── 5. Top tickers (top 25 by premium) ────────────────────────────
-    // COMPANY_NAMES_API_V1 — surface company_name so UI can show
-    // "MU — MICRON TECHNOLOGY" for Cmd+F-by-name discoverability.
-    const topTickers = sessionMetrics.slice(0, 25).map(m => ({
+    // ── 5. Top tickers (top 10 by premium) ────────────────────────────
+    const topTickers = sessionMetrics.slice(0, 10).map(m => ({
       symbol: m.symbol,
-      company_name: m.company_name || null,
       trade_count: m.trade_count,
       total_premium: parseFloat(m.total_premium),
       pc_ratio: m.pc_ratio !== null ? parseFloat(m.pc_ratio) : null,
       cvd: parseFloat(m.cvd),
       last_trade_ts: m.last_trade_ts,
     }));
-
-    // COMPANY_NAMES_API_V1 — demand-insertion: register unknown symbols so the
-    // weekly FMP cron (ingest-fmp-company-names.py) can populate names for
-    // wildcards (CAR, CRWV) that ranked into top 25 today. Bounded to 25 rows
-    // per request, ON CONFLICT DO NOTHING so it's idempotent.
-    const unknownSymbols = topTickers
-      .filter(t => !t.company_name)
-      .map(t => t.symbol);
-    if (unknownSymbols.length > 0) {
-      try {
-        await sql`
-          INSERT INTO ticker_names (symbol, source)
-          SELECT unnest(${unknownSymbols}::text[]), 'demand'
-          ON CONFLICT (symbol) DO NOTHING
-        `;
-      } catch (e) {
-        console.error('ticker_names demand-insert failed:', e);
-        // Non-fatal — UI still works without name registration
-      }
-    }
 
     // ── 6. Baselines ──────────────────────────────────────────────────
     let baselineMap = {};
@@ -206,7 +176,6 @@ export default async function handler(req, res) {
       }
       return {
         symbol: m.symbol,
-        company_name: m.company_name || null,    // COMPANY_NAMES_API_V1
         trade_count: m.trade_count,
         total_premium: parseFloat(m.total_premium),
         call_premium: parseFloat(m.call_premium),
