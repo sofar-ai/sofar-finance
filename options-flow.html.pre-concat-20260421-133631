@@ -294,27 +294,19 @@
         const crossAsset = data.analyses.find(a => a.is_cross_asset);
 
         if (tickers.length > 0) {
-          // FLOW_ANALYSIS_CONCAT_V1 — concatenate ALL ticker analyses (was: pick tickers[0] only)
-          let combinedText = '';
-          for (const a of tickers) {
-            const aPrice = a.reference_price ? ' @ ' + a.reference_price.toFixed(2) : '';
-            const body = (a.analysis || '').trim();
-            const startsWithHeader = /^#{2,4}\s/.test(body);
-            const synthHeader = '### ' + a.symbol + aPrice + ' Options Flow Analysis\n';
-            combinedText += (startsWithHeader ? body : synthHeader + body) + '\n\n---\n\n';
-          }
-          if (crossAsset) {
-            const body = (crossAsset.analysis || '').trim();
-            const startsWithHeader = /^#{2,4}\s/.test(body);
-            const synthHeader = '### CROSS_ASSET Options Flow Analysis\n';
-            combinedText += (startsWithHeader ? body : synthHeader + body);
-          }
-          // Strip ** and * but KEEP ### so smart-tag finds headers
-          combinedText = combinedText.replace(/\*\*/g, '').replace(/\*/g, '');
-          faContent.innerHTML = combinedText;
+          // Show most recent ticker analysis
           const latest = tickers[0];
+          const price = latest.reference_price ? ' @ ' + latest.reference_price.toFixed(2) : '';
           const time = new Date(latest.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) + ' ET';
-          faTimestamp.textContent = time + ' · ' + latest.model + ' · ' + tickers.length + ' symbols' + (crossAsset ? ' + cross-asset' : '');
+
+          // Clean markdown for display
+          let text = latest.analysis || '';
+          text = text.replace(/#{1,4}\s*/g, '').replace(/\*\*/g, '').replace(/\*/g, '').replace(/---/g, '');
+
+          // Full analysis — container is scrollable
+
+          faContent.innerHTML = '<strong>' + latest.symbol + price + '</strong>\n' + text;
+          faTimestamp.textContent = time + ' · ' + latest.model;
 
           // If multiple tickers, append brief summaries
           if (tickers.length > 1) {
