@@ -144,3 +144,13 @@ END
 $report$;
 
 COMMIT;
+
+-- =============================================================================
+-- 2026-04-20 evening — known issue
+-- =============================================================================
+-- ingest-fmp-company-names.py uses /api/v3/profile/{multi} which returns 403
+-- on FMP Stable plan. Needs rewrite to use stable/profile?symbol={one}
+-- single-symbol endpoint. Until then, only the 31 manually-seeded names show
+-- in the UI; demand-insertion still registers new tickers (they'll hydrate
+-- once the script is fixed). DO NOT add cron entry until rewrite is complete.
+-- =============================================================================
