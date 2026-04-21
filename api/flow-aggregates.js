@@ -16,7 +16,24 @@ export default async function handler(req, res) {
 
   try {
     const requestedDate = parseISODate(req.query.date);
-    const [{ today }] = await sql`SELECT fn_session_date(NOW())::text AS today`;
+    // SESSION_DATE_FIX_V1 — pick most-recent substantial session instead of
+    // fn_session_date(NOW()). After 8 PM ET, fn_session_date returns tomorrow's
+    // CBOE GTH session_date before real data exists, so the API returned only
+    // the ~2 phantom late-evening symbols. Filter: session_date with > $1B
+    // premium. Real days run $20B+; noise days run $0.
+    const [{ today }] = await sql`
+      WITH real_sessions AS (
+        SELECT session_date, SUM(total_premium) AS day_total
+        FROM flow_session_metrics
+        WHERE session_date >= CURRENT_DATE - INTERVAL '7 days'
+        GROUP BY session_date
+        HAVING SUM(total_premium) > 1e9
+      )
+      SELECT COALESCE(
+        (SELECT MAX(session_date)::text FROM real_sessions),
+        fn_session_date(NOW())::text
+      ) AS today
+    `;
     const sessionDate = requestedDate || today;
     const isToday = sessionDate === today;
 
