@@ -871,10 +871,11 @@ const OptionsFlowPage = (() => {
         // Top button — scroll the flow-analysis header into view
         tickerNav.querySelector('.fa-nav-top')?.addEventListener('click', (e) => {
           e.stopPropagation();
-          // SCROLL_INTO_VIEW_V8 — scroll the panel's internal scroll back to top
-          // (the headings are inside #flow-analysis-bar which has overflow:auto).
-          const panel = document.getElementById('flow-analysis-bar');
-          if (panel) panel.scrollTo({ top: 0, behavior: 'smooth' });
+          const header = document.getElementById('fa-header-row');
+          if (header) {
+            const y = header.getBoundingClientRect().top + window.scrollY - 10;
+            window.scrollTo({ top: y, behavior: 'smooth' });
+          }
         });
         tickerNav.querySelectorAll('.fa-nav-btn').forEach(btn => {
           btn.addEventListener('click', (e) => {
@@ -887,19 +888,33 @@ const OptionsFlowPage = (() => {
     }
 
     function scrollToTickerSection(sym) {
-      // SCROLL_INTO_VIEW_V8 — native scrollIntoView walks ancestor chain to find
-      // the actual scrollable container (here: #flow-analysis-bar with
-      // overflow-y:auto, max-height:40vh). CSS scroll-margin-top handles the
-      // sticky ticker nav offset. Replaces V4's window.scrollTo which was
-      // scrolling the page, not the internal panel scroll.
+      // SMART_TAG_SCROLL_V4 — find rendered <h3>/<h4> element, not line-index math.
+      // MARKDOWN_RENDER_V5 — headings now exist because marked.js parses fa-content.
+      // Line-counting drifts because marked.js emits varying-height elements
+      // (h3 ~30px, p ~66px wrapped, li variable). DOM query is exact.
       const headings = content.querySelectorAll('h1, h2, h3, h4, h5, h6');
       const re = new RegExp('^' + sym + '(?:\\s+@\\s+[\\d.]+)?\\s+Options\\s+Flow\\s+Analysis', 'i');
       let target = null;
       for (const h of headings) {
         if (re.test(h.textContent.trim())) { target = h; break; }
       }
+      if (!target) {
+        // Fallback: plain-text scan if marked didn't render headings
+        const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT);
+        let node;
+        while ((node = walker.nextNode())) {
+          if (re.test(node.textContent.trim())) {
+            target = node.parentElement;
+            break;
+          }
+        }
+      }
       if (!target) return;
-      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // Account for sticky nav: offset target by approx nav height + breathing room
+      const navEl = document.getElementById('fa-ticker-nav');
+      const navH = navEl ? navEl.getBoundingClientRect().height : 0;
+      const y = target.getBoundingClientRect().top + window.scrollY - navH - 20;
+      window.scrollTo({ top: y, behavior: 'smooth' });
     }
   }
 
