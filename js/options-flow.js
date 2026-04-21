@@ -825,10 +825,11 @@ const OptionsFlowPage = (() => {
 
     function refreshFromContent() {
       const text = content.innerText || content.textContent || '';
-      // Parse tickers from analyzer output. Section markers look like:
-      //   "SPX @ 7105.60" or "META @ 670.84" at line start
-      // Capture symbol before @
-      const tickerRe = /^([A-Z]{1,6})\s*@\s*[\d.]+/gm;
+      // SMART_TAG_REGEX_V2 — analyzer output is markdown with section headings:
+      //   "### SPXW Options Flow Analysis - 2026-04-21 13:15 ET"
+      //   "## NVDA Options Flow Analysis - ..."
+      // Capture symbol from the heading. Allows 2-4 # depth for flexibility.
+      const tickerRe = /^#{2,4}\s+([A-Z]{1,6})\s+Options\s+Flow\s+Analysis/gm;
       const found = [];
       const seen = new Set();
       let m;
@@ -862,11 +863,12 @@ const OptionsFlowPage = (() => {
     }
 
     function scrollToTickerSection(sym) {
-      // Find first text node containing "SYM @"
+      // SMART_TAG_REGEX_V2 — find the markdown heading for this symbol
+      // e.g. "### SPXW Options Flow Analysis - ..."
       const text = content.innerText || '';
       const lines = text.split('\n');
       let lineIdx = -1;
-      const re = new RegExp('^' + sym + '\\s*@');
+      const re = new RegExp('^#{2,4}\\s+' + sym + '\\s+Options\\s+Flow\\s+Analysis');
       for (let i = 0; i < lines.length; i++) {
         if (re.test(lines[i])) { lineIdx = i; break; }
       }
