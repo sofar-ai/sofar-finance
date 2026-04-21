@@ -825,29 +825,21 @@ const OptionsFlowPage = (() => {
 
     function refreshFromContent() {
       const text = content.innerText || content.textContent || '';
-      // NAV_DETECT_V6 — after MARKDOWN_RENDER_V5, content is parsed HTML so the
-      // ### markers are gone. Detect symbols from rendered <h3>/<h4> elements
-      // first; fall back to raw-text regex for pre-render / plain-text cases.
-      const symbolRe = /^([A-Z][A-Z0-9_]{0,10})(?:\s+@\s+[\d.]+)?\s+Options\s+Flow\s+Analysis/;
+      // SMART_TAG_REGEX_V3 — handles all analyzer heading variants in flow_analysis:
+      //   "### SPX Options Flow Analysis (2026-04-21 13:12 ET)"
+      //   "### NVDA Options Flow Analysis: Institutional Pivot ..."
+      //   "### AMZN Options Flow Analysis (2026-04-21 12:45 ET | Ref: $252.3)"
+      //   "### CROSS_ASSET Options Flow Analysis"  (synthesized by FLOW_ANALYSIS_CONCAT_V1)
+      // Symbol up to 11 chars (CROSS_ASSET) with underscore, optional " @ price".
+      const tickerRe = /^#{2,4}\s+([A-Z][A-Z0-9_]{0,10})(?:\s+@\s+[\d.]+)?\s+Options\s+Flow\s+Analysis/gm;
       const found = [];
       const seen = new Set();
-      const headings = content.querySelectorAll('h1, h2, h3, h4, h5, h6');
-      for (const h of headings) {
-        const m = h.textContent.trim().match(symbolRe);
-        if (m && !seen.has(m[1])) {
-          seen.add(m[1]);
-          found.push(m[1]);
-        }
-      }
-      // Fallback: raw markdown (e.g. marked.js failed to load)
-      if (found.length === 0) {
-        const tickerRe = /^#{2,4}\s+([A-Z][A-Z0-9_]{0,10})(?:\s+@\s+[\d.]+)?\s+Options\s+Flow\s+Analysis/gm;
-        let m;
-        while ((m = tickerRe.exec(text)) !== null) {
-          if (!seen.has(m[1])) {
-            seen.add(m[1]);
-            found.push(m[1]);
-          }
+      let m;
+      while ((m = tickerRe.exec(text)) !== null) {
+        const sym = m[1];
+        if (!seen.has(sym)) {
+          seen.add(sym);
+          found.push(sym);
         }
       }
       // Update summary line (collapsed view)
