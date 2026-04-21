@@ -1,128 +1,124 @@
 {
-  "generated_at": "2026-04-19T15:25:37.530188",
+  "generated_at": "2026-04-20T23:13:35.497540",
   "source": "quant-research-scout-v2",
   "model": "gemma4:26b",
-  "research_theme": "Cross-Domain Signal Convergence: Predicting Microstructure Regime Shifts via Macro-Proxy and Sentiment Velocity",
+  "research_theme": "Information Diffusion Topology & Cross-Modal Latency Dynamics",
   "hypotheses_count": 5,
-  "cycle": 3,
+  "cycle": 5,
   "hypotheses": [
     {
-      "title": "macro_gamma_regime_flip",
+      "title": "topological_iv_surface_persistence_anomaly",
       "intel_type": "SIGINT",
       "source_papers": [
-        "https://papers.ssrn.com/sol3/Delivery.cfm/c920b815-533e-4d93-b303-e4b62287a054-MECA.pdf?abstractid=5043260&mirid=1"
+        "https://arxiv.org/abs/1703.043 Arbitrary/TDA of Financial Time Series"
       ],
-      "theoretical_basis": "Dealer gamma positioning (GEX) dictates market stability. High macro-volatility (measured via Treasury spreads) triggers dealer re-hedging, which can flip the market from a 'stabilizing' (positive gamma) to a 'destabilizing' (negative gamma) regime, accelerating price moves.",
-      "hypothesis": "When the rolling 5-day volatility of the 10y-30y spread exceeds its 20-day mean AND the aggregate SPY Gamma (GEX) is approaching zero, SPY 1-day forward volatility will expand significantly.",
-      "signal_definition": "Calculate Net GEX for SPY: SUM(options_eod.gamma * options_e_od.open_interest * options_e_od.underlying_price) grouped by date. Calculate Treasury Vol: STDDEV(treasury_rates.10y - treasury_rates.30y, 5) / STDDEV(treasury_rates.10y - treasury_rates.30y, 20). Signal triggers when GEX_ratio < 0.1 and Treasury_Vol_Ratio > 1.5.",
-      "compute_approach": "Step 1: Query treasury_rates to compute 5d and 20d stddev of (10y-30y). Step 2: Query options_eod for SPY to aggregate weighted gamma. Step 3: Compute the ratio of GEX to its 20d mean. Step 4: Identify dates where Treasury_Vol_Ratio > 1.5 and GEX_ratio < 0.1. Step 5: Measure SPY IV change in following 24h.",
+      "theoretical_basis": "Using Topological Data Analysis (TDA), we can identify 'voids' or 'loops' in the Implied Volatility (IV) surface. A sudden change in the persistence homology (the 'lifetime' of topological features) of the IV surface across strikes and expirations indicates a structural regime shift in dealer hedging requirements before price action occurs.",
+      "hypothesis": "When the persistence of 1-dimensional holes (loops) in the IV surface (calculated via Rips filtration on strike/expiration/iv coordinates) exceeds its 20-day z-score, 3-day forward volatility is significantly higher.",
+      "signal_definition": "Construct a point cloud from options_eod where each point is (strike, expiration, iv). Compute the persistence diagram of the Vietoris-Rips complex. Calculate the 'Total Persistence' (sum of lifetimes of all features). Signal = (Total_Persistence_t / Rolling_Mean(Total_Persistence, 20)) - 1.",
+      "compute_approach": "Step 1: Query options_eod for symbol='SPY' for all strikes/expirations on date=t. Step 2: Map to 3D point cloud (strike, expiration_days_to_expiry, iv). Step 3: Run TDA algorithm (e.g., Ripser) to generate persistence diagrams. Step 4: Aggregate persistence values. Step 5: Compare against 20-day moving average of persistence.",
       "data_tables": [
-        "options_eod",
-        "treasury_rates",
-        "prices_daily"
+        "options_e0d"
       ],
       "data_available": true,
-      "expected_edge": "High. Captures the structural transition from mean-reverting to momentum-driven regimes using macro-proxies.",
+      "expected_edge": "High. Captures non-linear structural changes in the volatility surface that standard Greeks (gamma/vega) miss.",
       "priority": "high",
-      "novelty": "Combines fixed-income volatility (ELINT/SIGINT) with equity derivatives microstructure (SIGINT).",
-      "id": "qr-202604191525-001",
+      "novelty": "Moves beyond point-wise Greek monitoring to structural manifold monitoring.",
+      "id": "qr-202604202313-001",
       "status": "pending",
-      "generated_at": "2026-04-19T15:25:37.530124",
-      "research_theme": "Cross-Domain Signal Convergence: Predicting Microstructure Regime Shifts via Macro-Proxy and Sentiment Velocity"
+      "generated_at": "2026-04-20T23:13:35.497257",
+      "research_theme": "Information Diffusion Topology & Cross-Modal Latency Dynamics"
     },
     {
-      "title": "informed_sweep_divergence",
+      "title": "informed_sweep_cluster_detection",
       "intel_type": "HUMINT",
       "source_papers": [
-        "https://arxiv.org/html/2508.20672v1",
-        "https://arxiv.org/html/2509.04541v2"
+        "https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2997501"
       ],
-      "theoretical_basis": "Large-scale 'sweeps' in the options market represent informed participants (HUMINT) acting on information before it is reflected in the broader crowd sentiment (CAG). A divergence between aggressive flow and crowd awareness indicates an impending price breakout.",
-      "hypothesis": "When the volume of 'BUY' side sweeps in flow_trades (premium > 100k) increases by 3x its 10-day mean while the 'CAG' (Crowd Awareness Gap) in signal_values remains low, the underlying asset will experience a positive price drift.",
-      "signal_definition": "Identify flow_trades where side='BUY' and premium > 100000. Compute 10-day rolling mean of sweep_count. Compare current_sweep_count / mean_sweep_count. Cross-reference with signal_values.ticker='SPY' AND signal_name='CAG' where value < threshold.",
-      "compute_approach": "Step 1: Aggregate flow_trades by date/symbol for premium > 100k. Step 2: Compute 10d rolling mean of this count. Step 3: Fetch CAG value from signal_values. Step 4: Trigger signal if (Current_Count/Mean) > 3 AND CAG < 0.2.",
+      "theoretical_basis": "Institutional 'smart money' often executes via large, multi-leg sweeps. While individual trades might look like noise, a cluster of high-premium 'BUY' sweeps across different strikes/expirations with high 'sweep_id' correlation suggests a single informed actor attempting to hide footprint.",
+      "hypothesis": "When the volume of 'BUY' side trades in flow_trades with premium > 50k and side='BUY' exceeds the 10-day average 'cluster density' (trades sharing similar strike/expiry/direction), the probability of a positive 1-day return is increased.",
+      "signal_definition": "Identify trades in flow_trades where side='BUY' and premium > 50000. Group by (strike, expiration, date). Calculate 'Cluster_Size' = count(sweep_id) per group. Signal = (Cluster_Size_t / Rolling_Mean(Cluster_Size, 10)) - 1.",
+      "compute_approach": "Step 1: Filter flow_trades for premium > 50k and side='BUY'. Step 2: Aggregate by strike/expiration/date. Step 3: Calculate the count of unique sweep_ids per group. Step 4: Z-score the count against its 10-day history.",
       "data_tables": [
         "flow_trades",
-        "signal_values",
-        "prices_daily"
+        "options_eod"
       ],
       "data_available": true,
-      "expected_edge": "High. Detects 'hidden' institutional positioning before the 'crowd' (CAG) reacts.",
+      "expected_edge": "Detects institutional positioning (HUMINT) before it is fully reflected in the underlying price.",
       "priority": "high",
-      "novelty": "Uses real-time trade intensity (SIGINT) to find information asymmetry in crowd sentiment (HUMINT).",
-      "id": "qr-202604191525-002",
+      "novelty": "Uses 'sweep' grouping to reconstruct fragmented institutional orders.",
+      "id": "qr-202604202313-003",
       "status": "pending",
-      "generated_at": "2026-04-19T15:25:37.530145",
-      "research_theme": "Cross-Domain Signal Convergence: Predicting Microstructure Regime Shifts via Macro-Proxy and Sentiment Velocity"
+      "generated_at": "2026-04-20T23:13:35.497396",
+      "research_theme": "Information Diffusion Topology & Cross-Modal Latency Dynamics"
     },
     {
-      "title": "rv_iv_convergence_lead",
-      "intel_type": "SIGINT",
+      "title": "cross_modal_sentiment_gamma_latency",
+      "intel_type": "ELINT_to_SIGINT_bridge",
       "source_papers": [
-        "https://arxiv.org/html/2506.07928v1",
-        "https://arxiv.org/pdf/2503.08693"
+        "https://arxiv.org/html/2503.23757v1"
       ],
-      "hypothesis": "When the spread between Realized Volatility (RV) and Implied Volatility (IV) reaches a 20-day extreme, the IV will revert to the RV, predicting a volatility expansion or contraction.",
-      "signal_definition": "Compute 5-day RV from prices_daily.year_change(close). Compute 30-day ATM IV from options_eod.iv. Signal = (RV - IV) / STDDEV(RV - IV, 20).",
-      "compute_approach": "Step 1: Calculate 5d rolling stddev of prices_daily.close. Step 2: Fetch 30d ATM IV from options_eod. Step 3: Compute the spread. Step 4: Z-score the spread against a 20-day window. Step 5: Predict direction of IV based on Z-score magnitude.",
+      "theoretical_basis": "Information diffusion follows a predictable latency. News-driven sentiment (ELINT) precedes the physical manifestation of dealer hedging (SIGINT/Gamma). By measuring the time-delta between sentiment spikes and Gamma-surface shifts, we can identify the 'information velocity' of a specific ticker.",
+      "hypothesis": "If the time-delta between a spike in signal_values (sentiment) and a spike in options_t.gamma (aggregate dealer gamma) decreases below its 30-day median, it indicates an increase in market efficiency/speed, and we should reduce position sizing to avoid being 'picked off' by faster participants.",
+      "signal_definition": "Let T_sentiment = timestamp of signal_values.value > 2.0 (where signal_name='sentiment_score'). Let T_gamma = timestamp of sum(options_eod.gamma) change > 1.5 sigma. Signal = Median(T_gamma - T_sentiment) over 30 days.",
+      "compute_approach": "Step 1: Query signal_values for 'sentiment_score' spikes. Step 2: Query options_eod for aggregate gamma changes. Step 3: Calculate time-lag for each event pair. Step 4: Compute rolling 30-day median of this lag.",
       "data_tables": [
-        "prices_daily",
+        "signal_values",
         "options_eod"
       ],
       "data_available": true,
-      "expected_edge": "Medium. Exploits the predictable mean-reversion of the volatility risk premium.",
+      "expected_edge": "Allows for dynamic adjustment of execution latency requirements based on current market 'speed'.",
       "priority": "medium",
-      "novelty": "Focuses on the 'discrepancy' as a predictive feature rather than just the level of volatility.",
-      "id": "qr-202604191525-003",
+      "novelty": "Quantifies the 'speed of news' as a measurable market parameter.",
+      "id": "qr-202604202313-002",
       "status": "pending",
-      "generated_at": "2026-04-19T15:25:37.530155",
-      "research_theme": "Cross-Domain Signal Convergence: Predicting Microstructure Regime Shifts via Macro-Proxy and Sentiment Velocity"
+      "generated_at": "2026-04-20T23:13:35.497345",
+      "research_theme": "Information Diffusion Topology & Cross-Modal Latency Dynamics"
     },
     {
-      "title": "liquidity_shock_hawkes_proxy",
+      "title": "gamma_flip_structural_noise_ratio",
       "intel_type": "SIGINT",
       "source_papers": [
-        "https://arxiv.org/abs/2412.16850"
+        "https://arxiv.org/html/2509.05107v1"
       ],
-      "theoretical_basis": "High-frequency trading activity follows a self-exciting (Hawkes) process. A sudden cluster of trades (liquidity jump) in the options market often precedes a liquidity-driven volatility spike in the underlying equity.",
-      "hypothesis": "A spike in the frequency of 'sweep_id' occurrences in flow_trades within a 15-minute window, followed by an increase in the bid-ask spread (from flow_trades.bid/ask), predicts an increase in options_eod.iv.",
-      "signal_definition": "Count unique sweep_id in flow_trades per 15m window. Calculate spread_expansion = (flow_trades.ask - flow_trades.bid) / flow_trades.bid. Signal = (Count_Zscore > 2) AND (Spread_Expansion_Zscore > 2).",
-      "compute_approach": "Step 1: Group flow_trades by 15m intervals. Step 2: Compute frequency of sweep_id and mean spread. Step 3: Apply Z-score transform to both metrics. Step 4: Identify simultaneous spikes.",
+      "theoretical_basis": "Market volatility is driven by the transition from 'positive gamma' (stabilizing) to 'negative gamma' (destabilizing) regimes. We can measure the 'Signal-to-Noise' ratio of this transition by comparing the volatility of the gamma-flip point to the volume of trades occurring at that point.",
+      "hypothesis": "When the 'Gamma Flip' point (where net aggregate gamma = 0) exhibits high 'structural noise' (high volume in flow_trades without corresponding change in options_e0d.open_interest), the market is in a 'pre-regime-shift' state, predicting higher volatility.",
+      "signal_definition": "Find date where sum(options_eod.gamma) crosses zero. Calculate SNR = sum(flow_trades.volume) / sum(options_eod.open_interest_change) for that window. Signal = SNR_t / Rolling_Mean(SNR, 5).",
+      "compute_approach": "Step 1: Calculate net gamma from options_eod. Step 2: Detect zero-crossing. Step 3: For the 1-hour window around crossing, sum flow_trades.volume. Step 4: Divide by the change in open_interest from options_eod. Step 5: Compare to 5-day average.",
       "data_tables": [
-        "flow_trades",
-        "options_eod"
+        "options_eod",
+        "flow_trades"
       ],
       "data_available": true,
-      "expected_edge": "High. Captures the 'microstructure-to-volatility' transmission mechanism.",
+      "expected_edge": "Distinguishes between 'informed' hedging (structural) and 'uninformed' liquidity provision (noise).",
       "priority": "medium",
-      "novelty": "Uses trade-level 'burstiness' as a proxy for the self-exciting nature of liquidity shocks.",
-      "id": "qr-202604191525-004",
+      "novelty": "Uses the ratio of flow-to-OI to measure the 'quality' of the gamma flip.",
+      "id": "qr-202604202313-004",
       "status": "pending",
-      "generated_at": "2026-04-19T15:25:37.530163",
-      "research_theme": "Cross-Domain Signal Convergence: Predicting Microstructure Regime Shifts via Macro-Proxy and Sentiment Velocity"
+      "generated_at": "2026-04-20T23:13:35.497440",
+      "research_theme": "Information Diffusion Topology & Cross-Modal Latency Dynamics"
     },
     {
-      "title": "bond_equity_vol_lead_lag",
-      "intel_type": "SIGINT",
+      "title": "macro_yield_curve_topology_lead_lag",
+      "intel_type": "ELINT",
       "source_papers": [
-        "https://papers.ssrn.com/sol3/Delivery.cfm/SSRN_ID3427002_code2079101.pdf?abstractid=2938619"
+        "https://arxiv.org/abs/1703.04385"
       ],
-      "hypothesis": "Volatility in the 10y Treasury yield leads volatility expansion in the S&P 500 (SPY) with a 1-to-3 day lag.",
-      "signal_definition": "Calculate 5d rolling stddev of treasury_rates.10y. Calculate 5d rolling stddev of options_eod.iv for SPY. Signal = Correlation(Treasury_Vol_t-n, SPY_IV_t) where n in [1,3].",
-      "compute_approach": "Step 1: Compute rolling volatility for 10y yields. Step 2: Compute rolling volatility for SPY IV. Step 3: Use a cross-correlation function to find the lag (n) that maximizes the correlation coefficient.",
+      "theoretical_basis": "The 'shape' of the yield curve (spread between 10y and 30y) acts as a macro-signal. Changes in the topology of the spread (e.g., sudden flattening or steepening) precede shifts in equity risk premiums (ERP).",
+      "hypothesis": "A sudden increase in the 'velocity' of the 10y-30y spread (rate of change) precedes a spike in SPY volatility (VIX/ATR) by 2-5 days.",
+      "signal_definition": "Compute velocity_v = (treasury_rates.10y - treasury_rates.30y)_t - (treasury_rates.10y - treasury_rates.30y)_{t-1}. Signal = velocity_v / Rolling_StdDev(velocity_v, 20).",
+      "compute_approach": "Step 1: Query treasury_rates for 10y and 30y. Step 2: Compute daily spread. Step 3: Compute first-order difference (velocity). Step 4: Normalize velocity by its 20-day volatility.",
       "data_tables": [
         "treasury_rates",
-        "options_eod",
         "prices_daily"
       ],
       "data_available": true,
-      "expected_edge": "Medium. Leverages the cross-asset lead-lag effect documented in high-frequency research.",
+      "expected_edge": "Captures macro-regime shifts from the bond market that are often ignored by equity-only models.",
       "priority": "low",
-      "novelty": "Quantifies the specific lag-time of macro-to-equity volatility transmission.",
-      "id": "qr-202604191525-005",
+      "novelty": "Treats the yield curve as a momentum-based signal rather than a static level.",
+      "id": "qr-202604202313-005",
       "status": "pending",
-      "generated_at": "2026-04-19T15:25:37.530174",
-      "research_theme": "Cross-Domain Signal Convergence: Predicting Microstructure Regime Shifts via Macro-Proxy and Sentiment Velocity"
+      "generated_at": "2026-04-20T23:13:35.497483",
+      "research_theme": "Information Diffusion Topology & Cross-Modal Latency Dynamics"
     }
   ]
 }

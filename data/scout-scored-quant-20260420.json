@@ -1,0 +1,52 @@
+[
+  {
+    "title": "topological_iv_surface_persistence_anomaly",
+    "summary": "When the persistence of 1-dimensional holes (loops) in the IV surface (calculated via Rips filtration on strike/expiration/iv coordinates) exceeds its 20-day z-score, 3-day forward volatility is significantly higher.",
+    "signal_definition": "Construct a point cloud from options_eod where each point is (strike, expiration, iv). Compute the persistence diagram of the Vietoris-Rips complex. Calculate the 'Total Persistence' (sum of lifetimes of all features). Signal = (Total_Persistence_t / Rolling_Mean(Total_Persistence, 20)) - 1.",
+    "compute_approach": "Step 1: Query options_eod for symbol='SPY' for all strikes/expirations on date=t. Step 2: Map to 3D point cloud (strike, expiration_days_to_expiry, iv). Step 3: Run TDA algorithm (e.g., Ripser) to generate persistence diagrams. Step 4: Aggregate persistence values. Step 5: Compare against 20-day moving average of persistence.",
+    "theoretical_basis": "Using Topological Data Analysis (TDA), we can identify 'voids' or 'loops' in the Implied Volatility (IV) surface. A sudden change in the persistence homology (the 'lifetime' of topological features) of the IV surface across strikes and expirations indicates a structural regime shift in dealer hedging requirements before price action occurs.",
+    "intel_type": "SIGINT",
+    "source": "https://arxiv.org/abs/1703.043 Arbitrary/TDA of Financial Time Series",
+    "score": 9
+  },
+  {
+    "title": "informed_sweep_cluster_detection",
+    "summary": "When the volume of 'BUY' side trades in flow_trades with premium > 50k and side='BUY' exceeds the 10-day average 'cluster density' (trades sharing similar strike/expiry/direction), the probability of a positive 1-day return is increased.",
+    "signal_definition": "Identify trades in flow_trades where side='BUY' and premium > 50000. Group by (strike, expiration, date). Calculate 'Cluster_Size' = count(sweep_id) per group. Signal = (Cluster_Size_t / Rolling_Mean(Cluster_Size, 10)) - 1.",
+    "compute_approach": "Step 1: Filter flow_trades for premium > 50k and side='BUY'. Step 2: Aggregate by strike/expiration/date. Step 3: Calculate the count of unique sweep_ids per group. Step 4: Z-score the count against its 10-day history.",
+    "theoretical_basis": "Institutional 'smart money' often executes via large, multi-leg sweeps. While individual trades might look like noise, a cluster of high-premium 'BUY' sweeps across different strikes/expirations with high 'sweep_id' correlation suggests a single informed actor attempting to hide footprint.",
+    "intel_type": "HUMINT",
+    "source": "https://papers.ssrn.com/sol3/papers.cfm?abstract_id=2997501",
+    "score": 9
+  },
+  {
+    "title": "cross_modal_sentiment_gamma_latency",
+    "summary": "If the time-delta between a spike in signal_values (sentiment) and a spike in options_t.gamma (aggregate dealer gamma) decreases below its 30-day median, it indicates an increase in market efficiency/speed, and we should reduce position sizing to avoid being 'picked off' by faster participants.",
+    "signal_definition": "Let T_sentiment = timestamp of signal_values.value > 2.0 (where signal_name='sentiment_score'). Let T_gamma = timestamp of sum(options_eod.gamma) change > 1.5 sigma. Signal = Median(T_gamma - T_sentiment) over 30 days.",
+    "compute_approach": "Step 1: Query signal_values for 'sentiment_score' spikes. Step 2: Query options_eod for aggregate gamma changes. Step 3: Calculate time-lag for each event pair. Step 4: Compute rolling 30-day median of this lag.",
+    "theoretical_basis": "Information diffusion follows a predictable latency. News-driven sentiment (ELINT) precedes the physical manifestation of dealer hedging (SIGINT/Gamma). By measuring the time-delta between sentiment spikes and Gamma-surface shifts, we can identify the 'information velocity' of a specific ticker.",
+    "intel_type": "ELINT_to_SIGINT_bridge",
+    "source": "https://arxiv.org/html/2503.23757v1",
+    "score": 7
+  },
+  {
+    "title": "gamma_flip_structural_noise_ratio",
+    "summary": "When the 'Gamma Flip' point (where net aggregate gamma = 0) exhibits high 'structural noise' (high volume in flow_trades without corresponding change in options_e0d.open_interest), the market is in a 'pre-regime-shift' state, predicting higher volatility.",
+    "signal_definition": "Find date where sum(options_eod.gamma) crosses zero. Calculate SNR = sum(flow_trades.volume) / sum(options_eod.open_interest_change) for that window. Signal = SNR_t / Rolling_Mean(SNR, 5).",
+    "compute_approach": "Step 1: Calculate net gamma from options_eod. Step 2: Detect zero-crossing. Step 3: For the 1-hour window around crossing, sum flow_trades.volume. Step 4: Divide by the change in open_interest from options_eod. Step 5: Compare to 5-day average.",
+    "theoretical_basis": "Market volatility is driven by the transition from 'positive gamma' (stabilizing) to 'negative gamma' (destabilizing) regimes. We can measure the 'Signal-to-Noise' ratio of this transition by comparing the volatility of the gamma-flip point to the volume of trades occurring at that point.",
+    "intel_type": "SIGINT",
+    "source": "https://arxiv.org/html/2509.05107v1",
+    "score": 7
+  },
+  {
+    "title": "macro_yield_curve_topology_lead_lag",
+    "summary": "A sudden increase in the 'velocity' of the 10y-30y spread (rate of change) precedes a spike in SPY volatility (VIX/ATR) by 2-5 days.",
+    "signal_definition": "Compute velocity_v = (treasury_rates.10y - treasury_rates.30y)_t - (treasury_rates.10y - treasury_rates.30y)_{t-1}. Signal = velocity_v / Rolling_StdDev(velocity_v, 20).",
+    "compute_approach": "Step 1: Query treasury_rates for 10y and 30y. Step 2: Compute daily spread. Step 3: Compute first-order difference (velocity). Step 4: Normalize velocity by its 20-day volatility.",
+    "theoretical_basis": "The 'shape' of the yield curve (spread between 10y and 30y) acts as a macro-signal. Changes in the topology of the spread (e.g., sudden flattening or steepening) precede shifts in equity risk premiums (ERP).",
+    "intel_type": "ELINT",
+    "source": "https://arxiv.org/abs/1703.04385",
+    "score": 5
+  }
+]
