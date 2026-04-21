@@ -101,6 +101,7 @@
     .of-signal-legend span:nth-child(4) { min-width: 48px; text-align: right; }
     .of-signal-legend span:nth-child(5) { flex: 1; }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
 </head>
 <body>
   <div id="nav-root"></div>
@@ -175,8 +176,9 @@
     </div>
     <!-- Sticky ticker navigation — visible when expanded -->
     <div id="fa-ticker-nav" class="fa-ticker-nav" style="display:none;"></div>
+    <!-- MARKDOWN_RENDER_V5: pre-wrap removed, marked.js renders block elements -->
     <div id="fa-content" class="fa-content fa-collapsed"
-         style="color:var(--text-secondary); line-height:1.5; white-space:pre-wrap; font-size:11px;">
+         style="color:var(--text-secondary); line-height:1.5; font-size:11px;">
       Awaiting first analysis cycle…
     </div>
     <div id="fa-cross-asset" style="display:none; margin-top:8px; padding-top:8px; border-top:1px solid var(--border); color:var(--text-secondary); line-height:1.5; white-space:pre-wrap; font-size:11px;">
@@ -309,31 +311,26 @@
             const synthHeader = '### CROSS_ASSET Options Flow Analysis\n';
             combinedText += (startsWithHeader ? body : synthHeader + body);
           }
-          // Strip ** and * but KEEP ### so smart-tag finds headers
-          combinedText = combinedText.replace(/\*\*/g, '').replace(/\*/g, '');
-          faContent.innerHTML = combinedText;
+          // MARKDOWN_RENDER_V5: let marked.js parse full markdown — keeps **, ###, lists, etc.
+          faContent.innerHTML = (typeof marked !== 'undefined')
+            ? marked.parse(combinedText)
+            : combinedText;
           const latest = tickers[0];
           const time = new Date(latest.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) + ' ET';
           faTimestamp.textContent = time + ' · ' + latest.model + ' · ' + tickers.length + ' symbols' + (crossAsset ? ' + cross-asset' : '');
 
-          // If multiple tickers, append brief summaries
-          if (tickers.length > 1) {
-            let extra = '';
-            for (let i = 1; i < tickers.length; i++) {
-              const t = tickers[i];
-              const tp = t.reference_price ? ' @ ' + t.reference_price.toFixed(2) : '';
-              let tText = (t.analysis || '').replace(/#{1,4}\s*/g, '').replace(/\*\*/g, '').replace(/\*/g, '');
-              // Full text — scroll in container
-              extra += '\n\n━━━ ' + t.symbol + tp + ' ━━━\n' + tText;
-            }
-            faContent.innerHTML += extra;
-          }
+          // MARKDOWN_RENDER_V5: NO-OP — main loop above already concatenates ALL tickers
+          // with proper ### headers. Prior code here was appending a stripped duplicate
+          // with ━━━ separators that broke smart-tag scroll.
         }
 
         // Cross-asset synthesis
         if (crossAsset && crossAsset.analysis) {
-          let crossText = crossAsset.analysis.replace(/#{1,4}\s*/g, '').replace(/\*\*/g, '').replace(/\*/g, '');
-          faCrossAsset.innerHTML = '<strong>🔗 Cross-Asset Synthesis</strong>\n' + crossText;
+          // MARKDOWN_RENDER_V5: parse cross-asset markdown properly
+          const crossRendered = (typeof marked !== 'undefined')
+            ? marked.parse(crossAsset.analysis || '')
+            : (crossAsset.analysis || '');
+          faCrossAsset.innerHTML = '<strong>🔗 Cross-Asset Synthesis</strong>' + crossRendered;
 
           document.getElementById('fa-cross-asset-toggle').onclick = function() {
             const el = document.getElementById('fa-cross-asset');
@@ -360,19 +357,12 @@
       if (tickerNav) tickerNav.style.display = '';
       const toggleIcon = document.getElementById('fa-toggle-icon');
       if (toggleIcon) toggleIcon.textContent = '▾';
+      // MARKDOWN_RENDER_V5: delegate to the rendered-DOM scroll
+      // used by fa-ticker-nav buttons. One code path, no line-height math.
       const tryScroll = () => {
-        const text = faContent.innerText || '';
-        const lines = text.split('\n');
-        const re = new RegExp('(?:^|\\b)' + ticker + '\\b.*Options\\s+Flow\\s+Analysis');
-        let lineIdx = -1;
-        for (let i = 0; i < lines.length; i++) {
-          if (re.test(lines[i])) { lineIdx = i; break; }
-        }
-        if (lineIdx < 0) return false;
-        const lineHeight = parseFloat(getComputedStyle(faContent).lineHeight) || 16.5;
-        const targetTop = faContent.offsetTop + (lineIdx * lineHeight) - 60;
-        window.scrollTo({ top: targetTop, behavior: 'smooth' });
-        return true;
+        const faNavBtn = document.querySelector('#fa-ticker-nav [data-ticker="' + ticker + '"]');
+        if (faNavBtn) { faNavBtn.click(); return true; }
+        return false;
       };
       if (faContent.innerText && faContent.innerText.length > 100) {
         if (!tryScroll()) {

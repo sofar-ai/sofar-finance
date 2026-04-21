@@ -849,11 +849,22 @@ const OptionsFlowPage = (() => {
         // Fallback summary: first ~80 chars of content
         summary.textContent = text.replace(/\s+/g, ' ').trim().slice(0, 100) + '…';
       }
-      // Build ticker nav (expanded view)
+      // Build ticker nav (expanded view) — MARKDOWN_RENDER_V5 adds top button
       if (found.length && tickerNav) {
-        tickerNav.innerHTML = found.map(sym =>
+        const topBtn = '<button class="fa-nav-top" title="Back to top">▲ Top</button>';
+        const tickerBtns = found.map(sym =>
           `<button class="fa-nav-btn" data-ticker="${sym}">${sym}</button>`
         ).join('');
+        tickerNav.innerHTML = topBtn + tickerBtns;
+        // Top button — scroll the flow-analysis header into view
+        tickerNav.querySelector('.fa-nav-top')?.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const header = document.getElementById('fa-header-row');
+          if (header) {
+            const y = header.getBoundingClientRect().top + window.scrollY - 10;
+            window.scrollTo({ top: y, behavior: 'smooth' });
+          }
+        });
         tickerNav.querySelectorAll('.fa-nav-btn').forEach(btn => {
           btn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -866,6 +877,7 @@ const OptionsFlowPage = (() => {
 
     function scrollToTickerSection(sym) {
       // SMART_TAG_SCROLL_V4 — find rendered <h3>/<h4> element, not line-index math.
+      // MARKDOWN_RENDER_V5 — headings now exist because marked.js parses fa-content.
       // Line-counting drifts because marked.js emits varying-height elements
       // (h3 ~30px, p ~66px wrapped, li variable). DOM query is exact.
       const headings = content.querySelectorAll('h1, h2, h3, h4, h5, h6');
