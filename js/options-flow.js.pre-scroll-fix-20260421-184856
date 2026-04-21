@@ -865,32 +865,19 @@ const OptionsFlowPage = (() => {
     }
 
     function scrollToTickerSection(sym) {
-      // SMART_TAG_SCROLL_V4 — find rendered <h3>/<h4> element, not line-index math.
-      // Line-counting drifts because marked.js emits varying-height elements
-      // (h3 ~30px, p ~66px wrapped, li variable). DOM query is exact.
-      const headings = content.querySelectorAll('h1, h2, h3, h4, h5, h6');
-      const re = new RegExp('^' + sym + '(?:\\s+@\\s+[\\d.]+)?\\s+Options\\s+Flow\\s+Analysis', 'i');
-      let target = null;
-      for (const h of headings) {
-        if (re.test(h.textContent.trim())) { target = h; break; }
+      // SMART_TAG_REGEX_V3 — tolerate optional " @ price" + stripped # markers
+      const text = content.innerText || '';
+      const lines = text.split('\n');
+      let lineIdx = -1;
+      const re = new RegExp('^(?:#{2,4}\\s+)?' + sym + '(?:\\s+@\\s+[\\d.]+)?\\s+Options\\s+Flow\\s+Analysis');
+      for (let i = 0; i < lines.length; i++) {
+        if (re.test(lines[i])) { lineIdx = i; break; }
       }
-      if (!target) {
-        // Fallback: plain-text scan if marked didn't render headings
-        const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT);
-        let node;
-        while ((node = walker.nextNode())) {
-          if (re.test(node.textContent.trim())) {
-            target = node.parentElement;
-            break;
-          }
-        }
-      }
-      if (!target) return;
-      // Account for sticky nav: offset target by approx nav height + breathing room
-      const navEl = document.getElementById('fa-ticker-nav');
-      const navH = navEl ? navEl.getBoundingClientRect().height : 0;
-      const y = target.getBoundingClientRect().top + window.scrollY - navH - 20;
-      window.scrollTo({ top: y, behavior: 'smooth' });
+      if (lineIdx < 0) return;
+      // Approximate scroll: map line index to vertical position
+      const lineHeight = parseFloat(getComputedStyle(content).lineHeight) || 16.5;
+      const targetTop = content.offsetTop + (lineIdx * lineHeight) - 60;
+      window.scrollTo({ top: targetTop, behavior: 'smooth' });
     }
   }
 
