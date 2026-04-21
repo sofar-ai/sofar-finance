@@ -582,16 +582,24 @@ const OptionsFlowPage = (() => {
     },
   };
 
+  // BIFURCATE_VIEW_V1 — toggle between today / prior session views
+  if (typeof window.FlowView === 'undefined') {
+    window.FlowView = { session: 'today' };  // 'today' | 'prior'
+  }
+
   async function loadPanelData() {
-    // Hide historical banner — panels work for any date via /api/flow-aggregates
-    const banner = document.getElementById('of-historical-banner');
-    if (banner) banner.style.display = 'none';
     const qs = new URLSearchParams();
-    if (FlowData.selectedDate) qs.set('date', FlowData.selectedDate);
+    if (FlowData.selectedDate) {
+      qs.set('date', FlowData.selectedDate);
+    } else if (window.FlowView.session === 'prior') {
+      qs.set('session', 'prior');
+    }
     try {
       const res = await fetch('/api/flow-aggregates' + (qs.toString() ? '?' + qs : ''));
       if (!res.ok) return;
       const data = await res.json();
+      // BIFURCATE_VIEW_V1 — banner driven by data_status from API
+      updateSessionBanner(data.data_status, data.session_totals, FlowData.selectedDate);
       symbolMetrics = {};
       for (const row of (data.per_symbol || [])) {
         symbolMetrics[row.symbol] = {
@@ -883,5 +891,96 @@ const OptionsFlowPage = (() => {
     document.addEventListener('DOMContentLoaded', setupFlowAnalysisCollapse);
   } else {
     setupFlowAnalysisCollapse();
+  }
+
+  // ─── BIFURCATE_VIEW_V1 ─── session banner driven by data_status ───────
+  // Renders 4 modes:
+  //   1. Pre-market thin   → "Pre-market — RTH opens 9:30 AM. Today: $X / N
+  //                           syms · Yesterday: $Y / M syms. [View Yesterday]"
+  //   2. Viewing prior     → "Viewing yesterday's RTH (DATE, $Y / M syms)
+  //                           [Back to Today]"
+  //   3. Historical date   → "Historical view — Select 'Today' to resume live"
+  //   4. RTH active normal → banner hidden
+  function updateSessionBanner(status, totals, selectedHistoricalDate) {
+    const banner    = document.getElementById('of-historical-banner');
+    const text      = document.getElementById('of-banner-text');
+    const action    = document.getElementById('of-banner-action');
+    const icon      = document.getElementById('of-banner-icon');
+    if (!banner || !text || !action) return;
+
+    // Strip any existing handler so we can rebind freshly each render
+    const newAction = action.cloneNode(true);
+    action.parentNode.replaceChild(newAction, action);
+
+    const fmtPrem = v => {
+      const n = parseFloat(v) || 0;
+      if (n >= 1e9)  return '$' + (n / 1e9).toFixed(1) + 'B';
+      if (n >= 1e6)  return '$' + (n / 1e6).toFixed(1) + 'M';
+      if (n >= 1e3)  return '$' + (n / 1e3).toFixed(0) + 'K';
+      return '$' + n.toFixed(0);
+    };
+
+    // Mode 3: explicit historical date selection (existing behavior)
+    if (selectedHistoricalDate) {
+      icon.textContent = '📅';
+      text.textContent = `Historical view — ${selectedHistoricalDate}. Select "Today" to resume live.`;
+      newAction.style.display = 'none';
+      banner.style.display = 'flex';
+      return;
+    }
+
+    // No data_status yet → hide banner (legacy/error state)
+    if (!status) {
+      banner.style.display = 'none';
+      return;
+    }
+
+    // Mode 2: viewing prior session
+    if (status.is_viewing_prior) {
+      const symN = totals ? `${totals.total_trades.toLocaleString()} trades` : '';
+      const prem = totals ? fmtPrem(totals.total_premium) : '';
+      icon.textContent = '↩';
+      text.textContent = `Viewing yesterday's RTH close (${status.viewing_session_date}` +
+                         (prem ? ` · ${prem} · ${symN}` : '') + `).`;
+      newAction.textContent = 'Back to Today';
+      newAction.style.display = '';
+      newAction.addEventListener('click', () => {
+        window.FlowView.session = 'today';
+        loadPanelData();
+      });
+      banner.style.display = 'flex';
+      return;
+    }
+
+    // Mode 1: thin pre-market (today, RTH not active, light data)
+    if (status.thin_pre_market && status.is_viewing_today) {
+      const todayPrem = totals ? fmtPrem(totals.total_premium) : '$0';
+      const todayN = totals ? totals.total_trades.toLocaleString() : '0';
+      const phaseLabel = status.phase === 'GTH'
+        ? 'GTH overnight (indices only)'
+        : status.phase === 'AFTER_HOURS_NO_GTH'
+          ? 'After-hours (no GTH activity)'
+          : status.phase === 'WEEKEND'
+            ? 'Weekend (markets closed)'
+            : 'Pre-market';
+      icon.textContent = '🌙';
+      text.textContent = `${phaseLabel} — RTH opens 9:30 AM ET. Today: ${todayPrem} / ${todayN} trades` +
+                         (status.prior_session_date ? ` · Last RTH (${status.prior_session_date})` : '');
+      if (status.prior_session_date) {
+        newAction.textContent = 'View Yesterday';
+        newAction.style.display = '';
+        newAction.addEventListener('click', () => {
+          window.FlowView.session = 'prior';
+          loadPanelData();
+        });
+      } else {
+        newAction.style.display = 'none';
+      }
+      banner.style.display = 'flex';
+      return;
+    }
+
+    // Mode 4: RTH active or normal full session — hide banner
+    banner.style.display = 'none';
   }
 })();
