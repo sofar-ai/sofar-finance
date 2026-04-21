@@ -16,69 +16,26 @@ export default async function handler(req, res) {
 
   try {
     const requestedDate = parseISODate(req.query.date);
-    const requestedSession = (req.query.session || '').toString().toLowerCase();
-
-    // API_BIFURCATE_V1 — return TRUE current session via fn_session_date(NOW()).
-    // No more $1B fallback that masquerades yesterday's RTH as today.
-    // Accompanying data_status field tells the frontend where we are in the
-    // trading day so it can render appropriate UX (pre-market banner, etc.)
-    //
-    // Two queries:
-    //   today_sd  = fn_session_date(NOW()) — actual current session
-    //   prior_sd  = most recent session_date < today with > $1B premium
-    //               (yesterday's closed RTH, the carry-in reference)
-    const [{ today_sd, prior_sd, et_hour, et_dow }] = await sql`
-      WITH today_q AS (
-        SELECT fn_session_date(NOW()) AS sd
-      ),
-      prior_q AS (
-        SELECT MAX(session_date) AS sd
+    // SESSION_DATE_FIX_V1 — pick most-recent substantial session instead of
+    // fn_session_date(NOW()). After 8 PM ET, fn_session_date returns tomorrow's
+    // CBOE GTH session_date before real data exists, so the API returned only
+    // the ~2 phantom late-evening symbols. Filter: session_date with > $1B
+    // premium. Real days run $20B+; noise days run $0.
+    const [{ today }] = await sql`
+      WITH real_sessions AS (
+        SELECT session_date, SUM(total_premium) AS day_total
         FROM flow_session_metrics
-        WHERE session_date >= CURRENT_DATE - INTERVAL '14 days'
-          AND session_date < (SELECT sd FROM today_q)
-        GROUP BY ()
+        WHERE session_date >= CURRENT_DATE - INTERVAL '7 days'
+        GROUP BY session_date
         HAVING SUM(total_premium) > 1e9
-      ),
-      now_et AS (
-        SELECT EXTRACT(HOUR FROM (NOW() AT TIME ZONE 'America/New_York'))::int AS h,
-               EXTRACT(DOW  FROM (NOW() AT TIME ZONE 'America/New_York'))::int AS d
       )
-      SELECT
-        (SELECT sd::text FROM today_q) AS today_sd,
-        (SELECT sd::text FROM prior_q) AS prior_sd,
-        (SELECT h FROM now_et)         AS et_hour,
-        (SELECT d FROM now_et)         AS et_dow
+      SELECT COALESCE(
+        (SELECT MAX(session_date)::text FROM real_sessions),
+        fn_session_date(NOW())::text
+      ) AS today
     `;
-
-    const today = today_sd;
-    const prior = prior_sd;
-    const etHour = et_hour;
-    const etDow = et_dow;
-
-    // RTH = Mon-Fri (DOW 1-5), 9:30 AM ET to ~4:15 PM ET
-    // (we use 9-16 hour window for inclusivity; precise minute check below)
-    const isWeekday = etDow >= 1 && etDow <= 5;
-    const rthActive = isWeekday && etHour >= 9 && etHour < 16;
-    const gthActive = isWeekday && (etHour >= 20 || etHour < 9);
-    const phase = rthActive ? 'RTH'
-                : gthActive ? 'GTH'
-                : isWeekday ? 'AFTER_HOURS_NO_GTH'
-                : 'WEEKEND';
-
-    // Resolve which session the caller wants:
-    //   ?date=YYYY-MM-DD → that exact date
-    //   ?session=prior   → most recent prior RTH session (yesterday)
-    //   default          → today (true current session)
-    let sessionDate;
-    if (requestedDate) {
-      sessionDate = requestedDate;
-    } else if (requestedSession === 'prior') {
-      sessionDate = prior || today;
-    } else {
-      sessionDate = today;
-    }
+    const sessionDate = requestedDate || today;
     const isToday = sessionDate === today;
-    const isPrior = sessionDate === prior;
 
     res.setHeader(
       'Cache-Control',
@@ -294,22 +251,6 @@ export default async function handler(req, res) {
       })),
       sector_flow: sectorFlow,
       baselines_available: Object.keys(baselineMap).length > 0,
-      // API_BIFURCATE_V1 — context for the frontend
-      data_status: {
-        current_session_date: today,
-        prior_session_date:   prior,
-        viewing_session_date: sessionDate,
-        is_viewing_today:     isToday,
-        is_viewing_prior:     isPrior,
-        phase:                phase,        // 'RTH' | 'GTH' | 'AFTER_HOURS_NO_GTH' | 'WEEKEND'
-        rth_active:           rthActive,
-        gth_active:           gthActive,
-        et_hour:              etHour,
-        // Hint for the UI: if viewing today during pre-market and data is
-        // thin, the frontend should show the prior-session context banner
-        // and offer a "View prior session" action.
-        thin_pre_market: isToday && !rthActive && parseFloat(totals.total_premium) < 1e9,
-      },
     });
   } catch (err) {
     console.error('flow-aggregates error:', err);
