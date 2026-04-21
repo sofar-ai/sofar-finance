@@ -349,38 +349,39 @@
     }
 
     // Load analysis for a specific ticker
+    // FLOW_ANALYSIS_CONCAT_V1 — click-to-scroll instead of refetch+replace
     async function loadTickerAnalysis(ticker) {
-      try {
-        const res = await fetch('/api/flow-analysis?action=latest');
-        const data = await res.json();
-        const bar = document.getElementById('flow-analysis-bar');
-        const faContent = document.getElementById('fa-content');
-        const faTimestamp = document.getElementById('fa-timestamp');
-
-        if (!data.analyses || data.analyses.length === 0) return;
-        bar.style.display = 'block';
-
-        // Check if we have analysis for this ticker
-        const match = data.analyses.find(a => 
-          !a.is_cross_asset && (a.symbol === ticker || 
-          (ticker === 'SPX' && a.symbol === 'SPXW') ||
-          (ticker === 'SPXW' && a.symbol === 'SPX'))
-        );
-
-        if (match) {
-          const price = match.reference_price ? ' @ ' + match.reference_price.toFixed(2) : '';
-          const time = new Date(match.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) + ' ET';
-          let text = (match.analysis || '').replace(/#{1,4}\s*/g, '').replace(/\*\*/g, '').replace(/\*/g, '').replace(/---/g, '');
-          // Full analysis — container is scrollable
-          faContent.innerHTML = '<strong>' + match.symbol + price + '</strong>\n' + text;
-          faTimestamp.textContent = time + ' · ' + match.model;
-        } else {
-          faContent.innerHTML = '<strong>' + ticker + '</strong>\nNo structure analysis available — below $5M threshold or not yet analyzed.\n\nShowing SPX/SPXW analysis by default.';
-          // Fall back to loading default
-          setTimeout(loadFlowAnalysis, 100);
+      const bar = document.getElementById('flow-analysis-bar');
+      const faContent = document.getElementById('fa-content');
+      if (!bar || !faContent) return;
+      bar.style.display = 'block';
+      faContent.classList.remove('fa-collapsed');
+      const tickerNav = document.getElementById('fa-ticker-nav');
+      if (tickerNav) tickerNav.style.display = '';
+      const toggleIcon = document.getElementById('fa-toggle-icon');
+      if (toggleIcon) toggleIcon.textContent = '▾';
+      const tryScroll = () => {
+        const text = faContent.innerText || '';
+        const lines = text.split('\n');
+        const re = new RegExp('(?:^|\\b)' + ticker + '\\b.*Options\\s+Flow\\s+Analysis');
+        let lineIdx = -1;
+        for (let i = 0; i < lines.length; i++) {
+          if (re.test(lines[i])) { lineIdx = i; break; }
         }
-      } catch(e) {
-        console.log('Ticker analysis fetch error:', e);
+        if (lineIdx < 0) return false;
+        const lineHeight = parseFloat(getComputedStyle(faContent).lineHeight) || 16.5;
+        const targetTop = faContent.offsetTop + (lineIdx * lineHeight) - 60;
+        window.scrollTo({ top: targetTop, behavior: 'smooth' });
+        return true;
+      };
+      if (faContent.innerText && faContent.innerText.length > 100) {
+        if (!tryScroll()) {
+          await loadFlowAnalysis();
+          setTimeout(tryScroll, 200);
+        }
+      } else {
+        await loadFlowAnalysis();
+        setTimeout(tryScroll, 200);
       }
     }
 
