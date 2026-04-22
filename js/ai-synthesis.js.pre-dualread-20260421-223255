@@ -805,43 +805,7 @@ const AISynthesis = (() => {
   async function load(mode) {
     try {
       const [data, stats, log, ci] = await Promise.allSettled([
-        // DUAL_FILE_READ_V1 — load evening (base) + intraday (overlay), merge.
-        // Evening (~18:00 Opus) has rich per-symbol panels. Intraday (10:10-15:10)
-        // refreshes fast-moving signal cards without clobbering rich fields.
-        (async function loadMergedSynthesis() {
-          const cacheBust = '?t=' + Date.now();
-          const evening = await fetchJSON('/data/ai-synthesis.json' + cacheBust);
-          // Intraday may not exist yet (first day after migration) — tolerate 404
-          let intraday = null;
-          try {
-            intraday = await fetchJSON('/data/ai-synthesis-intraday.json' + cacheBust);
-          } catch (e) {
-            // no intraday file yet; use evening as-is
-          }
-          if (!evening) return intraday || {};
-          if (!intraday) return evening;
-
-          // Timestamp gate — only overlay if intraday is fresher than evening
-          const evTs = Date.parse(evening.generated_at || 0);
-          const idTs = Date.parse(intraday.generated_at || 0);
-          if (!idTs || idTs <= evTs) return evening;
-
-          // Whitelist overlay — fast-changing signal fields only
-          const merged = Object.assign({}, evening);
-          const OVERLAY_KEYS = ['intraday', 'regime', 'generated_at', 'next_update', 'signal_snapshot'];
-          for (const k of OVERLAY_KEYS) {
-            if (k in intraday && intraday[k] !== null && intraday[k] !== undefined) {
-              merged[k] = intraday[k];
-            }
-          }
-          // Add a trace field so we can see in DevTools what happened
-          merged._merge_source = {
-            evening_generated_at: evening.generated_at,
-            intraday_generated_at: intraday.generated_at,
-            overlaid_keys: OVERLAY_KEYS.filter(k => k in intraday),
-          };
-          return merged;
-        })(),
+        fetchJSON('/data/ai-synthesis.json?t=' + Date.now()),
         fetchJSON('/data/accuracy-stats.json?t=' + Date.now()),
         fetchJSON('/data/accuracy-log.json?t=' + Date.now()),
         fetchJSON('/data/contrarian-ideas.json?t=' + Date.now()),
