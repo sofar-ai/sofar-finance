@@ -909,4 +909,185 @@ const OptionsFlowPage = (() => {
   } else {
     setupFlowAnalysisCollapse();
   }
+
+  // ==========================================================
+  // UNUSUAL_FLOW_PANEL_V1 — dynamic-threshold detection signals
+  // Reads /api/unusual-flow, groups by symbol server-side, renders top N.
+  // ==========================================================
+  const UF_METHOD_LABELS = {
+    'iso_size':                  'ISO $',
+    'iso_concentration':         'ISO %',
+    'direction_concentration':   'DIR',
+    'intraday_burst':            'BURST',
+    'sweep_cluster_density':     'SWEEPS',
+    'premium_vs_baseline':       'Z-PREM',
+    'rank_anomaly':              'Z-RANK',
+  };
+
+  // Session preference — starts at "prior" when after-hours/weekend.
+  // User override via chips; state kept in the panel.
+  let __ufSession = 'prior';
+
+  function ufFmtM(v) {
+    if (v == null) return '—';
+    const n = Number(v);
+    if (n >= 1e9) return '$' + (n/1e9).toFixed(2) + 'B';
+    if (n >= 1e6) return '$' + (n/1e6).toFixed(2) + 'M';
+    if (n >= 1e3) return '$' + (n/1e3).toFixed(0) + 'K';
+    return '$' + n.toFixed(0);
+  }
+
+  function ufDirIcon(dir) {
+    if (dir === 'BUY_SKEW')  return '<span class="uf-dir uf-dir-buy">↑ BUY</span>';
+    if (dir === 'SELL_SKEW') return '<span class="uf-dir uf-dir-sell">↓ SELL</span>';
+    return '<span class="uf-dir uf-dir-mixed">◇ MIXED</span>';
+  }
+
+  function ufScoreColor(s) {
+    if (s >= 99) return 'uf-score-top';
+    if (s >= 97) return 'uf-score-high';
+    return 'uf-score-mid';
+  }
+
+  function ufRenderRow(sig, idx) {
+    const methodsHTML = sig.methods.map(m => {
+      const lbl = UF_METHOD_LABELS[m] || m;
+      return `<span class="uf-badge uf-badge-${m}">${lbl}</span>`;
+    }).join('');
+    const multi = sig.methods.length > 1 ? ' uf-multi' : '';
+    const detailId = 'uf-detail-' + idx;
+    return `
+      <div class="uf-row${multi}" data-uf-idx="${idx}">
+        <div class="uf-row-main">
+          <span class="uf-sym">${sig.symbol}</span>
+          <span class="uf-methods">${methodsHTML}</span>
+          <span class="uf-score ${ufScoreColor(sig.max_score)}">${sig.max_score.toFixed(1)}</span>
+          ${ufDirIcon(sig.dominant_direction)}
+          <span class="uf-prem">${ufFmtM(sig.premium_usd)}</span>
+          <span class="uf-expand">▸</span>
+        </div>
+        <div class="uf-row-detail" id="${detailId}" style="display:none;"></div>
+      </div>`;
+  }
+
+  function ufRenderDetail(sig) {
+    const rows = sig.detections.map(d => {
+      const det = d.trigger_details || {};
+      const keys = Object.keys(det).filter(k => det[k] != null).slice(0, 10);
+      const detList = keys.map(k => {
+        let v = det[k];
+        if (typeof v === 'number') v = v > 1000 ? v.toLocaleString(undefined,{maximumFractionDigits:2}) : v.toFixed(4);
+        return `<span class="uf-det-kv"><span class="uf-det-k">${k}</span>: <span class="uf-det-v">${v}</span></span>`;
+      }).join(' · ');
+      return `
+        <div class="uf-det-block">
+          <div class="uf-det-head">${UF_METHOD_LABELS[d.method] || d.method} · score ${d.score.toFixed(1)} · ${d.direction || 'NA'}</div>
+          <div class="uf-det-body">${detList}</div>
+        </div>`;
+    }).join('');
+    return rows;
+  }
+
+  async function loadUnusualFlow() {
+    const content = document.getElementById('uf-content');
+    if (!content) return;
+    try {
+      // URL assembly — respect global date selector when set
+      const params = new URLSearchParams();
+      if (typeof FlowData !== 'undefined' && FlowData.selectedDate) {
+        params.set('date', FlowData.selectedDate);
+      } else {
+        params.set('session', __ufSession);
+      }
+      const r = await fetch('/api/unusual-flow?' + params.toString());
+      if (!r.ok) {
+        content.innerHTML = `<div class="of-empty">Error ${r.status} loading unusual flow</div>`;
+        return;
+      }
+      const d = await r.json();
+
+      // Header meta
+      const sessLbl = document.getElementById('uf-session-label');
+      const cntLbl  = document.getElementById('uf-count-label');
+      const phaseLbl = document.getElementById('uf-phase-label');
+      if (sessLbl) sessLbl.textContent = d.session_date || '—';
+      if (cntLbl)  cntLbl.textContent  = (d.totals?.distinct_symbols ?? 0) + ' symbols';
+      if (phaseLbl) {
+        const phase = d.data_status?.phase || '—';
+        phaseLbl.textContent = phase;
+        phaseLbl.className = 'uf-phase uf-phase-' + phase.toLowerCase();
+      }
+
+      // Method counts footer
+      const mcEl = document.getElementById('uf-method-counts');
+      if (mcEl) {
+        const byMethod = d.totals?.by_method || {};
+        const parts = Object.entries(byMethod).sort((a,b) => b[1]-a[1]).map(([m,n]) =>
+          `<span class="uf-mc-chip">${UF_METHOD_LABELS[m] || m}: ${n}</span>`);
+        mcEl.innerHTML = parts.join('');
+      }
+
+      // Body — signal rows
+      const signals = d.signals || [];
+      if (signals.length === 0) {
+        content.innerHTML = `<div class="of-empty">No unusual activity detected for ${d.session_date}</div>`;
+        return;
+      }
+      content.innerHTML = signals.map((s, i) => ufRenderRow(s, i)).join('');
+
+      // Wire expand handlers
+      content.querySelectorAll('.uf-row').forEach((row, i) => {
+        row.addEventListener('click', () => {
+          const detail = row.querySelector('.uf-row-detail');
+          const expand = row.querySelector('.uf-expand');
+          if (!detail) return;
+          if (detail.style.display === 'none') {
+            detail.innerHTML = ufRenderDetail(signals[i]);
+            detail.style.display = 'block';
+            if (expand) expand.textContent = '▾';
+          } else {
+            detail.style.display = 'none';
+            if (expand) expand.textContent = '▸';
+          }
+        });
+      });
+
+    } catch (e) {
+      console.log('loadUnusualFlow error:', e);
+      content.innerHTML = `<div class="of-empty">Error: ${e.message || e}</div>`;
+    }
+  }
+
+  function setupUnusualFlowPanel() {
+    // Session toggle chips
+    document.querySelectorAll('#uf-panel .uf-chip').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        __ufSession = btn.dataset.ufSession;
+        document.querySelectorAll('#uf-panel .uf-chip').forEach(b =>
+          b.classList.toggle('uf-chip-active', b === btn));
+        loadUnusualFlow();
+      });
+    });
+
+    // If global date selector is set (FlowData.selectedDate), reflect that in chips
+    if (typeof FlowData !== 'undefined' && FlowData.selectedDate) {
+      // Date-specific view — chips mean nothing in this mode
+      document.querySelectorAll('#uf-panel .uf-chip').forEach(b =>
+        b.classList.remove('uf-chip-active'));
+    }
+
+    // Initial load
+    loadUnusualFlow();
+
+    // Refresh every 60s
+    setInterval(loadUnusualFlow, 60_000);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupUnusualFlowPanel);
+  } else {
+    setupUnusualFlowPanel();
+  }
+
 })();
