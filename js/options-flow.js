@@ -755,11 +755,14 @@ const OptionsFlowPage = (() => {
     }
 
     panelTimer = setInterval(() => {
-      if (!isPaused) {
-        if (!FlowData.selectedDate) {
-          FlowData.refreshNewer().then(() => rebuildTape({trades: allTrades, market_open: true, fetched_at: new Date().toISOString(), total_trades: (FlowData.totalMatching && FlowData.totalMatching.trades) || allTrades.length, total_premium: (FlowData.totalMatching && FlowData.totalMatching.premium) || 0}));
-        }
-      }
+      // PANEL_REFRESH_V1 — also refresh right-side panels (flow signals, sweeps,
+      // top tickers, sector flow, sentiment, concentration). Previously only the
+      // tape refreshed on tick; right-side panels required page reload to update.
+      if (isPaused) return;
+      if (document.hidden) return;                 // skip work when tab backgrounded
+      if (FlowData.selectedDate) return;           // historical mode — no live refresh
+      FlowData.refreshNewer().then(() => rebuildTape({trades: allTrades, market_open: true, fetched_at: new Date().toISOString(), total_trades: (FlowData.totalMatching && FlowData.totalMatching.trades) || allTrades.length, total_premium: (FlowData.totalMatching && FlowData.totalMatching.premium) || 0}));
+      loadPanelData();                             // right-side panels
     }, PANEL_TICK);
   }
 

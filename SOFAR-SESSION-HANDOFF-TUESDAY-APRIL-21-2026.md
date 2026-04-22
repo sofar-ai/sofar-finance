@@ -322,3 +322,25 @@ Correction appended to `docs/database-routing-addendum-2026-04-20.md`. Removed f
 ---
 
 *Session ends with dashboard correct, intraday clobber architecture fixed, unusual-flow detection live in DB + panel, first live RTH detector cycle tomorrow 10:05 AM ET.*
+
+---
+
+## Late-session addition: PANEL_REFRESH_V1
+
+User reported right-side panels (flow signals, sweeps, top tickers, sector flow, sentiment) never updated except on page refresh. Investigation: `panelTimer` interval already existed at 15s cadence (`PANEL_TICK`) but only called `FlowData.refreshNewer()` for the tape — never called `loadPanelData()` for the right-side panels.
+
+Fix: one-line addition inside the existing interval body. Kept existing guards (`isPaused`, `FlowData.selectedDate`), added two new ones (`document.hidden` to skip backgrounded tabs, clean early-return pattern vs nested conditionals).
+
+Sentinel: `PANEL_REFRESH_V1` in `js/options-flow.js`.
+
+Cadence: 15s (matches existing tape refresh rate). If visual jitter is too much tomorrow during RTH, bump `PANEL_TICK` constant (line 9) to 30s.
+
+## Also noticed earlier/late session — for carry-forward
+
+Two unconventional-data-source conversations happened toward end of session. User interested in Renaissance-style data acquisition. Candidate sources discussed:
+- WARN Act layoff notices (state DOL filings, leading earnings indicator)
+- ERCOT grid data (wholesale electricity, industrial demand proxy)
+- USPTO bulk patent filings (R&D velocity, tech theme emergence)
+- Plus larger list covering SEC EDGAR amendments, GitHub repo dynamics, job postings, shipping/AIS, satellite, regulatory/FDA, prediction markets, and "high-weird" tier (night lights, academic citations, app review velocity)
+
+Next session: if user wants to start building data source handlers, these are the pre-ranked candidates. Each ~100-200 lines of handler code following FRED pattern. WARN + ERCOT + USPTO is a natural starter set.
