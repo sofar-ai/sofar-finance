@@ -344,3 +344,136 @@ Two unconventional-data-source conversations happened toward end of session. Use
 - Plus larger list covering SEC EDGAR amendments, GitHub repo dynamics, job postings, shipping/AIS, satellite, regulatory/FDA, prediction markets, and "high-weird" tier (night lights, academic citations, app review velocity)
 
 Next session: if user wants to start building data source handlers, these are the pre-ranked candidates. Each ~100-200 lines of handler code following FRED pattern. WARN + ERCOT + USPTO is a natural starter set.
+
+---
+
+## Late-night: deep dive on signal pipeline + LightGBM integration gap
+
+User asked three architectural questions that led to a real discovery about the existing research/signal infrastructure:
+
+1. Should unusual-flow be wired into synthesis?
+2. How does dynamic signal weighting improve over time? Should LLMs be in the loop?
+3. Can user-originated research strategies flow through the system as signals?
+
+### What we found
+
+The quant research infrastructure is substantially built — not scaffolding:
+
+- **`hypotheses` table** — 10 rows, 7 `proposed` + 3 `rejected`. Full state machine: proposed → check_data → needs_data → pending_experiment → experimenting → results_ready → promoted | rejected
+- **`experiments` table** — 638 rows. `experiment-orchestrator.py` runs autonomously, LLM-generated signals. 7 `decision='promoted'` (note: past tense, not `'promote'`). Promotion gates: MIN_ACCURACY 50, MIN_SHARPE 0.5, MAX_PBO 0.4, MIN_CPCV_PATHS 5, MIN_SCORED_DAYS 100
+- **`experiment_knowledge`** — 546 rows of learned patterns (460 failure, 55 marginal, 7 success)
+- **`weight_sets`** — 12 sets, v5 active per DB (61% acc, 4.79 Sharpe, 116 samples, activated 2026-03-20). `live_predictions_count: 0` — counter not incrementing, OR weight set isn't being queried at prediction time
+- **`published_signals`** — 0 rows. **Orphan table.** Nothing copies promoted experiments into it.
+- **`signal_attribution`** — 0 rows. **Also orphaned.**
+- **`backtest_daily_results`** — 0 rows. **Also orphaned.**
+
+### The 7 promoted signals
+
+All SPY-focused, all with knowledge rows explaining the hypothesis:
+- spy_atr_vol_of_vol (vol-of-vol regime instability)
+- spy_bond_vol_lead_ratio (bond term premium leads equity vol)
+- spy_qqq_corr_zscore (tech regime breakdown)
+- sp_vol_atr_divergence_zscore (effort vs result anomaly)
+- spy_atr_spread_vol_divergence (macro vs equity vol decoupling)
+- spy_momentum_vol_decoupling
+- spy_vol_price_coherence
+
+Files exist at `~/scripts/signals/experimental/sig_<name>_exp-<hash>.py` but are NOT imported by the production compute pipeline. They only exist in shadow-experimental space.
+
+### The gap in one sentence
+
+**Promoted experimental signals never get imported into production: no row in `published_signals`, no daily compute filling `signal_attribution`/`signal_values`, no addition to `active-weights.json` features[] list, no LightGBM retrain to include them as features.**
+
+### `active-weights.json` — the actual model config
+
+Current state:
+version: v4_lgbm_24sig
+activated_at: 2026-03-21T22:00:00Z
+features[]: 24 baseline signals (rsi_14, macd, bb_position, atr_regime, dark_pool_short, news_sentiment, etc.)
+backtest_accuracy: 83.6
+backtest_sharpe: 4.7921
+
+None of the 7 promoted experimental signals appear in this list. Model doesn't know about them. Even if they were being computed daily (they're not), LightGBM wouldn't consume them.
+
+**Version drift:** DB `weight_sets` shows v5 active (from 2026-03-20). `active-weights.json` shows v4 active (from 2026-03-21). These are out of sync — worth investigating which is ground truth.
+
+### Compute pipeline status
+
+Baseline signals compute via `~/scripts/signals/compute_fast.py` (uses hardcoded `from db import` then computes rsi, ma_position, vix_level, etc. in one pass). Fills `signal_values` table.
+
+`~/scripts/signals/base.py` has `register_signal()` + `list_signals()` — a registry pattern. Signals self-register when imported. But `compute_fast.py` doesn't use the registry — it computes specific signals inline, not iterating `list_signals()`.
+
+`compute_batch_signals.py` uses the registry pattern for a subset (BB, ATR, MACD, EMA).
+
+**Critical: the production signal cron is commented out in crontab.** The `# PIPELINE:` lines for `compute_fast.py`, `compute_batch_signals.py`, and `sig_multi_timeframe.py` are all disabled. Only `compute-cag.py` runs at 18:35 daily. Baseline signals don't appear to be refreshed by a live cron — either they're computed on-demand by something else, or the `signal_values` table is stale.
+
+### The LightGBM batch-validation gap (user flagged)
+
+**Current system is sequential/greedy:** each experiment tests "signal X vs current baseline." If 5 signals get promoted over a month, each was validated in the context of whatever the ensemble was at its promotion time, not validated together as a set.
+
+**Known failure modes of sequential testing:**
+- **Collinearity** — signals A and B individually helpful but redundant together
+- **Interaction effects** — A+C negative, A+B+C neutral, sequentially missed
+- **Regime dependence** — signals tested in one regime may be redundant with other promoted signals once regime shifts
+- **Promotion drift** — signals promoted months ago may no longer earn their keep in current ensemble; nobody checks
+
+**What should happen:**
+- Promoted signals go into "candidate pool" (not auto-activated)
+- Periodic batch validation: retrain LightGBM with full candidate pool + baseline, measure feature importance + permutation importance
+- Active `active-weights.json` updates based on contribution threshold
+- Underperforming features deprecate with logged reasoning
+- Regime-conditional analysis: some signals may earn inclusion only in specific regimes, triggering multi-weight-set architecture
+
+This is a legitimate architectural gap to address before promoting many more signals.
+
+### The three original questions — answers with full context
+
+**1. Unusual-flow into synthesis?** Not yet. Unusual-flow has zero forward-return data. Route it through the existing pipeline:
+- Each method (iso_size, direction_concentration, etc.) becomes a candidate experiment
+- `unusual-flow-reconciler.py` (pending build) measures forward returns per method per horizon
+- After ≥30 observations, method qualifies to enter `experiments` table via automated job
+- Gets evaluated against baseline, possibly promoted
+- Then flows through the rest of the pipeline like any other signal
+- Only enters synthesis prompt AFTER promotion with accuracy weight attached
+
+**2. Dynamic weighting / LLM role?** Infrastructure exists (`weight_sets`, `weight_change_log`, `experiment_knowledge`) but the live-retrain loop isn't automated. Weight set v5 has 0 live predictions counted — either counter broken or v5 isn't being consulted. LLMs already in ideation loop (orchestrator calls Claude); should NOT be in weighting decisions (deterministic math only). LLM value-add: regime characterization, narrative/context for humans reviewing promotions, failure-pattern synthesis from `experiment_knowledge` → new hypothesis generation.
+
+**3. User research strategies as signals?** Path exists via research.html textarea. Your hypothesis enters `hypotheses` with `proposer='<your-handle>'`. Either LLM orchestrator auto-generates signal code OR you write it directly (need `source='human'` tag). Goes through identical pipeline. No special path needed.
+
+One enhancement worth considering: `hypothesis_source` tracking so you can measure "which ideation source (LLM autogen, you, academic paper) produces the highest-Sharpe signals over time."
+
+### What to build (ordered, next session)
+
+**Build 1 — `promote-signal-to-production.py`**  
+Finds `experiments.decision='promoted' AND signal_name NOT IN active-weights.features`. For each:
+- Reads signal_code from DB, writes canonical file `~/scripts/signals/sig_<name>.py` (graduates from experimental/)
+- Inserts `published_signals` row
+- Backfills `signal_values` historically (2y window) via compute helper
+- Appends to `active-weights-proposed.json` (NOT active-weights.json — requires human bless)
+- Logs action
+
+**Build 2 — `bless-weights-proposal.py`**  
+Archives current `active-weights.json`, activates proposal, logs to `weight_change_log`. Explicit gate. Human (you) runs it after reviewing.
+
+**Build 3 — Re-enable signal compute cron**  
+Uncomment `# PIPELINE:` lines. Verify `compute_fast.py` picks up graduated signals (either via registry or by updating its import block during graduation in Build 1).
+
+**Build 4 — `batch-validate-candidates.py`**  
+Addresses the sequential/greedy gap. Takes all candidate signals (promoted but not yet in active-weights), retrains LightGBM with baseline + full candidate pool, measures feature importance + permutation importance, produces report. Gates subsequent Build 1 promotions based on batch results.
+
+**Build 5 — `unusual-flow-reconciler.py`**  
+Separate track. Accumulates forward returns for unusual-flow detections. Gates unusual-flow methods entering `experiments` for formal promotion.
+
+**Build 6 — LightGBM retrain cron**  
+Once Builds 1-5 flow, a periodic (weekly?) retrain job that reads active-weights.features + signal_values for that period → new weight_set → compared to current active → automatic or human-gated activation. Closes the loop.
+
+### Other items to note for next session
+
+- **research.html needs reorganization** — user said current layout isn't useful, will come back to it. Likely touches: Hypothesis Pipeline counters, Awaiting Gate list, Experiments list, Signal Discovery form. Defer until discussed.
+
+- **Version drift audit** — `weight_sets.v5` (DB) vs `active-weights.json.v4_lgbm_24sig` (disk). Determine ground truth and reconcile.
+
+- **`weight_sets.live_predictions_count=0`** — investigate why counter never increments. Either dead code or disconnected from prediction path.
+
+- **`compute-cag.py` runs daily, other compute scripts commented** — is baseline signal refresh actually happening? If only CAG is cron'd but 24 features in active-weights.json, how are the other 23 getting fresh values? Either another script computes them or the data is stale.
+
