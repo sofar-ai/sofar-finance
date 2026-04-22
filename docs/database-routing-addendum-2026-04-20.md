@@ -162,3 +162,33 @@ WHERE session_date = fn_session_date(NOW())
 The flow-tape-daemon may be inserting today's late-evening trades with
 `session_date = CURRENT_DATE` (= tomorrow), creating data tagged with
 phantom session_dates.
+
+---
+
+## Correction — 2026-04-21 evening
+
+The "CURRENT_DATE → fn_session_date(NOW())" fix suggested in the original addendum was based on an incomplete analysis. Both return the same value during the 8-12 PM ET GTH window because both correctly identify the GTH session as tomorrow. The "phantom rows" observed on 2026-04-20 were not phantom — they were legitimate CBOE GTH session-start trades tagged with their correct session_date.
+
+The real issue is **session_date semantics ambiguity across consumers**:
+
+- Ingestion (flow-tape-daemon): writes CBOE GTH session_date — tags late-evening trades with the next day's session. This is **correct** per CBOE GTH.
+- Analysis (detector, dashboard, synthesis): typically wants "most recent completed RTH-heavy session" — not the thin GTH session still in progress.
+
+### Pragmatic resolver: session_date_helper.get_real_session_date()
+
+Introduced 2026-04-21. Returns the most recent session_date whose total_premium > $1B. Filters out thin GTH-only sessions automatically. Works through holidays, weekends, and early closes. This is the right primitive for analytical queries.
+
+See `~/scripts/session_date_helper.py` — `get_real_session_date(conn, min_premium_usd=1e9)`.
+
+### Callers that should use the helper
+
+- `unusual-flow-detector.py` ✓ wired 2026-04-21
+- `api/flow-aggregates.js` already uses the >$1B CTE pattern (SESSION_DATE_FIX_V1)
+- `ai-synthesis.py` already uses `prior_real` CTE with similar filter
+- `flow-intelligence.py` line 213 — needs review, different use case (per-symbol last-seen)
+- Any new script that queries "today's session" — use the helper, not MAX(session_date)
+
+### Functions that DO NOT need changing
+
+- `flow-tape-daemon.py` INSERT logic writing session_date = CURRENT_DATE is **correct** — CURRENT_DATE in a UTC Postgres session equals fn_session_date(NOW()) in ET, both returning the CBOE GTH session. No phantom bug.
+- `agg_mod.refresh_session_metrics(where_clause="WHERE session_date = CURRENT_DATE")` — also correct for its purpose (refresh the currently-ingesting session's aggregates).
