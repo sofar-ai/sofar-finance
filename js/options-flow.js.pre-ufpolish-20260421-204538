@@ -925,10 +925,8 @@ const OptionsFlowPage = (() => {
   };
 
   // Session preference — starts at "prior" when after-hours/weekend.
-  // UNUSUAL_FLOW_POLISH_V1: auto-flips to "today" during RTH unless user
-  // has manually clicked a chip (tracked via __ufUserChose).
+  // User override via chips; state kept in the panel.
   let __ufSession = 'prior';
-  let __ufUserChose = false;
 
   function ufFmtM(v) {
     if (v == null) return '—';
@@ -1020,20 +1018,6 @@ const OptionsFlowPage = (() => {
         phaseLbl.className = 'uf-phase uf-phase-' + phase.toLowerCase();
       }
 
-      // UNUSUAL_FLOW_POLISH_V1: if RTH is live and user hasn't overridden,
-      // prefer the current session. Skip if a global date override is set.
-      if (!__ufUserChose && !(typeof FlowData !== 'undefined' && FlowData.selectedDate)) {
-        const wantToday = d.data_status?.phase === 'RTH';
-        const newSession = wantToday ? 'today' : 'prior';
-        if (newSession !== __ufSession) {
-          __ufSession = newSession;
-          document.querySelectorAll('#uf-panel .uf-chip').forEach(b =>
-            b.classList.toggle('uf-chip-active', b.dataset.ufSession === newSession));
-          // Reload with the new session choice — don't render stale data
-          return loadUnusualFlow();
-        }
-      }
-
       // Method counts footer
       const mcEl = document.getElementById('uf-method-counts');
       if (mcEl) {
@@ -1080,7 +1064,6 @@ const OptionsFlowPage = (() => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         __ufSession = btn.dataset.ufSession;
-        __ufUserChose = true;  // UNUSUAL_FLOW_POLISH_V1: stop auto-flipping
         document.querySelectorAll('#uf-panel .uf-chip').forEach(b =>
           b.classList.toggle('uf-chip-active', b === btn));
         loadUnusualFlow();
