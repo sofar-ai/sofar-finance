@@ -121,3 +121,63 @@ When a future session adds a new detector, append it here with:
 5. Status (SHIPPED / DEFERRED — why)
 
 When a deferred method's prerequisite is met, move it to the active list and add it to `unusual-flow-detector.py`.
+
+## Detection Methodology — Dynamic Thresholds (2026-04-21 revision)
+
+**Principle:** Nothing hardcoded that should evolve. Thresholds derive from the live distribution each run. Calibration → self-tuning.
+
+### Why dynamic
+
+Early build used hardcoded dollar thresholds ($1M ISO, 60% skew, etc.) informed by a single-day sample. Problems:
+1. A $1M ISO is unusual on a sleepy Tuesday but normal on OPEX Friday. Hardcoded misses both contexts.
+2. Flow data is heavy-tailed (SPX ~$9B total premium, median symbol <$100K). Z-score on raw premium fires on the mega-symbols every day — meaningless.
+3. As market regimes shift, "unusual" shifts. Threshold drift requires manual retuning. Manual retuning won't happen reliably.
+
+Per the literature ([Z-score on skewed data](https://quora.com/What-is-a-Z-score-When-is-it-unusual)):
+> "For skewed or heavy-tailed data, fixed Z cutoffs are less reliable; consider robust measures (e.g., modified Z using median absolute deviation) or empirical percentiles."
+
+### How SOFAR implements it
+
+**For non-baseline methods (M4 burst, M5a/b iso, M6 direction, M7 sweep density):**
+- Compute the method's metric (iso_premium, direction_skew, burst_ratio, sweep_rate) for every symbol meeting a pragmatic liquidity floor
+- Rank eligible symbols by that metric
+- Flag symbols at or above the 95th percentile (configurable per-method) as unusual
+- `score` column = percentile rank (0-100)
+- `trigger_details` JSONB preserves: metric_value, percentile_rank, distribution_p50, distribution_p95, distribution_p99, universe_size, liquidity_floor_used
+
+**For baseline-conditional methods (M1 premium vs baseline, M3 rank anomaly):**
+- Z-score against the symbol's own 20-day rolling history in `flow_baselines`
+- Threshold: |Z| > 2.0 when days_in_baseline ≥ 20; loosens per the maturation curve when less
+- `score` column = |Z| × 30 clipped to 0-100 range (|Z|=2 → score 60, |Z|=3 → score 90)
+
+**Liquidity floor (the one pragmatic hardcode):**
+- `total_premium > $250,000` to be eligible for any method
+- Rationale: not a signal threshold — a data-hygiene filter. Below this, ratios and rankings are too noisy to interpret. Logged in `trigger_details.liquidity_floor_used` for audit.
+- This floor itself will become dynamic once we have enough baseline days (bottom quartile of 20-day premium median).
+
+### Per-method configuration
+
+| Method | Metric | Percentile / Threshold | Rationale |
+|---|---|---|---|
+| iso_size | iso_premium | p98 | Size distribution heavy-tailed; top 2% |
+| iso_concentration | iso_premium / total_premium (with iso_premium > 500K guard) | p95 | Top 5% concentrated |
+| direction_concentration | abs(buy-sell)/(buy+sell) | p95 | Top 5% one-sided |
+| intraday_burst | rolling 15-min / session avg | p95 | Top 5% burst rate |
+| sweep_cluster_density | sweep count rolling 1h / session hourly avg | p95 | Top 5% clustered |
+| premium_vs_baseline (M1) | z-score vs 20d rolling | |Z| > 2.0 (mature) | Literature norm |
+| rank_anomaly (M3) | rank delta vs 20d median rank | Delta > 5 positions (mature) | Pragmatic |
+
+All thresholds tunable via `~/scripts/unusual_flow_config.py` (or env file if preferred). No magic numbers in the detector itself.
+
+### Universe fairness
+
+Percentiles computed over today's eligible universe (all symbols above liquidity floor). This means on a quiet day with 30 liquid symbols, the 95th percentile is the top 1-2 symbols. On a busy day with 200 liquid symbols, it's the top 10. Signal count self-adjusts to market activity.
+
+### Forward-return stratification
+
+`trigger_details` preserves full distribution context. When reconciler measures 1d/5d/20d returns, per-method analysis can stratify by:
+- Percentile rank (p95-97 vs p97-99 vs p99+)
+- Universe size (quiet days vs busy days)
+- Liquidity band (symbol's rank within liquidity floor band)
+
+This is how we eventually answer "which method produces alpha in which regime" — the point of persisting everything.
