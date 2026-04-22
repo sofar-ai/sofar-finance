@@ -477,3 +477,114 @@ Once Builds 1-5 flow, a periodic (weekly?) retrain job that reads active-weights
 
 - **`compute-cag.py` runs daily, other compute scripts commented** — is baseline signal refresh actually happening? If only CAG is cron'd but 24 features in active-weights.json, how are the other 23 getting fresh values? Either another script computes them or the data is stale.
 
+
+---
+
+## Future architecture — ensemble search at scale
+
+Conversation thread: user observed that sequential/greedy signal promotion doesn't test combinations. Proposed: "system constantly experimenting with combinations of signals or weightings to achieve highest predictive rate." Answer: that's exactly how Renaissance-style systematic funds operate. Laying out the trajectory here so next session has forward view.
+
+### The problem at scale
+
+At ~100 signals: sequential/greedy testing mostly works, human review catches obvious issues, batch re-validation (Build 4 in queue) is sufficient.
+
+At ~1000 signals: combinatorial explosion (2^1000 subsets). All-pairs is 500k combinations, all-triples is 166M. Cannot grid-search. Need directed search algorithms.
+
+At ~10000+ signals: requires multi-tier infrastructure. LLM-assisted exploration, genetic search, bandit allocation across models.
+
+### Three-tier build trajectory
+
+**Tier 1 — Continuous batch re-validation (near-term)**
+Already queued as Build 4. Weekly cron takes current active weight set + all candidate signals → retrains model with superset → measures:
+- Gain-based importance (LightGBM native, but fragile with correlated features)
+- Permutation importance (shuffle column, measure accuracy drop — honest about correlation)
+- SHAP values (per-prediction contributions — reveals interaction patterns)
+
+Features below threshold drop from active weights. Features above threshold from candidate pool get added. Human review gate. Sufficient for up to ~100-200 signals.
+
+**Tier 2 — Evolutionary feature subset search (mid-term, when 500+ signals)**
+Shifts from "test individual features" to "test subsets." Genetic algorithm:
+- Initial population: 100 variants of current active weight set (mutate: add/remove/swap signals)
+- Evaluate each variant via CPCV backtest → Sharpe, PBO-adjusted
+- Keep top K, breed (combine features from two parents), mutate, repeat for M generations
+- Output: best subset by out-of-sample Sharpe
+
+Computational cost: each "individual" requires a full backtest. 1000 generations × 100 individuals × 10-path CPCV = 1M backtest runs. Either serious compute budget or use two-tier evaluation (fast-screen for search, full-CPCV for finalists only).
+
+LLM role here: propose semantically sensible candidate subsets. Random genetic search doesn't know that "bond term premium vol + ATR-vol-of-vol" is theoretically sound while "RSI_14 + RSI_21" is redundant. LLM proposes 20 novel subsets per generation faster than random search finds them. Evaluation stays pure math (CPCV → Sharpe → decision).
+
+**Tier 3 — Online bandit allocation across models (long-term)**
+Don't pick ONE active weight set. Maintain portfolio of N weight sets, each optimized for different regimes/horizons. At prediction time:
+- Each model makes prediction
+- Bandit algorithm (Thompson sampling, UCB) allocates capital/confidence by recent live performance
+- Regime-aware: different models dominate in different vol regimes
+
+Benefits: graceful regime transitions (underperforming models get less weight without retirement), rewards model diversity (uncorrelated models both earn allocation), survives individual model decay.
+
+Infrastructure required: parallel prediction pipelines, regime classification service, bandit state tracking, per-model P&L attribution, cross-model correlation monitoring. Big build. Aspirational until the system is deeply mature.
+
+### Critical tradeoffs to address as system scales
+
+**Search vs exploit** — More compute searching = better models, slower to deploy. Less compute searching = faster deployment but stuck in local optima where promoted signals reinforce a single regime's patterns.
+
+**Meta-overfitting** — Running 10,000 ensemble searches and picking best by out-of-sample Sharpe overfits your search procedure to the out-of-sample data. PBO handles individual-backtest overfit; need meta-level version (e.g., hold out a "search-validation" period entirely separate from backtest train/test).
+
+**Computational budget** — LightGBM retrains cheap (seconds). CPCV backtests expensive (minutes). Hierarchical evaluation essential at scale: fast screen (single-fold backtest, ~10 seconds) to eliminate obvious losers, full CPCV (10 paths, ~minutes) only for finalists.
+
+**Regime collapse** — Search run over 5 years where 4 are single regime → "best" ensemble is regime-specific but doesn't know it. Regime-conditional evaluation (require min performance in EACH regime band) prevents this. This is why Tier 3 bandit portfolio matters.
+
+### Signal lifecycle — explicit decay tracking
+
+Every promoted signal must have rolling accuracy tracking. When a signal's rolling-30d accuracy crosses threshold downward, flag for re-evaluation even without new candidates in pool. Renaissance operates under assumption that ALL signals decay; constantly searching for new ones because existing ones will eventually stop working.
+
+Concrete mechanism to add:
+- `signal_health` table: (signal_name, eval_date, rolling_30d_accuracy, rolling_90d_accuracy, vs_baseline_delta, status)
+- Daily update job computes from signal_attribution + prediction outcomes
+- Dashboard panel: "Signal Health" showing decay trajectories, flags, time-since-promotion
+- Auto-deprecate signals whose 90d rolling accuracy falls below 50% or baseline-delta below threshold
+
+### Renaissance principles observed from public sources
+
+1. **Many small edges.** Individual signals at 51-52% accuracy. Portfolio construction is where alpha compounds.
+2. **Relentless decay assumption.** Continuously search for new signals because existing ones will stop working.
+3. **Trade the residuals.** After model prediction, "what did we miss" becomes next signal's target. Hierarchical error correction.
+4. **Heavily regime-aware.** Different models for different vol/liquidity/microstructure conditions.
+5. **Execution quality is half the edge.** 51% predictive accuracy + 2bps market impact = breakeven. Optimize signals AND execution jointly.
+
+### What to track from the start
+
+Even before Tier 2/3 builds, structure data so future builds are possible:
+
+- **Every experiment tagged with training-data regime composition** — so later we can ask "did this signal get promoted because the search period was 70% one regime?"
+- **Every experiment tagged with baseline version** — so we know what "baseline" meant at promotion time (baseline drifts as other signals promote)
+- **Every prediction logged with per-regime context** — regime classification at prediction time, not just training time
+- **`hypothesis_source` column on experiments/hypotheses** — tag where the idea came from (llm_autogen, user_ryan, academic_paper, unusual_flow_reconciler, etc.) so we can measure "which ideation source produces highest-Sharpe survivors"
+
+These are all cheap to add now; expensive to retrofit later.
+
+### Additional queued builds reflecting this vision
+
+**Build 7 — `signal-decay-tracker.py`**
+Daily cron. Computes rolling accuracy per published signal. Updates `signal_health` table. Flags underperformers. Ties into eventual auto-deprecation.
+
+**Build 8 — `regime-conditional-evaluator.py`**
+Takes a weight_set, evaluates per-regime Sharpe/accuracy. Produces report. Enables Tier 3 multi-model portfolio later.
+
+**Build 9 — `evolutionary-subset-search.py`** (Tier 2 entrypoint)
+Not immediate. Requires Tier 1 infrastructure mature first. Flagged here so the need is documented.
+
+**Build 10 — `llm-subset-proposer.py`**
+When Tier 2 is active. Calls LLM with current weight set + candidate pool + `experiment_knowledge` failure/success patterns. Returns N semantically-reasoned subset proposals for genetic search initial population or mutation candidates. Reduces search iterations significantly vs pure random.
+
+### The big picture
+
+Your instinct ("constantly experimenting with combinations or weightings") is the production architecture of modern systematic funds. It is not exotic; it is the standard at scale. The path from current state (sequential/greedy promotion) → Tier 1 (batch re-validation) → Tier 2 (evolutionary search) → Tier 3 (bandit portfolio) is well-understood and executable.
+
+The right order is:
+1. Fix the current gap (promote → published → compute → features → retrain loop) with Builds 1-6
+2. Layer on decay tracking (Build 7) and regime conditioning (Build 8) early even at small signal counts
+3. When signal count justifies it, add Tier 2 evolutionary search
+4. When maturity justifies it, add Tier 3 bandit portfolio
+
+Doesn't all need to ship at once. But the data structures and tags you put in place NOW determine what's possible later. Structure for the future; build for the present.
+
