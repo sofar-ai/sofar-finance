@@ -1,6 +1,11 @@
 import { neon } from '@neondatabase/serverless';
 const sql = neon(process.env.DATABASE_URL_MARKET || process.env.DATABASE_URL);
 
+// SESSION_DATE_FALLBACK_V1 — when ?date= is not provided, resolve the current
+// session via fn_session_date(NOW()) rather than the naive getETDate() which
+// returns the ET calendar date and misses the 8pm CBOE GTH rollover. Mirrors
+// the pattern already used in flow-aggregates.js (API_BIFURCATE_V1) and
+// unusual-flow.js. Explicit ?date=YYYY-MM-DD still honored unchanged.
 function getETDate() {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
 }
@@ -21,7 +26,15 @@ export default async function handler(req, res) {
 
   try {
     const q = req.query;
-    const sessionDate = parseISODate(q.date) || getETDate();
+    // SESSION_DATE_FALLBACK_V1
+    const requestedDate = parseISODate(q.date);
+    let sessionDate;
+    if (requestedDate) {
+      sessionDate = requestedDate;
+    } else {
+      const sdRows = await sql`SELECT fn_session_date(NOW()) AS sd`;
+      sessionDate = sdRows[0].sd;
+    }
     const symbol = (q.symbol || '').trim().toUpperCase() || null;
     const right = (q.right || '').trim().toUpperCase() || null;
     const side = (q.side || '').trim().toUpperCase() || null;
