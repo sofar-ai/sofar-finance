@@ -24,6 +24,12 @@ infrastructure decisions, operational events. Not user-facing.
 
 ---
 
+## 2026-04-23 (Thursday session)
+
+- [OPS] Stale .git/index.lock from 11:12 ET blocked git-push-queue.sh for ~7 hours today. ~27 pending data/ files backlogged on disk, including ai-synthesis.json + ai-synthesis-intraday.json which caused dashboard to serve stale 10:10 ET content via Vercel CDN. Removed lock, manually flushed pending changes in two commits (b1ec155a9 + followup). Lock file was zero bytes — consistent with a git process that crashed mid-init rather than holding the file.
+
+---
+
 ## 2026-04-22 (Wednesday evening session)
 
 - [FIX] DATE_SELECT_GTH_AWARE_V1 field fix — enrichment fetch now reads data.data_status.current_session_date / prior_session_date / phase instead of nonexistent top-level today_sd/prior_sd fields. Dropdown rebuild now actually fires. Naive fallback was masking the silent fail.
