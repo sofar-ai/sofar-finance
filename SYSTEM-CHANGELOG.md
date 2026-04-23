@@ -26,6 +26,7 @@ infrastructure decisions, operational events. Not user-facing.
 
 ## 2026-04-22 (Wednesday evening session)
 
+- [FIX] DATE_SELECT_GTH_AWARE_V1 — options-flow.html date dropdown now fetches /api/flow-aggregates to rebuild with phase-aware labels (Today (GTH — 4/23)) + inserts just-closed RTH session as explicit option during GTH/AH/Weekend phases. Fixes dropdown that was hiding today's RTH data after 8pm rollover. Progressive enhancement — naive fallback paints first, async rebuild follows.
 - [BUILD-QUEUED] F5 — Extract shared api/_session.js helper exporting resolveCurrentSession(sql). Refactor all 4 session-resolving endpoints (flow-trades, flow-analysis, flow-aggregates, unusual-flow) to import it. Eliminates the bug class where one endpoint gets a fix and a sibling drifts. No behavior change — pure code organization. Rationale: encode pattern as config, not duplicated code.
 - [FIX] SESSION_DATE_FALLBACK_V1 — flow-trades.js + flow-analysis.js fallback now resolves session via fn_session_date(NOW()) instead of getETDate(). Fixes 20:00 ET CBOE GTH rollover bug where main trade tape and flow-structure synthesis bar stayed on prior session_date after 8pm. Mirrors flow-aggregates.js API_BIFURCATE_V1 pattern.
 - --help
