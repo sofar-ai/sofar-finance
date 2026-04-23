@@ -26,6 +26,7 @@ infrastructure decisions, operational events. Not user-facing.
 
 ## 2026-04-22 (Wednesday evening session)
 
+- --help
 - [DECISION] Stopping session here. CFTC ingestion deferred to fresh session. Architecture work complete; implementation cleaner with fresh context.
 - [FIX-PENDING] data_source_registry row for polymarket lists table_name='ingestion_log' but actual data lands in signal_values. Update needed next session.
 - [OPS] data_source_registry discovered as canonical inventory of data sources (9 entries, status=production). Adopting pattern: every new data source gets a row at script startup via INSERT...ON CONFLICT.
