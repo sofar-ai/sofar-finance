@@ -423,25 +423,110 @@
   </nav>
 
   <script>
-    // Populate of-date-select with last 10 trading days (Mon-Fri, excluding today)
+    // DATE_SELECT_GTH_AWARE_V1 — populate of-date-select with awareness of the
+    // 8pm ET CBOE GTH rollover. Progressive enhancement:
+    //   1. Paint a naive fallback synchronously (today + last 10 weekdays),
+    //      matches the previous behavior — ensures dropdown is always usable.
+    //   2. Fetch /api/flow-aggregates to get today_sd / prior_sd / phase from
+    //      the server (which uses fn_session_date(NOW())), then rebuild with
+    //      GTH-aware labels + insert the just-closed RTH option where relevant.
+    // If the enrichment fetch fails, the naive list remains — no regression.
     (function() {
       const sel = document.getElementById('of-date-select');
       if (!sel) return;
+
+      // Helpers
+      const isoET = (d) => d.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+      const labelET = (isoStr) => {
+        // Interpret YYYY-MM-DD as a local date at noon to avoid TZ drift in the label
+        const d = new Date(isoStr + 'T12:00:00');
+        return d.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
+      };
+      const mkOpt = (value, text) => {
+        const o = document.createElement('option');
+        o.value = value;
+        o.textContent = text;
+        return o;
+      };
+
+      // --- Step 1: naive synchronous fallback (preserves pre-patch behavior) ---
       const todayET = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
-      const d = new Date(todayET + 'T12:00:00');
+      const cursor = new Date(todayET + 'T12:00:00');
       let added = 0;
       for (let i = 1; added < 10 && i < 20; i++) {
-        d.setDate(d.getDate() - 1);
-        const dow = d.getDay();
+        cursor.setDate(cursor.getDate() - 1);
+        const dow = cursor.getDay();
         if (dow === 0 || dow === 6) continue;
-        const iso = d.toLocaleDateString('en-CA');
-        const label = d.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
-        const opt = document.createElement('option');
-        opt.value = iso;
-        opt.textContent = label;
-        sel.appendChild(opt);
+        const iso = cursor.toLocaleDateString('en-CA');
+        sel.appendChild(mkOpt(iso, labelET(iso)));
         added++;
       }
+
+      // --- Step 2: async enrichment via /api/flow-aggregates ---
+      // Server resolves today_sd via fn_session_date(NOW()) and prior_sd as the
+      // most recent session before that with >$1B premium. data_status.phase
+      // tells us RTH / GTH / AFTER_HOURS_NO_GTH / WEEKEND.
+      fetch('/api/flow-aggregates')
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (!data) return;
+          // Tolerate missing fields — different endpoints shape responses
+          // slightly differently; fall back gracefully.
+          const today_sd = data.today_sd || (data.data_status && data.data_status.today_sd);
+          const prior_sd = data.prior_sd || (data.data_status && data.data_status.prior_sd);
+          const phase    = (data.data_status && data.data_status.phase) || 'UNKNOWN';
+          if (!today_sd) return;
+
+          // Preserve current user selection so the rebuild doesn't reset
+          // their view if they've already clicked a date.
+          const priorValue = sel.value;
+
+          // Wipe and rebuild.
+          sel.innerHTML = '';
+
+          // "Today" — always the live session resolved by the server.
+          // Label varies by phase so the user sees what "Today" actually means.
+          let todayLabel;
+          if (phase === 'GTH') {
+            todayLabel = `Today (GTH — ${labelET(today_sd)})`;
+          } else if (phase === 'AFTER_HOURS_NO_GTH') {
+            todayLabel = `Today (${labelET(today_sd)})`;
+          } else if (phase === 'WEEKEND') {
+            todayLabel = `Next session (${labelET(today_sd)})`;
+          } else {
+            // RTH or UNKNOWN — keep it clean
+            todayLabel = 'Today';
+          }
+          sel.appendChild(mkOpt('today', todayLabel));
+
+          // If we're NOT in RTH and prior_sd != today_sd, surface the
+          // just-closed RTH session as an explicit peer option. This is the
+          // "where did today's RTH data go" fix.
+          const showPriorAsRTH = prior_sd && prior_sd !== today_sd &&
+                                 (phase === 'GTH' || phase === 'AFTER_HOURS_NO_GTH' || phase === 'WEEKEND');
+          if (showPriorAsRTH) {
+            sel.appendChild(mkOpt(prior_sd, `${labelET(prior_sd)} — RTH`));
+          }
+
+          // Historical: 10 weekdays preceding prior_sd (or today_sd if no prior).
+          const anchor = prior_sd || today_sd;
+          const c2 = new Date(anchor + 'T12:00:00');
+          let added2 = 0;
+          for (let i = 1; added2 < 10 && i < 20; i++) {
+            c2.setDate(c2.getDate() - 1);
+            const dow = c2.getDay();
+            if (dow === 0 || dow === 6) continue;
+            const iso = c2.toLocaleDateString('en-CA');
+            sel.appendChild(mkOpt(iso, labelET(iso)));
+            added2++;
+          }
+
+          // Restore user's selection if it still exists in the new list.
+          if (priorValue && Array.from(sel.options).some(o => o.value === priorValue)) {
+            sel.value = priorValue;
+          }
+        })
+        .catch(() => { /* silent — naive list remains */ });
     })();
   </script>
 </body>
