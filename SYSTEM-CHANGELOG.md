@@ -26,6 +26,7 @@ infrastructure decisions, operational events. Not user-facing.
 
 ## 2026-04-23 (Thursday session)
 
+- [BUILD-QUEUED] Harden git-push-queue.sh: (a) detect lock-take failure distinctly from 'nothing to commit' and log LOUD error, (b) auto-recover if lock is >N minutes old and no git process exists, (c) optional Discord/email heartbeat on consecutive failures. Today's incident was silent for 7 hours.
 - [OPS] Stale .git/index.lock from 11:12 ET blocked git-push-queue.sh for ~7 hours today. ~27 pending data/ files backlogged on disk, including ai-synthesis.json + ai-synthesis-intraday.json which caused dashboard to serve stale 10:10 ET content via Vercel CDN. Removed lock, manually flushed pending changes in two commits (b1ec155a9 + followup). Lock file was zero bytes — consistent with a git process that crashed mid-init rather than holding the file.
 
 ---
