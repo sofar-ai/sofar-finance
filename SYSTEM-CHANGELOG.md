@@ -26,6 +26,7 @@ infrastructure decisions, operational events. Not user-facing.
 
 ## 2026-04-22 (Wednesday evening session)
 
+- [MISTAKE] Duplicate request: asked for data_source_registry inspection twice in adjacent turns. Pay attention to what's already been answered.
 - [OPS] convention: 'Cmd 1/Cmd 2' for sequential commands; 'S1/S2' reserved for servers (S1 main, S2 GPU)
 - [CODE] tools/dump-schemas.py created (SCHEMA_DUMP_V1) — introspects all 3 Neon DBs to docs/SCHEMA.md weekly. Feeds H1 LLM schema injection.
 - [OPS] moved changelog-add.sh into repo at tools/, symlinked from ~/scripts/
