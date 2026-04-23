@@ -26,6 +26,10 @@ infrastructure decisions, operational events. Not user-facing.
 
 ## 2026-04-22 (Wednesday evening session)
 
+- [DECISION] Stopping session here. CFTC ingestion deferred to fresh session. Architecture work complete; implementation cleaner with fresh context.
+- [FIX-PENDING] data_source_registry row for polymarket lists table_name='ingestion_log' but actual data lands in signal_values. Update needed next session.
+- [OPS] data_source_registry discovered as canonical inventory of data sources (9 entries, status=production). Adopting pattern: every new data source gets a row at script startup via INSERT...ON CONFLICT.
+- [CRON] Added schema-dump weekly Sunday 02:00 ET — auto-commits docs/SCHEMA.md
 - [MISTAKE] Duplicate request: asked for data_source_registry inspection twice in adjacent turns. Pay attention to what's already been answered.
 - [OPS] convention: 'Cmd 1/Cmd 2' for sequential commands; 'S1/S2' reserved for servers (S1 main, S2 GPU)
 - [CODE] tools/dump-schemas.py created (SCHEMA_DUMP_V1) — introspects all 3 Neon DBs to docs/SCHEMA.md weekly. Feeds H1 LLM schema injection.
