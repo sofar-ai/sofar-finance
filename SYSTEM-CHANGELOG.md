@@ -26,6 +26,7 @@ infrastructure decisions, operational events. Not user-facing.
 
 ## 2026-04-22 (Wednesday evening session)
 
+- [OPS] moved changelog-add.sh into repo at tools/, symlinked from ~/scripts/
 - [OPS] changelog-add.sh helper bug fix: match sections by date prefix, not full DOW string
 - [OPS] SYSTEM-CHANGELOG.md established with helper script (changelog-add.sh)
 
