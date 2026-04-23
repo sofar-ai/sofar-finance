@@ -470,11 +470,14 @@
         .then(r => r.ok ? r.json() : null)
         .then(data => {
           if (!data) return;
-          // Tolerate missing fields — different endpoints shape responses
-          // slightly differently; fall back gracefully.
-          const today_sd = data.today_sd || (data.data_status && data.data_status.today_sd);
-          const prior_sd = data.prior_sd || (data.data_status && data.data_status.prior_sd);
-          const phase    = (data.data_status && data.data_status.phase) || 'UNKNOWN';
+          // Actual API shape (flow-aggregates.js API_BIFURCATE_V1):
+          //   data.data_status.current_session_date   — fn_session_date(NOW())
+          //   data.data_status.prior_session_date     — most recent prior >$1B
+          //   data.data_status.phase                  — RTH | GTH | AFTER_HOURS_NO_GTH | WEEKEND
+          const ds = data.data_status || {};
+          const today_sd = ds.current_session_date;
+          const prior_sd = ds.prior_session_date;
+          const phase    = ds.phase || 'UNKNOWN';
           if (!today_sd) return;
 
           // Preserve current user selection so the rebuild doesn't reset
