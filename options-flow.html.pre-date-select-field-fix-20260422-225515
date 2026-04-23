@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Options Flow — SOFAR FINANCE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <meta name="theme-color" content="#0d1117">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Sofar Finance">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* ── Flow Signals Panel ─────────────────────────────────────────── */
+    .of-signal-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 8px; border-bottom: 1px solid var(--border);
+      font-family: var(--font-mono); font-size: 12px;
+      transition: background 0.15s;
+    }
+    .of-signal-row:hover { background: var(--bg-card-hover); }
+    .of-signal-sym { font-weight: 600; color: var(--text-primary); min-width: 48px; }
+    .of-signal-pc { min-width: 44px; text-align: right; }
+    .of-signal-zscore {
+      min-width: 52px; text-align: center; padding: 2px 6px;
+      border-radius: 3px; font-weight: 600; font-size: 11px;
+    }
+    .of-signal-zscore.z-hot  { background: #ef444430; color: #ef4444; }
+    .of-signal-zscore.z-warm { background: #f59e0b30; color: #f59e0b; }
+    .of-signal-zscore.z-cool { background: #22c55e30; color: #22c55e; }
+    .of-signal-zscore.z-neutral { background: var(--bg-secondary); color: var(--text-muted); }
+    .of-signal-cvd { min-width: 48px; text-align: right; font-size: 11px; }
+    .of-signal-flip {
+      font-size: 10px; font-weight: 600; padding: 2px 6px;
+      border-radius: 3px; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .of-signal-flip.flip-bull { background: #22c55e25; color: #22c55e; }
+    .of-signal-flip.flip-bear { background: #ef444425; color: #ef4444; }
+
+    /* ── Sweep Alert Row ────────────────────────────────────────────── */
+    .of-sweep-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 8px; border-bottom: 1px solid var(--border);
+      font-family: var(--font-mono); font-size: 12px;
+      transition: background 0.15s;
+    }
+    .of-sweep-row:hover { background: var(--bg-card-hover); }
+    .of-sweep-icon { font-size: 14px; }
+    .of-sweep-sym { font-weight: 600; color: var(--text-primary); min-width: 48px; }
+    .of-sweep-detail { color: var(--text-secondary); font-size: 11px; }
+    .of-sweep-prem { font-weight: 600; margin-left: auto; }
+    .of-sweep-prem.sweep-buy { color: var(--green); }
+    .of-sweep-prem.sweep-sell { color: var(--red); }
+    .of-sweep-meta { font-size: 10px; color: var(--text-muted); }
+
+    /* ── Sector Flow Strip ──────────────────────────────────────────── */
+    .of-sector-strip {
+      display: flex; align-items: center; gap: 16px;
+      padding: 6px 12px; background: var(--bg-secondary);
+      border-top: 1px solid var(--border); font-family: var(--font-mono);
+      font-size: 11px; color: var(--text-secondary);
+      overflow-x: auto; white-space: nowrap;
+      scrollbar-width: thin;
+    }
+    .of-sector-strip::-webkit-scrollbar { height: 6px; }
+    .of-sector-strip::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    .of-sector-item { flex-shrink: 0; }
+    .of-sector-item { display: flex; align-items: center; gap: 6px; }
+    .of-sector-label { text-transform: uppercase; letter-spacing: 0.5px; font-size: 10px; }
+    .of-sector-dir { font-weight: 600; padding: 1px 5px; border-radius: 2px; }
+    .of-sector-dir.dir-bull { background: #22c55e20; color: #22c55e; }
+    .of-sector-dir.dir-bear { background: #ef444420; color: #ef4444; }
+    .of-sector-dir.dir-neut { background: var(--bg-card); color: var(--text-muted); }
+    .of-sector-pc { color: var(--text-muted); }
+
+    /* ── Premium Concentration Alert ────────────────────────────────── */
+    .of-concentration {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 12px; background: #f59e0b15;
+      border: 1px solid #f59e0b30; border-radius: 4px;
+      margin: 4px 0; font-family: var(--font-mono); font-size: 11px;
+    }
+    .of-concentration-icon { font-size: 14px; }
+    .of-concentration-text { color: var(--accent); }
+
+    /* ── Signal panel header with legend ─────────────────────────────── */
+    .of-signal-legend {
+      display: flex; gap: 8px; font-size: 9px; color: var(--text-muted);
+      font-family: var(--font-mono); padding: 4px 8px 2px;
+      border-bottom: 1px solid var(--border);
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .of-signal-legend span:nth-child(1) { min-width: 48px; }
+    .of-signal-legend span:nth-child(2) { min-width: 44px; text-align: right; }
+    .of-signal-legend span:nth-child(3) { min-width: 52px; text-align: center; }
+    .of-signal-legend span:nth-child(4) { min-width: 48px; text-align: right; }
+    .of-signal-legend span:nth-child(5) { flex: 1; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+</head>
+<body>
+  <div id="nav-root"></div>
+  <script src="js/nav.js"></script>
+  <script>document.addEventListener('DOMContentLoaded',()=>{NavComponent.setMeta(`<span class="live-dot"></span><span id="of-ws-status">Loading…</span><span style="margin-left:8px" id="clock-of"></span>`);});</script>
+  <button class="of-filter-toggle" id="of-filter-toggle">⚙ Filters &amp; Search</button>
+  <!-- Filter Bar -->
+  <div class="of-filter-bar">
+    <input type="text" id="of-ticker-search" class="of-ticker-input" placeholder="Ticker…" maxlength="6">
+    <div class="of-type-group">
+      <button class="of-type-btn active" data-type="ALL">All</button>
+      <button class="of-type-btn" data-type="CALL">Calls</button>
+      <button class="of-type-btn" data-type="PUT">Puts</button>
+    </div>
+    <div class="of-filter-sep"></div>
+    <select id="of-min-premium" class="of-select">
+      <option value="0">Any premium</option>
+      <option value="25000">$25k+</option>
+      <option value="50000">$50k+</option>
+      <option value="100000">$100k+</option>
+      <option value="500000">$500k+</option>
+      <option value="1000000">$1M+</option>
+    </select>
+    <select id="of-dte" class="of-select">
+      <option value="ANY">Any DTE</option>
+      <option value="0-7">0–7 days</option>
+      <option value="7-30">7–30 days</option>
+      <option value="30+">30+ days</option>
+    </select>
+    <select id="of-date-select" class="of-select" title="Session date">
+      <option value="today">Today</option>
+    </select>
+    <div class="of-filter-sep"></div>
+    <div class="ta-toggle-item">
+      <label class="toggle-switch">
+        <input type="checkbox" id="of-sweeps-only">
+        <span class="toggle-slider"></span>
+      </label>
+      <span class="ta-toggle-label">Sweeps only</span>
+    </div>
+    <div class="of-refresh-info">
+      Last trade: <span id="of-last-update">—</span> · Trades: <span id="of-trade-count">0</span> · Premium: <span id="of-total-premium">$0</span>
+    </div>
+  </div>
+  <div id="of-historical-banner" style="display:none;align-items:center;gap:8px;padding:6px 12px;background:#f59e0b15;border-left:3px solid #f59e0b;color:var(--text-secondary);font-family:var(--font-mono);font-size:11px;">
+    <span>📅</span>
+    <span>Historical view — panels disabled. Select "Today" to resume live.</span>
+  </div>
+  <!-- Flow Structure Analysis Bar -->
+  <div id="flow-analysis-bar" style="
+    margin: 0 0 2px 0; padding: 10px 14px;
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    font-family: var(--font-mono); font-size: 12px;
+    max-height: 40vh; overflow-y: auto;
+    display: none;
+  ">
+    <!-- COLLAPSE_ANALYSIS_V1 — collapsed by default; click header to expand -->
+    <div class="fa-header-row" id="fa-header-row" style="cursor:pointer;">
+      <span style="font-weight:600; color:var(--accent); font-size:11px; text-transform:uppercase; letter-spacing:0.5px;">
+        📊 FLOW STRUCTURE ANALYSIS
+      </span>
+      <span class="fa-summary" id="fa-summary"
+            style="flex:1; margin:0 12px; font-size:10px; color:var(--text-muted); font-family:var(--font-mono); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+        Awaiting first analysis cycle…
+      </span>
+      <div style="display:flex; align-items:center; gap:12px;">
+        <span id="fa-cross-asset-toggle" style="font-size:10px; color:var(--text-muted); cursor:pointer; text-decoration:underline;">Cross-Asset View</span>
+        <span id="fa-timestamp" style="font-size:10px; color:var(--text-muted);"></span>
+        <span class="fa-toggle-icon" id="fa-toggle-icon" style="font-size:14px; color:var(--text-muted); user-select:none;">▸</span>
+      </div>
+    </div>
+    <!-- Sticky ticker navigation — visible when expanded -->
+    <div id="fa-ticker-nav" class="fa-ticker-nav" style="display:none;"></div>
+    <!-- MARKDOWN_RENDER_V5: pre-wrap removed, marked.js renders block elements -->
+    <div id="fa-content" class="fa-content fa-collapsed"
+         style="color:var(--text-secondary); line-height:1.5; font-size:11px;">
+      Awaiting first analysis cycle…
+    </div>
+    <div id="fa-cross-asset" style="display:none; margin-top:8px; padding-top:8px; border-top:1px solid var(--border); color:var(--text-secondary); line-height:1.5; white-space:pre-wrap; font-size:11px;">
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="of-main">
+    <!-- Left: Live Tape (60%) -->
+    <div class="of-tape-panel">
+      <div class="of-tape-header">
+        <span>FLAGS</span>
+        <span>TICKER</span>
+        <span>STRIKE</span>
+        <span>EXPIRY</span>
+        <span>C/P</span>
+        <span>PREMIUM</span>
+        <span>TIME</span>
+        <span>SIZE</span>
+        <span>SIDE</span>
+      </div>
+      <div class="of-tape" id="of-tape">
+        <div class="tape-empty">Loading flow data…</div>
+      </div>
+    </div>
+    <!-- Right Panels (40%) -->
+    <div class="of-right-panels">
+      <!-- Flow Signals — P/C Z-scores and Flip Detection -->
+      <div class="of-panel" data-panel-id="flow-signals">
+        <div class="of-panel-header">FLOW SIGNALS <span style="font-size:10px;color:var(--text-muted);font-weight:400">P/C Z-SCORE · CVD · FLIPS</span><button class="of-panel-expand" title="Expand panel" aria-label="Expand panel">⇱</button></div>
+        <div class="of-signal-legend">
+          <span>SYM</span><span>P/C</span><span>Z-SCORE</span><span>CVD</span><span>SIGNAL</span>
+        </div>
+        <div class="of-panel-content" id="of-flow-signals">
+          <div class="of-empty">Awaiting flow tape data…</div>
+        </div>
+      </div>
+      <!-- Sweep Alerts -->
+      <div class="of-panel" data-panel-id="sweep-alerts">
+        <div class="of-panel-header">🔥 SWEEP ALERTS<button class="of-panel-expand" title="Expand panel" aria-label="Expand panel">⇱</button></div>
+        <div class="of-panel-content" id="of-sweeps">
+          <div class="of-empty">No sweeps detected</div>
+        </div>
+      </div>
+      <!-- Top Tickers -->
+      <div class="of-panel" data-panel-id="top-tickers">
+        <div class="of-panel-header">TOP TICKERS BY FLOW<button class="of-panel-expand" title="Expand panel" aria-label="Expand panel">⇱</button></div>
+        <div class="of-panel-content" id="of-top-tickers">
+          <div class="of-empty">Collecting…</div>
+        </div>
+      </div>
+      <!-- UNUSUAL_FLOW_PANEL_V1 — Unusual Activity (replaces Flow Detail) -->
+      <div class="of-panel" id="uf-panel">
+        <div class="of-panel-header uf-header-row">
+          <span class="uf-title">🎯 UNUSUAL ACTIVITY</span>
+          <span class="uf-meta">
+            <span id="uf-session-label">—</span>
+            <span class="uf-meta-sep">·</span>
+            <span id="uf-count-label">—</span>
+            <span class="uf-meta-sep">·</span>
+            <span id="uf-phase-label" class="uf-phase">—</span>
+          </span>
+          <span class="uf-session-toggle">
+            <button class="uf-chip" data-uf-session="today">Today</button>
+            <button class="uf-chip uf-chip-active" data-uf-session="prior">Prior</button>
+          </span>
+          <button class="of-panel-expand" title="Expand panel" aria-label="Expand panel">⇱</button>
+        </div>
+        <div class="of-panel-content" id="uf-content">
+          <div class="of-empty">Loading unusual activity…</div>
+        </div>
+        <div class="uf-footer">
+          <span class="uf-method-counts" id="uf-method-counts"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Sentiment + Sector Strip -->
+  <div class="of-sentiment-strip">
+    <span class="of-sent-label">15-MIN P/C</span>
+    <span class="of-sent-ratio" id="of-sent-ratio">—</span>
+    <div class="of-sent-bar-wrap">
+      <div id="of-sent-bar" style="display:flex;width:100%;height:100%"></div>
+    </div>
+    <span class="of-sent-text" id="of-sent-text">Calculating…</span>
+    <span class="of-sent-time" id="of-sent-time"></span>
+  </div>
+  <div class="of-sector-strip" id="of-sector-strip">
+    <span class="of-sector-label">SECTOR FLOW</span>
+  </div>
+  <!-- Premium Concentration Alert (shown dynamically) -->
+  <div id="of-concentration-wrap" style="padding:0 12px;display:none"></div>
+  <script src="js/mobile.js"></script>
+  <script src="js/refresh.js"></script>
+  <script src="js/options-flow.js"></script>
+  <script>
+    function updateClock() {
+      var el = document.getElementById('clock-of');
+      if (el) el.textContent = new Date().toLocaleTimeString([], {
+        hour: '2-digit', minute: '2-digit', second: '2-digit'
+      }) + ' ET';
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
+    OptionsFlowPage.init();
+
+    // Flow Structure Analysis
+    async function loadFlowAnalysis() {
+      try {
+        const res = await fetch('/api/flow-analysis?action=latest');
+        const data = await res.json();
+        const bar = document.getElementById('flow-analysis-bar');
+        const faContent = document.getElementById('fa-content');
+        const faTimestamp = document.getElementById('fa-timestamp');
+        const faCrossAsset = document.getElementById('fa-cross-asset');
+
+        if (!data.analyses || data.analyses.length === 0) return;
+
+        bar.style.display = 'block';
+
+        // Find the non-cross-asset analyses and cross-asset
+        // Sort so SPX/SPXW come first
+        const tickers = data.analyses.filter(a => !a.is_cross_asset).sort((a, b) => {
+          const priority = ['SPX', 'SPXW', 'SPY', 'QQQ'];
+          const aIdx = priority.indexOf(a.symbol);
+          const bIdx = priority.indexOf(b.symbol);
+          if (aIdx >= 0 && bIdx >= 0) return aIdx - bIdx;
+          if (aIdx >= 0) return -1;
+          if (bIdx >= 0) return 1;
+          return 0;
+        });
+        const crossAsset = data.analyses.find(a => a.is_cross_asset);
+
+        if (tickers.length > 0) {
+          // FLOW_ANALYSIS_CONCAT_V1 — concatenate ALL ticker analyses (was: pick tickers[0] only)
+          let combinedText = '';
+          for (const a of tickers) {
+            const aPrice = a.reference_price ? ' @ ' + a.reference_price.toFixed(2) : '';
+            const body = (a.analysis || '').trim();
+            const startsWithHeader = /^#{2,4}\s/.test(body);
+            const synthHeader = '### ' + a.symbol + aPrice + ' Options Flow Analysis\n';
+            combinedText += (startsWithHeader ? body : synthHeader + body) + '\n\n---\n\n';
+          }
+          if (crossAsset) {
+            const body = (crossAsset.analysis || '').trim();
+            const startsWithHeader = /^#{2,4}\s/.test(body);
+            const synthHeader = '### CROSS_ASSET Options Flow Analysis\n';
+            combinedText += (startsWithHeader ? body : synthHeader + body);
+          }
+          // MARKDOWN_RENDER_V5: let marked.js parse full markdown — keeps **, ###, lists, etc.
+          faContent.innerHTML = (typeof marked !== 'undefined')
+            ? marked.parse(combinedText)
+            : combinedText;
+          // NAV_REFRESH_TRIGGER_V7 — force nav rebuild now that rendered <h3>s exist
+          if (window.__refreshFlowAnalysisNav) window.__refreshFlowAnalysisNav();
+          const latest = tickers[0];
+          const time = new Date(latest.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) + ' ET';
+          faTimestamp.textContent = time + ' · ' + latest.model + ' · ' + tickers.length + ' symbols' + (crossAsset ? ' + cross-asset' : '');
+
+          // MARKDOWN_RENDER_V5: NO-OP — main loop above already concatenates ALL tickers
+          // with proper ### headers. Prior code here was appending a stripped duplicate
+          // with ━━━ separators that broke smart-tag scroll.
+        }
+
+        // Cross-asset synthesis
+        if (crossAsset && crossAsset.analysis) {
+          // MARKDOWN_RENDER_V5: parse cross-asset markdown properly
+          const crossRendered = (typeof marked !== 'undefined')
+            ? marked.parse(crossAsset.analysis || '')
+            : (crossAsset.analysis || '');
+          faCrossAsset.innerHTML = '<strong>🔗 Cross-Asset Synthesis</strong>' + crossRendered;
+          // NAV_REFRESH_TRIGGER_V7 — safety: refresh nav in case cross-asset changed anchor set
+          if (window.__refreshFlowAnalysisNav) window.__refreshFlowAnalysisNav();
+
+          document.getElementById('fa-cross-asset-toggle').onclick = function() {
+            const el = document.getElementById('fa-cross-asset');
+            el.style.display = el.style.display === 'none' ? 'block' : 'none';
+            this.textContent = el.style.display === 'none' ? 'Cross-Asset View' : 'Hide Cross-Asset';
+          };
+        } else {
+          document.getElementById('fa-cross-asset-toggle').style.display = 'none';
+        }
+      } catch(e) {
+        console.log('Flow analysis fetch error:', e);
+      }
+    }
+
+    // Load analysis for a specific ticker
+    // FLOW_ANALYSIS_CONCAT_V1 — click-to-scroll instead of refetch+replace
+    async function loadTickerAnalysis(ticker) {
+      const bar = document.getElementById('flow-analysis-bar');
+      const faContent = document.getElementById('fa-content');
+      if (!bar || !faContent) return;
+      bar.style.display = 'block';
+      faContent.classList.remove('fa-collapsed');
+      const tickerNav = document.getElementById('fa-ticker-nav');
+      if (tickerNav) tickerNav.style.display = '';
+      const toggleIcon = document.getElementById('fa-toggle-icon');
+      if (toggleIcon) toggleIcon.textContent = '▾';
+      // MARKDOWN_RENDER_V5: delegate to the rendered-DOM scroll
+      // used by fa-ticker-nav buttons. One code path, no line-height math.
+      const tryScroll = () => {
+        const faNavBtn = document.querySelector('#fa-ticker-nav [data-ticker="' + ticker + '"]');
+        if (faNavBtn) { faNavBtn.click(); return true; }
+        return false;
+      };
+      if (faContent.innerText && faContent.innerText.length > 100) {
+        if (!tryScroll()) {
+          await loadFlowAnalysis();
+          setTimeout(tryScroll, 200);
+        }
+      } else {
+        await loadFlowAnalysis();
+        setTimeout(tryScroll, 200);
+      }
+    }
+
+    // Expose to OptionsFlowPage
+    const _loadTickerAnalysisFn = loadTickerAnalysis;
+    window.loadTickerAnalysis = function(t) { window._lastTickerClick = Date.now(); _loadTickerAnalysisFn(t); };
+
+    // Load immediately and refresh every 2 minutes
+    loadFlowAnalysis();
+    setInterval(function() {
+      // Only auto-refresh to default if user hasn't clicked a ticker in last 60s
+      if (!window._lastTickerClick || (Date.now() - window._lastTickerClick > 60000)) {
+        loadFlowAnalysis();
+      }
+    }, 120000);
+  </script>
+  <div id="refresh-modal" class="refresh-modal">
+    <div class="refresh-modal-inner">
+      <div class="refresh-modal-header">Data Refresh in Progress</div>
+      <div class="refresh-modal-step">Running: <span id="refresh-step">Starting…</span></div>
+      <div class="refresh-modal-content"><div id="refresh-log"></div></div>
+    </div>
+  </div>
+  <nav class="mobile-bottom-nav">
+    <a href="index.html" class="mbn-item"><span class="mbn-icon">📈</span><span class="mbn-label">Market</span></a>
+    <a href="options-flow.html" class="mbn-item active"><span class="mbn-icon">🌊</span><span class="mbn-label">Flow</span></a>
+    <a href="ai-analysis.html" class="mbn-item"><span class="mbn-icon">🤖</span><span class="mbn-label">AI</span></a>
+  </nav>
+
+  <script>
+    // DATE_SELECT_GTH_AWARE_V1 — populate of-date-select with awareness of the
+    // 8pm ET CBOE GTH rollover. Progressive enhancement:
+    //   1. Paint a naive fallback synchronously (today + last 10 weekdays),
+    //      matches the previous behavior — ensures dropdown is always usable.
+    //   2. Fetch /api/flow-aggregates to get today_sd / prior_sd / phase from
+    //      the server (which uses fn_session_date(NOW())), then rebuild with
+    //      GTH-aware labels + insert the just-closed RTH option where relevant.
+    // If the enrichment fetch fails, the naive list remains — no regression.
+    (function() {
+      const sel = document.getElementById('of-date-select');
+      if (!sel) return;
+
+      // Helpers
+      const isoET = (d) => d.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+      const labelET = (isoStr) => {
+        // Interpret YYYY-MM-DD as a local date at noon to avoid TZ drift in the label
+        const d = new Date(isoStr + 'T12:00:00');
+        return d.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
+      };
+      const mkOpt = (value, text) => {
+        const o = document.createElement('option');
+        o.value = value;
+        o.textContent = text;
+        return o;
+      };
+
+      // --- Step 1: naive synchronous fallback (preserves pre-patch behavior) ---
+      const todayET = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+      const cursor = new Date(todayET + 'T12:00:00');
+      let added = 0;
+      for (let i = 1; added < 10 && i < 20; i++) {
+        cursor.setDate(cursor.getDate() - 1);
+        const dow = cursor.getDay();
+        if (dow === 0 || dow === 6) continue;
+        const iso = cursor.toLocaleDateString('en-CA');
+        sel.appendChild(mkOpt(iso, labelET(iso)));
+        added++;
+      }
+
+      // --- Step 2: async enrichment via /api/flow-aggregates ---
+      // Server resolves today_sd via fn_session_date(NOW()) and prior_sd as the
+      // most recent session before that with >$1B premium. data_status.phase
+      // tells us RTH / GTH / AFTER_HOURS_NO_GTH / WEEKEND.
+      fetch('/api/flow-aggregates')
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (!data) return;
+          // Tolerate missing fields — different endpoints shape responses
+          // slightly differently; fall back gracefully.
+          const today_sd = data.today_sd || (data.data_status && data.data_status.today_sd);
+          const prior_sd = data.prior_sd || (data.data_status && data.data_status.prior_sd);
+          const phase    = (data.data_status && data.data_status.phase) || 'UNKNOWN';
+          if (!today_sd) return;
+
+          // Preserve current user selection so the rebuild doesn't reset
+          // their view if they've already clicked a date.
+          const priorValue = sel.value;
+
+          // Wipe and rebuild.
+          sel.innerHTML = '';
+
+          // "Today" — always the live session resolved by the server.
+          // Label varies by phase so the user sees what "Today" actually means.
+          let todayLabel;
+          if (phase === 'GTH') {
+            todayLabel = `Today (GTH — ${labelET(today_sd)})`;
+          } else if (phase === 'AFTER_HOURS_NO_GTH') {
+            todayLabel = `Today (${labelET(today_sd)})`;
+          } else if (phase === 'WEEKEND') {
+            todayLabel = `Next session (${labelET(today_sd)})`;
+          } else {
+            // RTH or UNKNOWN — keep it clean
+            todayLabel = 'Today';
+          }
+          sel.appendChild(mkOpt('today', todayLabel));
+
+          // If we're NOT in RTH and prior_sd != today_sd, surface the
+          // just-closed RTH session as an explicit peer option. This is the
+          // "where did today's RTH data go" fix.
+          const showPriorAsRTH = prior_sd && prior_sd !== today_sd &&
+                                 (phase === 'GTH' || phase === 'AFTER_HOURS_NO_GTH' || phase === 'WEEKEND');
+          if (showPriorAsRTH) {
+            sel.appendChild(mkOpt(prior_sd, `${labelET(prior_sd)} — RTH`));
+          }
+
+          // Historical: 10 weekdays preceding prior_sd (or today_sd if no prior).
+          const anchor = prior_sd || today_sd;
+          const c2 = new Date(anchor + 'T12:00:00');
+          let added2 = 0;
+          for (let i = 1; added2 < 10 && i < 20; i++) {
+            c2.setDate(c2.getDate() - 1);
+            const dow = c2.getDay();
+            if (dow === 0 || dow === 6) continue;
+            const iso = c2.toLocaleDateString('en-CA');
+            sel.appendChild(mkOpt(iso, labelET(iso)));
+            added2++;
+          }
+
+          // Restore user's selection if it still exists in the new list.
+          if (priorValue && Array.from(sel.options).some(o => o.value === priorValue)) {
+            sel.value = priorValue;
+          }
+        })
+        .catch(() => { /* silent — naive list remains */ });
+    })();
+  </script>
+</body>
+</html>
