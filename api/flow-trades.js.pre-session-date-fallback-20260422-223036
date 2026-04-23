@@ -1,0 +1,140 @@
+import { neon } from '@neondatabase/serverless';
+const sql = neon(process.env.DATABASE_URL_MARKET || process.env.DATABASE_URL);
+
+function getETDate() {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+}
+
+function parseISODate(s) {
+  // Accept YYYY-MM-DD or YYYYMMDD
+  if (!s) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  if (/^\d{8}$/.test(s)) return `${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6,8)}`;
+  return null;
+}
+
+export default async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') return res.status(200).end();
+
+  try {
+    const q = req.query;
+    const sessionDate = parseISODate(q.date) || getETDate();
+    const symbol = (q.symbol || '').trim().toUpperCase() || null;
+    const right = (q.right || '').trim().toUpperCase() || null;
+    const side = (q.side || '').trim().toUpperCase() || null;
+    const minPrem = Math.max(parseInt(q.min_premium) || 0, 0);
+    const minSize = Math.max(parseInt(q.min_size) || 0, 0);
+    const dteMin = q.dte_min !== undefined ? parseInt(q.dte_min) : null;
+    const dteMax = q.dte_max !== undefined ? parseInt(q.dte_max) : null;
+    const isSweep = q.is_sweep === 'true' || q.is_sweep === '1';
+    const limit = Math.min(Math.max(parseInt(q.limit) || 500, 1), 2000);
+    const beforeTs = q.before_ts || null;
+    const afterTs = q.after_ts || null;
+    const wantCount = q.count !== 'false';
+
+    // Build dynamic WHERE using tagged-template concatenation.
+    // Neon's tagged sql`` does not support conditional appending directly,
+    // so we build the query with a series of conditions applied via sql.query().
+    // Using sql() helper that supports dynamic composition via unsafe only for
+    // identifiers. We use parameterized via template literals by routing to sql.query.
+
+    // Fall back to sql.query(textSql, paramsArr) for dynamic WHERE.
+    const whereParts = ['session_date = $1'];
+    const params = [sessionDate];
+    let p = 2;
+
+    if (symbol)       { whereParts.push(`symbol = $${p++}`);      params.push(symbol); }
+    if (right)        { whereParts.push(`right_type = $${p++}`);  params.push(right); }
+    if (side)         { whereParts.push(`side = $${p++}`);        params.push(side); }
+    if (minPrem > 0)  { whereParts.push(`premium >= $${p++}`);    params.push(minPrem); }
+    if (minSize > 0)  { whereParts.push(`size >= $${p++}`);       params.push(minSize); }
+    if (isSweep)      { whereParts.push(`sweep_id IS NOT NULL AND sweep_id <> ''`); }
+    if (beforeTs)     { whereParts.push(`ts < $${p++}`);          params.push(beforeTs); }
+    if (afterTs)      { whereParts.push(`ts > $${p++}`);          params.push(afterTs); }
+    if (dteMin !== null && !isNaN(dteMin)) {
+      whereParts.push(`expiration >= $${p++}::date + INTERVAL '${dteMin} days' - INTERVAL '${dteMin} days' AND expiration >= session_date + ($${p-1}::int * INTERVAL '1 day')`);
+      // Simpler — just use a direct days diff:
+      whereParts[whereParts.length-1] = `(expiration - session_date) >= $${p-1}`;
+      params.push(dteMin);
+    }
+    if (dteMax !== null && !isNaN(dteMax)) {
+      whereParts.push(`(expiration - session_date) <= $${p++}`);
+      params.push(dteMax);
+    }
+
+    const whereSql = whereParts.join(' AND ');
+
+    const tradesSql = `
+      SELECT symbol, expiration, strike, right_type, price, size, premium,
+             side, condition, exchange, bid, ask, sweep_id, ts, session_date
+      FROM flow_trades
+      WHERE ${whereSql}
+      ORDER BY ts DESC
+      LIMIT $${p}
+    `;
+    const tradesParams = [...params, limit];
+
+    const trades = await sql.query(tradesSql, tradesParams);
+
+    let totalMatching = null;
+    if (wantCount) {
+      // Count with same WHERE (excluding cursor so "total" reflects the full filtered set)
+      const countWhereParts = [];
+      const countParams = [];
+      let cp = 1;
+      countWhereParts.push(`session_date = $${cp++}`); countParams.push(sessionDate);
+      if (symbol)       { countWhereParts.push(`symbol = $${cp++}`); countParams.push(symbol); }
+      if (right)        { countWhereParts.push(`right_type = $${cp++}`); countParams.push(right); }
+      if (side)         { countWhereParts.push(`side = $${cp++}`); countParams.push(side); }
+      if (minPrem > 0)  { countWhereParts.push(`premium >= $${cp++}`); countParams.push(minPrem); }
+      if (minSize > 0)  { countWhereParts.push(`size >= $${cp++}`); countParams.push(minSize); }
+      if (isSweep)      { countWhereParts.push(`sweep_id IS NOT NULL AND sweep_id <> ''`); }
+      if (dteMin !== null && !isNaN(dteMin)) { countWhereParts.push(`(expiration - session_date) >= $${cp++}`); countParams.push(dteMin); }
+      if (dteMax !== null && !isNaN(dteMax)) { countWhereParts.push(`(expiration - session_date) <= $${cp++}`); countParams.push(dteMax); }
+
+      const countSql = `SELECT COUNT(*)::bigint AS n, COALESCE(SUM(premium), 0) AS prem FROM flow_trades WHERE ${countWhereParts.join(' AND ')}`;
+      const countRows = await sql.query(countSql, countParams);
+      totalMatching = {
+        trades: parseInt(countRows[0].n),
+        premium: parseFloat(countRows[0].prem),
+      };
+    }
+
+    const next_cursor = (trades.length === limit && trades.length > 0)
+      ? trades[trades.length - 1].ts
+      : null;
+
+    return res.json({
+      trades: trades.map(t => ({
+        symbol: t.symbol,
+        expiration: t.expiration,
+        strike: t.strike,
+        right: t.right_type,
+        price: t.price,
+        size: t.size,
+        premium: parseFloat(t.premium),
+        side: t.side,
+        condition: t.condition,
+        exchange: t.exchange,
+        bid: t.bid,
+        ask: t.ask,
+        sweep_id: t.sweep_id,
+        timestamp: t.ts,
+        session_date: t.session_date
+      })),
+      next_cursor,
+      has_more: next_cursor !== null,
+      returned: trades.length,
+      limit,
+      total_matching: totalMatching,
+      session_date: sessionDate,
+      filters: { symbol, right, side, minPrem, minSize, dteMin, dteMax, isSweep },
+    });
+  } catch (err) {
+    console.error('flow-trades error:', err);
+    return res.status(500).json({ error: err.message });
+  }
+}
