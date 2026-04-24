@@ -116,16 +116,56 @@ Repo was in complete disarray: 531 uncommitted items, NO remote. Cleaned up to 1
 
 `E-MINI S&P 500 - CHICAGO MERCANTILE EXCHANGE` only has 219 rows (2022-02-08 → 2026-04-14). The *actual* 16-year SPX positioning track is on `S&P 500 Consolidated - CHICAGO MERCANTILE EXCHANGE` — 827 rows starting 2010-06-15.
 
-Two names both appear in recent data simultaneously. Per 2026-04-14 data point, both exist. Hypothesis: Consolidated is futures+options combined; E-MINI is futures-only. They're different aggregations, not a rename.
-
-For signal research we likely want BOTH in the universe with clear labels. The universe currently contains both names, but the E-MINI one is what our "flagship SPX" query has been using, and its short history is limiting.
+Confirmed via side-by-side query on 2026-04-14: Consolidated OI=1,980,961 and E-MINI OI=1,959,076, with lev_money positioning within ~1%. They are essentially the same data — likely two names for the same underlying, kept for back-compat. `Consolidated` is the name to use for rolling-z-score signals that need >4yr lookback; `E-MINI S&P 500` starts 2022.
 
 **Next session action:**
-1. Query: `SELECT * FROM cftc_cot_financial WHERE report_date = '2026-04-14' AND market_and_exchange_names LIKE 'S&P 500%' OR market_and_exchange_names LIKE 'E-MINI S&P 500%'` to compare OI / positioning side-by-side
-2. If they're complementary (fut-only vs consolidated), add both explicitly to docs + note which to use for which purpose
-3. Similar audit likely needed for every universe entry — are we on the right contract name? What's the 16-year vs 4-year history story?
+1. For any SPX signal with >4yr lookback, query `S&P 500 Consolidated`, not `E-MINI S&P 500`
+2. Similar audit likely needed for every universe entry — what's the 16-year vs 4-year history story per contract?
+3. Document in the catalog doc when it gets written
 
-### B. db.py `_detect_table` regex bug
+### B. CRITICAL — research-director still generating "overnight" briefs despite quant-research pause
+
+Morning of 2026-04-23 the user received a Discord brief from the research-director subsystem titled "Morning Director Brief" that claimed:
+- "Overnight experiments yielded marginal improvements but no breakthrough signals"
+- "exp-0fe05601 (spy_price_efficiency_zscore) showed the strongest result with +0.0848 Sharpe improvement"
+- "7 hypotheses pending gate decisions"
+- Detailed PROMOTE/REJECT/PARK directives for specific `qr-YYYYMMDDHHMM-NNN` hypothesis IDs
+
+But per QUANT-RESEARCH-PAUSE.md:
+- Quant-research was paused Wed evening
+- `sofar-research.service` is stopped
+- All 5 quant-research crons are tagged `# QR-PAUSED:` and disabled
+
+**Hypothesis: the research-director is reading existing `experiments` / `hypotheses` DB rows and narrating them as "overnight activity," even though no experiments actually ran.** It reads DB state, not live output, so it has no way to know the generators are paused.
+
+**Risk:** User might act on the brief's PROMOTE directives thinking they represent real overnight experimentation, when they're synthesized narrative on top of stale data.
+
+**Next session — investigate:**
+1. Confirm research-director crons' state: `crontab -l | grep -iE "research-director"`
+2. If cron is ACTIVE: either pause it explicitly or require it to check experiment freshness before narrating
+3. If cron is already disabled: then something else is triggering it (manual run? systemd unit we forgot?) — needs tracing
+4. Longer-term: research-director should refuse to write a brief when no experiments have actually run in the last 24h. Add a pre-flight check.
+
+### C. 22:06 ET synthesis fire — explained, no action needed
+
+`ai-synthesis.json` updated at 22:06 ET tonight looked off-schedule. Investigation confirmed it was the legitimate `synthesis-trigger.py` conditional runner: a 4-per-day cron (12:45/14:45/15:45 market hours + 22:05 Sun-Thu evening post-close) that only fires a full Opus synthesis if material changes are detected. At 22:05 it detected a P/C ratio swing 0.80 → 0.62, triggered the Opus run, which wrote the JSON at 22:06.
+
+**This is intended behavior.** The synthesis archive correctly tagged `source=evening model=claude-opus-4-7`.
+
+### D. [BUILD-QUEUED] Synthesis provenance in dashboard UI
+
+The synthesis pipeline internally tags every run with the model (`claude-opus-4-7`, `qwen3.6:35b-a3b`, etc.) and the source (morning/intraday/evening/conditional). This is visible in `~/logs/ai-synthesis.log`:
+
+```
+[archive] saved synthesis_archive.archive_id=22 source=intraday model=qwen3.6:35b-a3b
+[archive] saved synthesis_archive.archive_id=26 source=evening  model=claude-opus-4-7
+```
+
+And it's stored in the `synthesis_archive` DB table. But it is NOT surfaced in the dashboard JSON, so users reading the dashboard can't tell which model wrote the current synthesis. Which matters: Opus is expensive/high-quality; qwen is local/cheaper. Same prompt can produce meaningfully different output. Tonight if we'd had provenance-in-dashboard, the 22:06 question would have answered itself.
+
+**Next session:** Add `model` and `source` fields to `ai-synthesis.json` and `ai-synthesis-intraday.json` output. Render alongside timestamp on dashboard (e.g. "10:06 PM (claude-opus-4-7, evening)"). Estimated 20-30 min.
+
+### E. db.py `_detect_table` regex bug
 
 The regex in `_detect_table` matches `FROM` inside `EXTRACT(YEAR FROM col)`, `CAST(x AS y FROM z)`, subqueries in parens after FROM, etc. Result: queries misroute to wrong DB and fail with "relation does not exist."
 
@@ -135,7 +175,7 @@ The regex in `_detect_table` matches `FROM` inside `EXTRACT(YEAR FROM col)`, `CA
 
 **[BUILD-QUEUED]** fix detection — skip matches inside paren groups, or use a proper SQL parser library (sqlparse).
 
-### C. ~/scripts hygiene still has rough edges
+### F. ~/scripts hygiene still has rough edges
 
 Though we cleaned up 531 → 103, remaining items of concern:
 - `signals/experimental/` directory is empty but the git-push-queue cron is NOT protecting it — if quant-research unpauses, new LLM-generated files will appear untracked (our gitignore handles `sig_*.py` but not the directory itself being modified)
@@ -144,11 +184,11 @@ Though we cleaned up 531 → 103, remaining items of concern:
 
 **[BUILD-QUEUED]** Secondary ~/scripts hygiene pass: model backup policy, experimental-dir write-monitoring, .pre-* file sweep policy.
 
-### D. Polymarket registry row wrong (carried over from Wed)
+### G. Polymarket registry row wrong (carried over from Wed)
 
 `data_source_registry` row for polymarket has `table_name='ingestion_log'` but the actual data lands in `signal_values`. Not fixed tonight. Queued.
 
-### E. Saturday cron for CFTC not yet installed
+### H. Saturday cron for CFTC not yet installed
 
 The ingest script is ready. Cron line needed:
 
@@ -158,7 +198,7 @@ The ingest script is ready. Cron line needed:
 
 9am Saturday ET, 18 hours after CFTC's Friday 3:30pm ET release (gives them time to fix any release-day errata). Add to `crontab -e`.
 
-### F. Status flip pilot → production
+### I. Status flip pilot → production
 
 After first successful Saturday cron fire, flip both CFTC sources in `data_source_registry` from `status='pilot'` to `status='production'`:
 
@@ -168,7 +208,7 @@ SET status = 'production', verified_at = NOW(), verified_by = 'human'
 WHERE source_name IN ('cftc_cot_tff', 'cftc_cot_dcot');
 ```
 
-### G. CFTC-UNIVERSE-CATALOG.md still not written
+### J. CFTC-UNIVERSE-CATALOG.md still not written
 
 Proposed structure (discussed but not drafted):
 - Header + sentinel
@@ -210,6 +250,15 @@ Estimated size: long. Either one file (user preferred) or split (catalog + skipp
 
 You have **clean repos** and **both CFTC tables fully populated** with 19 years of history. Everything is queryable *right now* given the db.py workaround.
 
-First thing to do next session: resolve the SPX legacy-name question (issue A above). That's a data-quality decision that affects every signal we build on top of this. Second: catalog doc. Third: Saturday cron. Fourth: db.py regex fix.
+**Priority order for next session:**
 
-The heavy-lifting infrastructure work is done. Remaining items are mostly polish + follow-through.
+1. **Investigate research-director** (issue B) — this is the only safety-relevant item from tonight. System sent a brief narrating "overnight experiments" during a paused-research state. Must understand why before trusting future briefs.
+2. **SPX legacy-name audit** (issue A) — data-quality decision that affects every signal built on SPX positioning.
+3. `docs/CFTC-UNIVERSE-CATALOG.md` (issue J)
+4. Saturday 9am ET cron + pilot→production flip (issues H, I)
+5. Synthesis provenance in dashboard (issue D)
+6. db.py `_detect_table` regex fix (issue E)
+7. git-push-queue hardening (from earlier tonight's stale-lock recovery)
+8. Polymarket registry row (issue G, Wed carryover)
+
+The heavy-lifting infrastructure work is done. Remaining items are mostly polish, follow-through, and the research-director investigation.
