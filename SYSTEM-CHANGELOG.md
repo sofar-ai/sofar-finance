@@ -24,6 +24,12 @@ infrastructure decisions, operational events. Not user-facing.
 
 ---
 
+## 2026-04-24 (Friday session)
+
+- [GIT_PUSH_QUEUE_V2] Hardened git-push-queue.sh to detect stale .git/index.lock, classify commit failures properly (distinguishing lock collisions from nothing-to-commit), and heartbeat-log twice hourly. Fixes the silent-failure pattern that caused 2 dashboard stalls in 14 hours.
+
+---
+
 ## 2026-04-23 (Thursday session)
 
 - [BUILD-QUEUED] Harden git-push-queue.sh: (a) detect lock-take failure distinctly from 'nothing to commit' and log LOUD error, (b) auto-recover if lock is >N minutes old and no git process exists, (c) optional Discord/email heartbeat on consecutive failures. Today's incident was silent for 7 hours.
