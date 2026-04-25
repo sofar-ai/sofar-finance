@@ -1,6 +1,6 @@
 # SOFAR Finance — Project Context for Claude
 
-**This file is auto-loaded at the start of every Claude Code session.**
+**This file is the canonical project-context document for SOFAR. It is auto-loaded by the Claude Code CLI if used. For claude.ai chat sessions (the primary interface), explicitly tell Claude to read this at session start: *"Read ~/sofar-finance/CLAUDE.md, ~/sofar-finance/docs/SYSTEM-STATE.md, and the most recent file in ~/sofar-finance/docs/handoffs/ before we start."***
 
 Sentinel of the continuity protocol that defines this file: `CONTINUITY_PROTOCOL_V1`. See `docs/CONTINUITY-PROTOCOL.md` for the full layering model. This file holds *durable* project context only — current state lives in `docs/SYSTEM-STATE.md`, decisions live in `docs/adr/`, recent work lives in `docs/handoffs/`.
 
