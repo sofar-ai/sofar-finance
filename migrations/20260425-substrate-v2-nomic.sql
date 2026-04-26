@@ -1,19 +1,16 @@
--- 20260425-substrate-v2-nomic.sql
+-- 20260425-substrate-v2-nomic.sql (PATCH1)
 -- Sentinel: SUBSTRATE_V2_NOMIC
 --
 -- Migrate embedding column from vector(1024) -> vector(768) for nomic-embed-text.
+-- PATCH1: corrected migrations_applied INSERT to use actual column names
+--   (name, applied_at — no `filename` or `sentinel` columns exist).
 --
--- WHY: bge-m3 (1024-dim) has unbounded NaN failures via Ollama's quantized math.
--- We've hit it on 3 entities during full re-embed AND on smoke-test inputs;
--- the failure surface is not bounded. nomic-embed-text (768-dim) is the
--- Continue.dev-recommended local default, ranked ADR-0001 #1 on our hardest
--- test query (others ranked it 2nd-3rd).
+-- WHY: bge-m3 has unbounded NaN failures via Ollama's quantized math.
+-- nomic-embed-text is the Continue.dev-recommended local default and
+-- ranked ADR-0001 #1 on our hardest test query.
 --
--- WHAT IT TOUCHES: only the entities.embedding column + its index. All
--- entity rows, attrs, relationships, events, proposals are PRESERVED.
--- Embeddings will be NULL after this; embed_entities.py rebuilds them.
---
--- REVERSIBLE: yes — drop column, recreate as vector(1024), re-embed with bge-m3.
+-- WHAT IT TOUCHES: only the entities.embedding column + its index.
+-- All entity rows, attrs, relationships, events are PRESERVED.
 --
 -- DEPLOY:
 --   psql "$NEON_META_URL" -f migrations/20260425-substrate-v2-nomic.sql
@@ -35,7 +32,6 @@ END $$;
 DROP INDEX IF EXISTS idx_entities_embedding;
 
 -- Drop and recreate at 768 dim
--- Note: existing embeddings are dropped. embed_entities.py will rebuild.
 ALTER TABLE entities DROP COLUMN embedding;
 ALTER TABLE entities ADD COLUMN embedding vector(768);
 
@@ -43,14 +39,13 @@ ALTER TABLE entities ADD COLUMN embedding vector(768);
 CREATE INDEX idx_entities_embedding ON entities
   USING hnsw (embedding vector_cosine_ops);
 
--- Track in migrations_applied per ADR-0005 convention
-INSERT INTO migrations_applied (filename, sentinel, applied_at)
-VALUES ('20260425-substrate-v2-nomic.sql', 'SUBSTRATE_V2_NOMIC', NOW())
-ON CONFLICT (filename) DO NOTHING;
+-- Track in migrations_applied (correct schema: name + applied_at only)
+INSERT INTO migrations_applied (name, applied_at)
+VALUES ('20260425-substrate-v2-nomic.sql', NOW())
+ON CONFLICT (name) DO NOTHING;
 
 COMMIT;
 
--- Verify
 \echo ''
 \echo 'Migration applied. Verify column type:'
 \d entities
