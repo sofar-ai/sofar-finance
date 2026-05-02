@@ -57,7 +57,7 @@ Handoffs live at `~/sofar-finance/docs/handoffs/YYYY-MM-DD-slug.md` where:
 **Deciders:** bot1
 **Related:** ADR-XXXX, ADR-YYYY    (optional)
 **Supersedes:** ADR-ZZZZ           (optional, only when replacing prior decision)
-**Sentinel:** <NAME>_V<N>            (optional, ADR-born sentinel header; replace with actual SHOUTING_SNAKE_CASE_V1 form)
+**Sentinel:** <NAME>_V<N>            (optional, ADR-born sentinel header; replace with actual capitalized form ending in V-and-a-digit)
 
 ---
 
@@ -102,7 +102,7 @@ non-trivial decisions]
 [bullet list of concrete deliverables with file paths]
 
 ## New sentinels captured
-**`<NAME>_V<N>`**            (replace with actual SHOUTING_SNAKE_CASE_V1 form for each new sentinel)
+**`<NAME>_V<N>`**            (replace with actual capitalized form ending in V-and-a-digit, one per new sentinel)
 [paragraph explaining what it captures, why it matters, what to do]
 
 ## Files added/modified
@@ -133,10 +133,11 @@ the same conceptual sentinel.
 
 **Documentation hazard.** This very ADR (and any other doc that shows
 sentinel-format examples) must obfuscate placeholder sentinels using
-angle-bracket syntax like `<NAME>_V<N>` — an example sentinel name in
-the literal `EXAMPLE_SENTINEL_V1` form would auto-promote on ingest and
-create a phantom entity. The angle-bracket form does not match the
-`[A-Z0-9_]+_V[0-9]+` auto-promotion regex.
+angle-bracket syntax like `<NAME>_V<N>`. A literal capitalized name
+ending in `_V` followed by a digit (the auto-promote regex pattern)
+will create a phantom sentinel entity on ingest, even when used in a
+"do not do this" example. The angle-bracket form does not match the
+auto-promotion regex.
 
 ### Mentions resolution
 
