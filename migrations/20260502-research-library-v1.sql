@@ -27,13 +27,57 @@
 
 BEGIN;
 
--- ── DB target assertion ─────────────────────────────────────────────────────
+-- ── DB target assertion (structure-based, since all Neon DBs share name 'neondb') ──
+-- All three SOFAR Neon projects (market, production, research) have current_database()
+-- = 'neondb'. We can't distinguish by name. Instead: check for tables that
+-- uniquely identify each DB. Names verified against substrate data_table entities
+-- on 2026-05-02.
+--   - research DB has: hypotheses (UNIQUE — only research)
+--   - market DB has:   cftc_cot_financial, cftc_cot_commodity (UNIQUE — only market)
+--   - production DB has: accuracy_log (UNIQUE — only production)
+-- We assert research-unique table EXISTS and market/production-unique tables do NOT.
+-- Triple-check belt-and-suspenders.
+
 DO $$
 BEGIN
-    IF current_database() != 'sofar-research' THEN
-        RAISE EXCEPTION 'WRONG DB: this migration targets research, got %', current_database();
+    -- Positive check: this DB has the research-unique table
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.tables
+         WHERE table_schema = 'public' AND table_name = 'hypotheses'
+    ) THEN
+        RAISE EXCEPTION 'WRONG DB: research-DB-unique table public.hypotheses missing. '
+                        'Expected research DB; got something else (current_database=%).',
+                        current_database();
+    END IF;
+
+    -- Negative check: this DB does NOT have a market-unique table
+    IF EXISTS (
+        SELECT 1 FROM information_schema.tables
+         WHERE table_schema = 'public' AND table_name = 'cftc_cot_financial'
+    ) THEN
+        RAISE EXCEPTION 'WRONG DB: market-DB table public.cftc_cot_financial present. '
+                        'This migration must NOT run on market DB.';
+    END IF;
+
+    -- Negative check: this DB does NOT have a production-unique table
+    IF EXISTS (
+        SELECT 1 FROM information_schema.tables
+         WHERE table_schema = 'public' AND table_name = 'accuracy_log'
+    ) THEN
+        RAISE EXCEPTION 'WRONG DB: production-DB table public.accuracy_log present. '
+                        'This migration must NOT run on production DB.';
     END IF;
 END $$;
+
+-- ── Bootstrap migrations_applied if missing (per ADR-0005) ──────────────────
+-- The market DB has migrations_applied; research DB does not yet. This
+-- migration brings research DB into ADR-0005 conformance by creating the
+-- table on first run. Subsequent research migrations can rely on it.
+
+CREATE TABLE IF NOT EXISTS migrations_applied (
+    name        TEXT NOT NULL PRIMARY KEY,
+    applied_at  TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
 
 -- ── Idempotency: bail if already applied ────────────────────────────────────
 DO $$
@@ -42,10 +86,7 @@ BEGIN
         SELECT 1 FROM migrations_applied
         WHERE name = 'RESEARCH_LIBRARY_SCHEMA_V1'
     ) THEN
-        RAISE NOTICE 'RESEARCH_LIBRARY_SCHEMA_V1 already applied; exiting clean';
-        -- Postgres has no early-return-from-anonymous-block; we use a
-        -- harmless no-op below and the rest of the migration uses
-        -- IF NOT EXISTS guards anyway.
+        RAISE NOTICE 'RESEARCH_LIBRARY_SCHEMA_V1 already applied; subsequent IF NOT EXISTS guards make rest of migration idempotent';
     END IF;
 END $$;
 
