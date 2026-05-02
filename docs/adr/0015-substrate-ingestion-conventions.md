@@ -57,7 +57,7 @@ Handoffs live at `~/sofar-finance/docs/handoffs/YYYY-MM-DD-slug.md` where:
 **Deciders:** bot1
 **Related:** ADR-XXXX, ADR-YYYY    (optional)
 **Supersedes:** ADR-ZZZZ           (optional, only when replacing prior decision)
-**Sentinel:** SENTINEL_NAME_V1     (optional, ADR-born sentinel header)
+**Sentinel:** <NAME>_V<N>            (optional, ADR-born sentinel header; replace with actual SHOUTING_SNAKE_CASE_V1 form)
 
 ---
 
@@ -102,7 +102,7 @@ non-trivial decisions]
 [bullet list of concrete deliverables with file paths]
 
 ## New sentinels captured
-**`SENTINEL_NAME_V1`**
+**`<NAME>_V<N>`**            (replace with actual SHOUTING_SNAKE_CASE_V1 form for each new sentinel)
 [paragraph explaining what it captures, why it matters, what to do]
 
 ## Files added/modified
@@ -130,6 +130,13 @@ Substrate auto-creates them when names appear in prose enclosed in backticks:
 Do NOT manually insert sentinel entities. Let the extractors auto-create
 them from the markdown. Manual insertion creates two storage shapes for
 the same conceptual sentinel.
+
+**Documentation hazard.** This very ADR (and any other doc that shows
+sentinel-format examples) must obfuscate placeholder sentinels using
+angle-bracket syntax like `<NAME>_V<N>` — an example sentinel name in
+the literal `EXAMPLE_SENTINEL_V1` form would auto-promote on ingest and
+create a phantom entity. The angle-bracket form does not match the
+`[A-Z0-9_]+_V[0-9]+` auto-promotion regex.
 
 ### Mentions resolution
 
