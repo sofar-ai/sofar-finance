@@ -200,12 +200,41 @@ framing is replaced with structured observation extraction:
 
 Output rows go to `research.observations` with `source_doc_id` FK,
 `extracted_by_model_id` FK to the substrate model entity, and
-`extraction_run_id` linking to `scout_runs`. Internal-gap analysis is
-deleted from this layer; if SOFAR-specific gap analysis is ever
-needed, it becomes a separate downstream consumer of
-`research.observations`.
+`extraction_run_id` linking to `scout_runs`.
 
-`SUMMARIZER_REFRAME_V1` captures this reframing.
+**Two distinct "gap" concepts; only one is removed.** The existing
+summarizer prompt conflates two different gap types under one output
+field (`proposed_change.target_component`):
+
+- **Gap-A — internal SOFAR pipeline gaps.** "What component or script
+  in SOFAR does this paper reveal a weakness in." Output points at
+  `target_component: filename` with refactor suggestions. *This output
+  is removed.* Reasons: (1) the orchestrator never read it, so it
+  produced zero downstream effect; (2) it conflates "what's true in
+  the world" with "what we should change about our code"; (3) when
+  internal-pipeline review is genuinely needed, it should be a
+  separate downstream consumer of `research.observations`, not a
+  side effect of every scrape.
+
+- **Gap-B — external data gaps.** "Research mentions a data source
+  (vendor, API, dataset, regulatory feed) that SOFAR does not
+  ingest." This is the original purpose of `data-scout.py` and
+  `research.data_gaps`. *This output is preserved and strengthened.*
+  Mechanism: every observation captures a `data_sources_mentioned`
+  array (structured TEXT[]), not buried free-text. Per §6 below, a
+  background process compares observation `data_sources_mentioned`
+  against `data_source_registry` and auto-populates `research.data_gaps`
+  rows for sources we don't have, with the supporting documents
+  attached as evidence. Per §4, the LLM scout populates `data_gaps`
+  directly when a hypothesis requires absent data. Both paths feed
+  the same data acquisition loop.
+
+The Gap-B loop becomes structurally enforced where today it is
+narrative-only. The Gap-A loop is removed because it was never wired
+to anything that would act on it.
+
+`SUMMARIZER_REFRAME_V1` captures the prompt cleanup; `DATA_GAP_AUTO_POPULATION_V1`
+captures the strengthened Gap-B mechanism.
 
 ### 4. Wire `quant-research-scout.py` into the new schema
 
@@ -427,6 +456,8 @@ Tracked as `ORCHESTRATOR_CONTEXT_EXPANSION_PENDING_V1`.
 - `EXTERNAL_RESEARCH_SYSTEM_V1` — captures the system as a whole
 - `RESEARCH_LIBRARY_SCHEMA_V1` — captures the schema decision
 - `SUMMARIZER_REFRAME_V1` — captures the prompt + endpoint cleanup
+- `DATA_GAP_AUTO_POPULATION_V1` — captures Gap-B (external data gaps)
+  becoming structurally enforced via observations.data_sources_mentioned
 - `HYPOTHESIS_GROUNDING_REQUIRED_V1` — captures cite-or-die
 - `PGVECTOR_DEFERRED_V1` — captures the deferral
 - `SCOUT_FLEET_EXPANSION_PENDING_V1` — captures the future-build list
