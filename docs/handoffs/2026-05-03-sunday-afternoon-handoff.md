@@ -62,6 +62,16 @@ Twelve sentinels created during this session's work. Half are scout-v2 design ca
 
 ---
 
+### Sentinels filed (addendum — predicted effects and structural fix)
+
+Two additional sentinels on the ticker-recall thread. The first explicitly captures a *predicted downstream effect* on hypothesis quality — not the cause-side stat (which is `QRS_CORPUS_91_PCT_ZERO_TICKER_FILTER_HIGH_PRECISION_LOW_RECALL_V1`). Filing it as a separate sentinel makes the prediction queryable later: did this bear out, or was the corpus filter less load-bearing than we thought? Renaissance frame: forecast explicitly, then check the forecast against reality.
+
+`QRS_HYPOTHESIS_QUALITY_BLUNTED_BY_LOW_TICKER_RECALL_V1` — *predicted effect.* When a research cycle has ticker-grounded intent (e.g. theme "NVDA gamma squeeze regime"), the corpus filter under v2 falls back to recency-only because most NVDA-mentioning docs aren't tagged with NVDA in `tickers_detected`. The synthesize phase then cites docs that mention NVDA only obliquely. Hypotheses are not broken, but blunted — less anchored to the specific ticker the plan targeted. Falsifiable: track whether early hypotheses with ticker-laden themes actually cite ticker-relevant docs, or whether the citations skew tangential. If signature appears in the first ~10 cycles, prioritize the structural fix below.
+
+`SUMMARIZER_LLM_TICKER_RESOLUTION_PROPOSED_V1` — *structural fix for the cause.* The right long-term answer is LLM-side ticker resolution at observation-extraction time, not regex+whitelist at scrape time. Shape: summarizer prompt gets a "ticker resolution" pass that extracts entity mentions (NVDA, "the chip giant", "$nvda", "Nvidia") and resolves all to canonical NVDA via the LLM; `observations.tickers_mentioned` is then populated from LLM output, not regex match; `KNOWN_TICKERS` retained as fallback only. Pairs with existing `KNOWN_TICKERS_HARDCODED_IN_SCRAPERS_V1` and `KNOWN_TICKERS_TO_CANONICAL_TABLE_PROPOSED_V1` from ADR-0017 — both anticipated this need; this sentinel commits to a specific shape. Out of scope for scout v2; deserves its own ADR + dedicated session because it touches the summarizer prompt, the observation schema's tickers_mentioned semantics, and any downstream consumer that interprets that field.
+
+---
+
 ### What is pending
 
 **Quant-research-scout v2 — steps 8-14 of implementation order** (per design doc §11). The skeleton at `quant-research-scout-v2-wip.py` exits with `NotImplementedError` for plan/synthesize/reflect phases. Concretely remaining:
