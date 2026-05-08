@@ -53,4 +53,4 @@ ORDER BY column_name;
 -- DRY RUN: leave commented for inspection, then uncomment ONE of the two below.
 
 -- ROLLBACK;   -- for the test-in-transaction dry run
--- COMMIT;     -- for the real run after dry run looks clean
+COMMIT;     -- for the real run after dry run looks clean
