@@ -12,27 +12,26 @@
 -- The promotion-executor.py script refuses to execute any row where either
 -- column is NULL or where sha256(current signal_code) != stored hash.
 --
--- Tracking: bootstraps migrations_applied if missing, then inserts the
--- sentinel row. Pattern follows 20260502-research-library-v1.sql which
--- did the same per ADR-0005. As of 2026-05-08 a separate finding shows
--- migrations_applied is absent from the research DB even though the
--- May 2 migration claimed to bootstrap it; this migration's bootstrap
--- block is therefore both belt-and-suspenders and remediation.
--- See tonight's handoff for the broader doc-vs-reality reconciliation.
+-- Tracking: this migration does NOT write to migrations_applied. Per repo
+-- practice as of 2026-05-08, that table is absent from the research DB and
+-- the most recent research migrations have a mixed track record on writing
+-- to it. The doc-vs-reality drift (CLAUDE.md describes the convention;
+-- 20260502-research-library-v1.sql attempted bootstrap; table is currently
+-- absent) is flagged for tonight's handoff under sentinel
+-- MIGRATIONS_APPLIED_RESEARCH_DB_BOOTSTRAP_NOT_TAKEN_V1. Bootstrapping the
+-- table as a side effect of this feature migration would mix concerns;
+-- bootstrap-or-don't is its own decision deserving its own discrete migration.
+-- Audit trail for this migration is the filename + git commit + ADR-0023.
 -- ============================================================================
 
 BEGIN;
 
--- ── Bootstrap migrations_applied if missing (per ADR-0005) ──────────────────
-CREATE TABLE IF NOT EXISTS migrations_applied (
-    name        VARCHAR(100) PRIMARY KEY,
-    applied_at  TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
 -- ── Schema change ───────────────────────────────────────────────────────────
+-- IF NOT EXISTS on each ADD COLUMN so the migration is safe to re-run after
+-- a partial failure (e.g. dry-run COMMITted by accident, then real run).
 ALTER TABLE experiments
-  ADD COLUMN human_reviewed_at TIMESTAMPTZ,
-  ADD COLUMN human_reviewed_signal_code_hash VARCHAR(64);
+  ADD COLUMN IF NOT EXISTS human_reviewed_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS human_reviewed_signal_code_hash VARCHAR(64);
 
 -- ── Verification: both columns present, both NULL across all rows ───────────
 -- Expect: total = (rows in experiments), reviewed = 0, hashed = 0.
@@ -51,18 +50,7 @@ WHERE table_name = 'experiments'
   AND column_name IN ('human_reviewed_at', 'human_reviewed_signal_code_hash')
 ORDER BY column_name;
 
--- ── Track the migration ─────────────────────────────────────────────────────
-INSERT INTO migrations_applied (name, applied_at)
-VALUES ('EXECUTOR_HUMAN_REVIEW_GATE_V1', now())
-ON CONFLICT (name) DO NOTHING;
-
--- ── Verification: tracking row landed ───────────────────────────────────────
--- Expect one row.
-SELECT name, applied_at
-FROM migrations_applied
-WHERE name = 'EXECUTOR_HUMAN_REVIEW_GATE_V1';
-
 -- DRY RUN: leave commented for inspection, then uncomment ONE of the two below.
 
-ROLLBACK;   -- for the test-in-transaction dry run
+-- ROLLBACK;   -- for the test-in-transaction dry run
 -- COMMIT;     -- for the real run after dry run looks clean
