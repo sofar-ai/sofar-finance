@@ -145,3 +145,45 @@ These have surfaced repeatedly across sessions and should be followed by default
 - **Why something is the way it is:** scan `docs/adr/README.md` index, then read the relevant ADR
 - **Schema:** `docs/SCHEMA.md` (auto-generated)
 - **The big picture:** this file
+
+---
+
+## Recent architectural work (May 2026 additions)
+
+The body of this file was last substantively updated 2026-04-25. The following ADRs and pipeline components shipped between 2026-05-02 and 2026-05-07 and supersede or extend the architecture described above. **Read these in full before recommending direction:**
+
+### Research substrate stack (May 2 onward)
+- **ADR-0014** — External Research System (documents, observations, data_gaps, hypothesis grounding)
+- **ADR-0015** — Substrate ingestion conventions (ADRs + handoffs format)
+- **ADR-0016** — mac2 Ollama SSH tunnel
+- **ADR-0017** — Research scraper v2 architecture
+- **ADR-0018** — Director context expansion (un-paused directors with rich research context)
+- **ADR-0019** — Data gap auto-populator
+- **v2-wip:** `quant-research-scout-v2-wip.py` is a deliberate skeleton (phases 1, 3, 4 stubbed). Design doc at `docs/specs/quant-research-scout-v2-design.md`. Hypothesis pipeline NOT operational pending v2-wip completion.
+
+### Signal pipeline stack (May 4 onward)
+- **ADR-0020** — Signal-graduation source-agnostic (the "graduator" / action layer; design exists, implementation pending)
+- **ADR-0021** — SEC EDGAR Form 4 as second signal source
+- **ADR-0022** — SOFAR ML Pipeline Architecture (canonical reference for production lgbm v7 family)
+- Three production lightgbm models (v7_7day, v7_14day, v7_21day_macro). 75/75/133 features. Sunday retrain cadence. Full integration pathway documented in ADR-0022.
+- New tables: `cot_signals`, `cot_returns`, `cot_contract_mappings`, `form4_filings`, `form4_transactions`, `form4_returns`.
+
+### Sandbox convention for experimental signals
+- **`signal_version='v_research_NNN'`** (3-digit sequence) for sandbox-isolated feature experiments in signal_values. v_research_001 currently populated for SPY with 8 CFTC z-score features + production v1.0 features copied for prototype training. Production lgbm scripts all filter `WHERE signal_version='v1.0'` so sandbox is safe.
+
+### Empirically-verified action-layer gap (2026-05-07)
+- 2 promoted experiments in `research.experiments` from April 15-16 (`spy_vol_price_coherence`, `spy_momentum_vol_decoupling`) have `decision='promoted'` set by director but ZERO rows in `signal_values`. Confirmed via direct query.
+- Sentinel: `EXPERIMENT_PROMOTION_NO_ACTION_LAYER_V1`
+- This is the priority unblock for the closed research → production loop.
+
+### Empirically-verified trainer non-improvement (2026-05-07)
+- Early stopping with chronological 15% val slice is HARMFUL for financial time series (-2.9pp accuracy, -0.5 Sharpe vs production v7 baseline).
+- Sentinel: `EARLY_STOPPING_HARMFUL_FOR_FINANCIAL_TIME_SERIES_V1`
+- ADR-0022 backlog item #1 was wrong. Do NOT re-attempt without alternative validation methodology (purged CV, random-sample within-window, or block-wise CV).
+
+## Additional pitfalls (May 2026 patterns)
+
+- **Schema-from-spec-not-data anti-pattern.** Three instances in one week (form4 filename suffix, form4 dates, cot VARCHAR(1) column type) of declaring schema/parser logic from documentation rather than inspecting actual source data. Sentinel: `SCHEMA_DESIGN_FROM_SPEC_NOT_DATA_RECURRING_PATTERN_V1`. Discipline: query one real sample before declaring schema.
+- **N+1 query bugs disguised as set-oriented SQL.** LATERAL subqueries that re-execute a CTE per row produce N+1 runtime even though syntax looks set-oriented. Two instances this week. Fix pattern: two-phase materialization with temp table + index.
+- **Pattern-matching before deep-reading at session start.** Recurring assistant failure: forming partial mental model from substrate name searches and excerpts, operating from incomplete model for hours before being corrected. Sentinel: `ASSISTANT_PATTERN_MATCH_BEFORE_DEEP_READ_AT_SESSION_START_V1`. **Discipline: read the latest handoff in full + read mentioned ADR bodies in full BEFORE recommending direction.**
+- **Asserting certainty without verification.** Multiple instances per session of "yes the SQL is correct" or "the script is faithful" being said without checking. Verify before asserting.
