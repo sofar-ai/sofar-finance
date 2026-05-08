@@ -18,19 +18,39 @@ A separate finding during pre-design verification: the `EXPERIMENTS_TABLE_DIVERG
 
 ## Decision
 
-Build a **promotion executor** as `~/scripts/promotion-executor.py`. Source-agnostic from the first commit. Reads `experiments WHERE decision='promoted'`, executes each row's `signal_code` in an isolated subprocess with read-only database access, and writes the resulting (date, value) tuples into `signal_values` under a sandbox `signal_version` (never `v1.0` in this version). Refuses to execute any row where `human_reviewed_at IS NULL`.
+Build a **promotion executor** as `~/scripts/promotion-executor.py`. Source-agnostic from the first commit. Reads `experiments WHERE decision='promoted'`, executes each row's `signal_code` in an isolated subprocess with read-only database access, and writes the resulting (date, value) tuples into `signal_values` under a sandbox `signal_version` (never `v1.0` in this version). Refuses to execute any row whose review gate does not pass: `human_reviewed_at` and `human_reviewed_signal_code_hash` must both be non-NULL, and the stored hash must match the current `sha256(signal_code)`.
 
 ### Schema change
 
-Add one column to `research.experiments`:
+Add two columns to `research.experiments`:
 
 ```sql
-ALTER TABLE experiments ADD COLUMN human_reviewed_at TIMESTAMPTZ;
+ALTER TABLE experiments
+  ADD COLUMN human_reviewed_at TIMESTAMPTZ,
+  ADD COLUMN human_reviewed_signal_code_hash VARCHAR(64);
 ```
 
 Migration sentinel: `EXECUTOR_HUMAN_REVIEW_GATE_V1`.
 
-The column is the trust marker for executor admission. NULL = not yet reviewed by operator; non-NULL = reviewed and cleared for execution. Co-locating the marker with the artifact (rather than in a separate hash-allowlist table) means any post-promotion mutation of `signal_code` re-triggers review naturally — operator workflow is to inspect, then `UPDATE experiments SET human_reviewed_at=now() WHERE experiment_id=...`.
+The two columns together form the trust marker for executor admission. `human_reviewed_at` records WHEN review happened; `human_reviewed_signal_code_hash` records WHAT was reviewed (sha256 of `signal_code` at approval time). Co-locating both with the artifact means any post-approval mutation of `signal_code` is detectable: at execution time the executor recomputes `sha256(signal_code)` and refuses to run if it does not match `human_reviewed_signal_code_hash`. Timestamp-only would have failed this property — an edit between approval and execution would slip through unnoticed.
+
+Executor admission predicate:
+
+```
+human_reviewed_at IS NOT NULL
+  AND human_reviewed_signal_code_hash IS NOT NULL
+  AND sha256(experiments.signal_code) == experiments.human_reviewed_signal_code_hash
+```
+
+On hash mismatch, the executor refuses with:
+
+```
+[signal_name] signal_code mutated after approval; re-review required
+  approved sha256: <stored hash>
+  current sha256:  <recomputed hash>
+```
+
+No check constraint is placed on the columns. Direct `psql` UPDATE remains a valid (if discouraged) approval path — the gate is the column values, not the mechanism that set them. The recommended path is the executor's own `--approve` subcommand (see Operational model below), which computes the hash atomically with the timestamp.
 
 ### Execution model
 
@@ -85,28 +105,32 @@ Idempotency via `ON CONFLICT (date, signal_name, signal_version, ticker) DO NOTH
 
 ```
 promotion-executor.py
-  --target-version v_research_NNN     [required]   sandbox signal_version to write under
-  --signal-name NAME                  [optional]   restrict to a single signal_name
-  --dry-run                           [default]    execute, print plan, write nothing
-  --commit                            [opt-in]     execute and write
-  --backfill-from YYYY-MM-DD          [optional]   override experiments.date_range_start
-  --backfill-to YYYY-MM-DD            [optional]   override experiments.date_range_end
-  --skip-review-gate                  [forbidden in v1]   reserved; raises NotImplementedError
+  --target-version v_research_NNN     [required for execute mode]   sandbox signal_version to write under
+  --signal-name NAME                  [optional]                    restrict to a single signal_name
+  --dry-run                           [default in execute mode]     execute, print plan, write nothing
+  --commit                            [opt-in in execute mode]      execute and write
+  --backfill-from YYYY-MM-DD          [optional]                    override experiments.date_range_start
+  --backfill-to YYYY-MM-DD            [optional]                    override experiments.date_range_end
+  --approve EXPERIMENT_ID             [subcommand mode]             compute sha256(signal_code), set human_reviewed_at=now() and human_reviewed_signal_code_hash atomically
+  --skip-review-gate                  [forbidden in v1]             reserved; raises NotImplementedError
 ```
 
-`--dry-run` and `--commit` are mutually exclusive. Dry-run is the default; `--commit` must be passed explicitly.
+`--dry-run` and `--commit` are mutually exclusive. Dry-run is the default; `--commit` must be passed explicitly. `--approve` is its own mode and is not combined with execute flags.
 
 ### Operational model (v1)
 
 Operator-invoked, not cron'd. The expected workflow per stranded promoted signal:
 
 1. Operator runs `--dry-run` against the target sandbox version
-2. Executor lists each promoted row with its `human_reviewed_at` status; refuses to execute any NULL row
-3. Operator inspects the printed `signal_code` snippet (executor prints first 500 chars and full sha256), reviews, runs `UPDATE experiments SET human_reviewed_at=now() WHERE experiment_id=...` manually
-4. Operator re-runs `--dry-run` — now executes, prints planned writes
-5. Operator inspects dry-run output (row counts, date ranges, sample values)
-6. Operator runs with `--commit` to write
-7. Operator runs math-validation queries against `signal_values` to confirm reproduced statistics match the original backtest
+2. Executor lists each promoted row with its review-gate status; refuses to execute any row where the gate predicate fails (NULL columns, or hash mismatch)
+3. Operator inspects the printed `signal_code` snippet (executor prints first 500 chars and full sha256), greps for the suspicious-call list (see Negative consequences below), reviews
+4. Operator runs `promotion-executor.py --approve <experiment_id>` — this computes sha256, atomically sets both columns, and writes a line to `~/logs/promotion-executor.log` with experiment_id, sha256, and timestamp
+5. Operator re-runs `--dry-run` — gate now passes, executor prints planned writes
+6. Operator inspects dry-run output (row counts, date ranges, sample values)
+7. Operator runs with `--commit` to write
+8. Operator runs math-validation queries against `signal_values` to confirm reproduced statistics match the original backtest
+
+`--approve` is the recommended path because it captures the hash atomically with the timestamp and emits an audit log line. Direct `psql` UPDATE remains valid for emergency or scripted use — the gate logic is identical regardless of how the columns got set — but loses the audit log entry and requires the operator to compute the sha256 by hand. No check constraint enforces `--approve`; this is convention, not mechanism.
 
 Promotion to cron deferred until at least 3 successful manual cycles across at least 2 distinct signals.
 
@@ -129,7 +153,7 @@ The two stranded signals are executed into a fresh `signal_version='v_research_0
 
 - Closes the action-layer gap captured by `EXPERIMENT_PROMOTION_NO_ACTION_LAYER_V1`. The 2 stranded April-15/16 promotions get backfilled into the sandbox.
 - Source-agnostic by construction. Adding a future signal source means writing a reconciler and getting a director promotion; the executor needs no change.
-- Human-review gate at the trust boundary, co-located with the artifact. Mutation of `signal_code` post-promotion would require re-review (operator must re-set `human_reviewed_at`).
+- Human-review gate at the trust boundary, co-located with the artifact. Hash-pinning means any mutation of `signal_code` post-approval is detected at execution time and re-review is forced.
 - Dry-run by default, sandbox-only target, idempotent writes. Three independent guards before any production exposure.
 - Backfill window provenance is explicit in dry-run output. Math validation against original backtest is a like-for-like comparison.
 
@@ -138,11 +162,11 @@ The two stranded signals are executed into a fresh `signal_version='v_research_0
 - Manual review gate adds operator friction per new promoted signal. Acceptable at current volumes; revisit if signal volume grows past ~1/week.
 - Subprocess overhead is roughly 500ms per signal. Negligible at current N (2-30 signals); irrelevant compared to actual computation time of the signals themselves.
 - Does not scale to thousands of signals as written. Acceptable for foreseeable horizon.
-- Network is not firewalled at the subprocess boundary. Mitigated but not eliminated by the human-review gate; operator is the last line of defense if `signal_code` contains a network call. Reviewer should grep for `urllib`, `requests`, `socket`, `http`, `subprocess`, `os.system`, `eval`, `exec`, `__import__` before clearing review.
+- Network is not firewalled at the subprocess boundary. Mitigated but not eliminated by the human-review gate; operator is the last line of defense if `signal_code` contains a network call. Reviewer should grep for `urllib`, `requests`, `socket`, `http`, `subprocess`, `os.system`, `eval`, `exec`, `compile`, `__import__`, `pickle` before clearing review. (`pickle` covers deserialization attacks; `compile` is the underlying primitive for `eval` and `exec`.)
 
 ### Risks accepted
 
-- An operator who clears `human_reviewed_at` without actually reading the code defeats the gate. This is a discipline risk, not a code risk; mitigated by the sentinel and by the executor printing the sha256 of the reviewed code so it's visible what was approved.
+- An operator who clears the review gate without actually reading the code defeats the gate. This is a discipline risk, not a code risk; mitigated by the sentinel, by the executor printing the sha256 of the reviewed code, and by the `--approve` audit log line. The hash-pinning property catches the mutation case but not the rubber-stamp case.
 - The director LLM that wrote `signal_code` could in principle be prompt-injected via document corpus. Out of scope for executor; addressed by upstream director hardening if/when needed.
 
 ## Open questions explicitly deferred
