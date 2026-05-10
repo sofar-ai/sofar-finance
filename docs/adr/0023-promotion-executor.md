@@ -1,7 +1,7 @@
 # ADR-0023: Promotion executor — running approved signal_code into signal_values
 
 **Date:** 2026-05-08
-**Status:** proposed
+**Status:** accepted
 **Deciders:** bot1
 **Related:** ADR-0011 (verify schema before write), ADR-0020 (signal-graduation source-agnostic — sibling pipeline piece, not parent), ADR-0022 (SOFAR ML pipeline architecture — downstream consumer)
 **Sentinel:** `ARCHITECTURAL_PIECE_CONFLATION_GRADUATOR_VS_EXECUTOR_V1`
