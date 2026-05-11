@@ -194,3 +194,57 @@ In sofar-finance (main):
 - `a5b0c0533` — EXPERIMENT_SANDBOX_VALIDATIONS_TABLE_V1: ADR-0025
 
 (Pending: validator + symlink commits to sofar-scripts; migration SQL commit to sofar-finance.)
+
+---
+
+## Next-session direction: B then A
+
+Two real paths after today's work, sequenced as B → A.
+
+**B — downstream graduation + director re-decision (1-2 sessions):**
+- ADR-0026 candidate: graduation criteria. When does a sandbox-validated
+  signal earn promotion from `v_research_NNN` to production `v1.0`?
+  Concrete data exists — the 7 rows in
+  `research.experiment_sandbox_validations`. Test candidate rules against
+  the real data: likely 5 of 6 daemon-promoted signals would pass naive
+  criteria (sharpe_delta > 0.05 AND new_signal_rank ≤ 5 AND validation_days
+  ≥ 2000); spy_qqq_corr_zscore_v2 (+0.0176 delta) would not — which is
+  the right answer.
+- ADR-0027 candidate (or amendment to 0026): director re-decision. The
+  director scripts (`~/scripts/research-director-{evening,morning}.py`)
+  currently consult `experiments.backtest_sharpe`. Should consult
+  `experiment_sandbox_validations.enhanced_sharpe` when present. Note
+  director cron is ACTIVE at 16:30 and 07:30 weekdays — modifying these
+  is a live change, not a paused-codebase edit.
+- Implementation of graduation logic + director updates.
+
+**A — upstream quant-research-scout v2 completion (2-3 sessions):**
+- Per `docs/specs/quant-research-scout-v2-design.md` (May 3, locked design),
+  the v2 scout is a partial skeleton at `~/scripts/quant-research-scout-v2-wip.py`.
+  Phase 2 (corpus query) is implemented; phases 1, 3, 4 are stubs raising
+  NotImplementedError.
+- Phase 1 (plan, small model qwen3.6:35b-a3b, ~15s wall): ~1-2h to
+  implement and smoke-test.
+- Phase 4 (reflect, small model, ~5s wall): ~30-60min.
+- Phase 3 (synthesize, frontier qwen3:235b on mac1, ~90s wall):
+  ~2-4h with iteration on the prompt. This is the phase that produces
+  hypotheses with cited_doc_ids — the grounding contract per ADR-0014
+  §6 / `HYPOTHESIS_GROUNDING_REQUIRED_V1`. Hardest piece.
+- Integration glue, scout_runs lifecycle, grounding validation, INSERT
+  with cited_doc_ids: ~2h.
+- Un-pause scrapers v2 in cron, smoke-test full upstream flow into
+  observations + documents.
+- Eventually un-pause overnight-research-daemon.py per ADR-0004 once
+  hypothesis quality has improved. ADR-0004's pause condition was
+  partly waiting on grounding-required-V1; A closes that.
+
+**Rough total scope:** B is ~1-2 sessions, A is ~2-3 sessions, full
+closed-loop pipeline ~3-5 sessions out. Today's work (executor v4 +
+sandbox validator + ADRs 0024/0025) was the action-layer half. B closes
+the consumer side. A closes the producer side. Both are required for
+the closed loop ADR-0004 paused.
+
+Sentinels worth filing if not auto-extracted from these blocks:
+`GRADUATION_CRITERIA_NEEDED_V1` (B's anchor),
+`SCOUT_V2_PHASES_1_3_4_NOTIMPLEMENTED_V1` (A's anchor).
+
