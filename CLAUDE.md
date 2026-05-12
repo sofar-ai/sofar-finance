@@ -169,12 +169,14 @@ The body of this file was last substantively updated 2026-04-25. The following A
 - New tables: `cot_signals`, `cot_returns`, `cot_contract_mappings`, `form4_filings`, `form4_transactions`, `form4_returns`.
 
 ### Sandbox convention for experimental signals
-- **`signal_version='v_research_NNN'`** (3-digit sequence) for sandbox-isolated feature experiments in signal_values. v_research_001 currently populated for SPY with 8 CFTC z-score features + production v1.0 features copied for prototype training. Production lgbm scripts all filter `WHERE signal_version='v1.0'` so sandbox is safe.
+- **`signal_version='v_research_NNN'`** (3-digit sequence) for sandbox-isolated feature experiments in signal_values. **v_research_001** holds the original sandbox: 913k rows / 173 signal names (CFTC z-score features + production v1.0 copies for prototype training). **v_research_002** holds the daemon-promoted-signal backfill from ADR-0023: 55k rows / 7 signal names (6 daemon-promoted + 1 ADR-0024 sibling correction). Production lgbm scripts all filter `WHERE signal_version='v1.0'` so both sandboxes are isolated.
 
-### Empirically-verified action-layer gap (2026-05-07)
-- 2 promoted experiments in `research.experiments` from April 15-16 (`spy_vol_price_coherence`, `spy_momentum_vol_decoupling`) have `decision='promoted'` set by director but ZERO rows in `signal_values`. Confirmed via direct query.
-- Sentinel: `EXPERIMENT_PROMOTION_NO_ACTION_LAYER_V1`
-- This is the priority unblock for the closed research → production loop.
+### Action-layer state (current as of 2026-05-11)
+- ADR-0023 executor shipped; 6 daemon-promoted experiments backfilled to `signal_version='v_research_002'` in market.signal_values (Path C complete).
+- ADR-0024 sibling-experiment correction pattern shipped; first instance applied to spy_qqq_corr_zscore (lookahead bias removed; corrected sibling at exp-72d528e3-fixed-v1).
+- ADR-0025 sandbox-version signal validator shipped; 7 of 7 sandbox signals validated in research.experiment_sandbox_validations (4 of 7 pass candidate graduation criteria of Δ>0.10, rank≤3, days≥2000).
+- **Open: ADR-0026 graduation criteria + `sandbox-graduator.py` + `graduation-surfacer.py`.** This is the path to actually moving sandbox signals to v1.0 in production.
+- Closes: `EXPERIMENT_PROMOTION_NO_ACTION_LAYER_V1`.
 
 ### Empirically-verified trainer non-improvement (2026-05-07)
 - Early stopping with chronological 15% val slice is HARMFUL for financial time series (-2.9pp accuracy, -0.5 Sharpe vs production v7 baseline).
