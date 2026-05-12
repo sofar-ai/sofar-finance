@@ -84,10 +84,14 @@ Network: 8-port 10GbE switch planned; two Sparks linked via 200GbE ConnectX cabl
 
 ## Known issues (open)
 
-### A. Research-director narrates stale experiments during quant-research pause — **high priority**
-The `research-director-morning.py` cron (7:30 AM) still runs. With quant-research paused, no new experiments occur — but the director reads existing `experiments`/`hypotheses` rows and narrates them as "overnight activity." Result: morning briefs sound like they reflect fresh work but reflect pre-pause backlog. Risk: user may act on PROMOTE directives thinking they're informed by new evidence.
+### A. Research-director's action layer now lives, but narrates against paused-pipeline backlog — **medium priority** (was high)
+**As of 2026-05-11:** parser bug fixed (commit `b91bf2b`), routing moved to mac2/qwen3.6:35b. Director's PROMOTE/REJECT directives now correctly move hypothesis state in research.hypotheses. Tonight's first successful run applied 7 directives (3 promote, 4 reject).
 
-**Fix options:** (a) explicitly pause the two director crons, OR (b) add a freshness gate that refuses to write a brief if no experiments completed in last 24h.
+**Remaining concern:** with quant-research-daemon still paused (ADR-0004), no fresh experiments enter the corpus. Director reads existing pre-pause hypotheses + flow_analysis cycles (still flowing intraday) and narrates accordingly. Today's `experiments_today=1` reflects a manual sibling-experiment INSERT, not daemon output. Director's promotions are now real state changes based on its read of existing backlog hypotheses, not new evidence.
+
+**Risk shape changed:** previously "user may read stale-context brief and act manually"; now "director acts directly on stale-context backlog, moving hypothesis state without operator review."
+
+**Fix options:** (a) gate `apply_promotion_directives` behind a freshness check (no auto-actions if no new experiments in last 24h), (b) accept the behavior and rely on the eventual daemon unpause to make it self-correcting, (c) explicitly pause the two director crons until daemon resumes.
 
 ### B. SPX universe gap — `Consolidated` vs `E-MINI` — **medium priority**
 The CFTC `E-MINI S&P 500` market name only has 219 rows (2022-02-08 onwards). The 16-year history is on `S&P 500 Consolidated` (827 rows from 2010). For SPX signals with >4yr lookback, query the Consolidated name. Both are in the universe and ingested; just need to use the right one.
@@ -112,7 +116,7 @@ Used to host Ollama; current state unknown. Verify whether it's still in the pic
 
 In rough priority order. Items get promoted to "open issues" when worked on.
 
-1. Address research-director freshness (issue A above)
+1. Address research-director's action layer + freshness interaction (issue A above)
 2. Install Saturday CFTC weekly cron + flip to production after first fire
 3. Synthesis model-provenance in dashboard UI (`model` field in JSON, render alongside timestamp)
 4. db.py `_detect_table` fix
