@@ -314,7 +314,10 @@ const AISynthesis = (() => {
           if (r.ok) {
             const meta = await r.json();
             const el = document.getElementById(sm.elId);
-            if (el && meta.walk_forward_sharpe) {
+            // DASHBOARD_HIDE_INFLATED_WALK_FORWARD_SHARPE_V1: walk_forward_sharpe is over-annualized
+            // (inflated ~sqrt(horizon)); hidden until realized Sharpe from
+            // prediction_tracking is wired in (dashboard rebuild).
+            if (false && el && meta.walk_forward_sharpe) {
               el.textContent = '(Sharpe ' + Number(meta.walk_forward_sharpe).toFixed(2) + ')';
             }
           }
