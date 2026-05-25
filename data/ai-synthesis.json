@@ -1,283 +1,225 @@
 {
   "calibration_notes": {
-    "pattern_acknowledgment": "Acknowledged next_day directional accuracy is 37.5% (n=16), significantly below baseline. Acknowledged MEDIUM tier underperforms LOW tier (33.3% vs 60.0%). Adjusted confidence downward and defaulted to LOW tier unless 3+ signals converge.",
-    "conviction_audit": "HIGH tier has no backtested data; reserve for exceptional convergence (4+ signals). Default to LOW (30-50) confidence today. Threshold for HIGH today: 75% only if GEX, VIX structure, and deep ITM flow align perfectly.",
-    "target_bias_correction": "Detected undershoot bias in intraday (1.35% error) and next-day (7.66% error). Corrected by anchoring targets strictly to the $7500 call wall and $7450 put wall, widening ranges slightly to capture mean-reversion drift while respecting PINNED regime compression.",
-    "regime_adjustment": "Detected PINNED regime (Positive GEX + Contango). Backtested 63.0% accuracy with Sharpe 5.58. Strategy: MEAN_REVERSION. Bias: BULLISH preferred. Confidence: MEDIUM to HIGH but downgraded to LOW/MEDIUM per feedback. Targets tightened per regime rules (intraday <=0.5%, next-day <=1.0%).",
+    "pattern_acknowledgment": "Intraday accuracy 28.6% (n=14) and next-day 27.3% (n=11) \u2014 both below random. Low_vol_uptrend regime accuracy is 28.0% (n=25). My recent BULLISH\u2192NEUTRAL flips on May 25 produced indeterminate 0% moves (frozen prices suggest market closed/holiday). MEDIUM tier (12.5%) underperforms LOW (35.3%).",
+    "conviction_audit": "HIGH tier has no data \u2014 not using HIGH today. Threshold for HIGH would require 4+ converging signals; today I have weak flow data (no live OPRA), so MEDIUM cap is 55, LOW default 35-45.",
+    "target_bias_correction": "Intraday shows 8.06% overshoot bias (targets too far) and next-day 10.19% undershoot. Correcting by tightening intraday ranges and slightly widening next-day targets relative to base move.",
+    "regime_adjustment": "Low_vol_uptrend = 28% accuracy. PINNED regime backtested 63% but my actual track record disagrees \u2014 suggests I'm calling reversals/bearish in uptrends and being wrong. Per regime rules: MEAN_REVERSION with BULLISH bias preferred. CAG=0.99 BEAR-DELUDED says crowd is complacent \u2014 contrarian bearish edge, but mild. Balancing: lean slight bullish with tight targets, low confidence.",
     "specific_changes": [
-      "Lowered next-day confidence by 10 points (to 40%) per dynamic correction for weak timeframe.",
-      "Applied MEAN_REVERSION strategy with tight intraday targets (<=0.5%) due to PINNED regime.",
-      "Defaulted to LOW confidence tier across all timeframes unless 3+ signals converge, overriding default MEDIUM."
+      "Default to LOW conviction (35-45) given MEDIUM tier 12.5% accuracy",
+      "Apply regime rule: bullish bias in PINNED/low_vol_uptrend, tight targets <=0.5% intraday",
+      "Acknowledge CAG bear-deluded contrarian signal but weight it lightly given mild z-scores"
     ]
   },
-  "calibration_summary": "Pinned regime with positive GEX ($387M) and contango VIX favors mean-reversion upside. Next-day accuracy historically weak (37.5%), so confidence is downgraded to LOW and targets are tightly anchored to the $7500 call wall and $7450 put wall. Deep ITM call accumulation confirms institutional bullish positioning despite hedging activity.",
+  "calibration_summary": "Intraday/next-day accuracy is below random in this regime \u2014 defaulting to LOW conviction with bullish bias per backtested PINNED regime rules. CAG bear-deluded provides mild contrarian bearish overlay but signal is too weak to override base regime. Tight price targets to fight overshoot bias.",
   "intraday": {
     "signal": "BULLISH",
-    "confidence": 50,
-    "summary": "Positive GEX ($387M) and contango VIX structure (+9.5%) suppress realized volatility, creating a mean-reversion environment. Bullish options flow ($1.44B calls vs $936M puts) and deep ITM call accumulation (AAPL $19.11M, SPY $5.01M) provide structural support. CAG indicates bear-delusion (0.99), suggesting contrarian upside pressure.",
-    "key_driver": "Positive GEX + Contango VIX structure",
-    "primary_driver": "gex",
+    "confidence": 38,
+    "summary": "Low_vol_uptrend regime with VIX at 16.59 (stable), oil down 7% on Iran ceasefire optimism = risk-on tailwind. No live flow data limits conviction. Regime rules favor mean-reversion bullish in PINNED-like conditions. Expect grind higher into close with tight range.",
+    "key_driver": "Iran ceasefire optimism (oil -7%) + low_vol_uptrend regime",
+    "primary_driver": "regime",
     "predicted_prices": {
-      "SPY": 747.5,
+      "SPY": 746.8,
       "QQQ": 719.0,
-      "IWM": 286.0,
-      "NVDA": 216.5,
-      "AAPL": 310.0
+      "IWM": 285.85,
+      "NVDA": 215.9,
+      "AAPL": 309.5
     },
     "predicted_range": [
-      745.0,
-      748.5
+      744.5,
+      748.0
     ],
-    "price_target_basis": "Call wall: $7500 strike ($3.28M OTM call premium on SPX) / Put wall: $7450 strike ($387M net GEX support)",
+    "price_target_basis": "Regime-based: PINNED rule limits intraday move to <=0.5%, SPY 0.5% = $749; targeting half that (~0.2%) given no flow confirmation and CAG bear-deluded contrarian overlay",
     "regime_strategy": "MEAN_REVERSION"
   },
   "next_day": {
     "signal": "BULLISH",
     "confidence": 40,
-    "summary": "Pinned regime favors bullish mean reversion. Deep ITM call positioning across SPY, AAPL, and AMD confirms institutional accumulation. However, next-day accuracy is historically weak (37.5%), warranting reduced confidence and tight targets anchored to the $7500 call wall.",
-    "key_driver": "Deep ITM call accumulation + Positive GEX",
-    "primary_driver": "options_flow",
+    "summary": "Iran de-escalation narrative continuing, falling oil eases inflation pressure, 10Y at 4.558% is stable. VIX 16.59 + normal yield curve = supportive backdrop. CAG bear-deluded warns of complacency but signal is mild (z=-0.61 fear).",
+    "key_driver": "Iran ceasefire reducing geopolitical risk premium",
+    "primary_driver": "headlines",
     "predicted_prices": {
-      "SPY": 749.0,
-      "QQQ": 721.5,
-      "IWM": 287.5,
-      "NVDA": 218.0,
-      "AAPL": 312.0
+      "SPY": 748.5,
+      "QQQ": 721.0,
+      "IWM": 287.0,
+      "NVDA": 217.5,
+      "AAPL": 310.5
     },
     "predicted_range": [
-      744.5,
-      750.0
+      743.0,
+      752.0
     ],
-    "price_target_basis": "Call wall: $7500 strike ($3.28M OTM call premium on SPX) / Put wall: $7450 strike",
+    "price_target_basis": "PINNED regime next-day cap <=1.0%, SPY 1% = $753. Target $748.50 = 0.38% reflects historical analog of post-geopolitical de-escalation gap-ups averaging 0.3-0.5%",
     "regime_strategy": "MEAN_REVERSION"
   },
   "long_term": {
     "signal": "BULLISH",
     "confidence": 60,
-    "summary": "30-day accuracy is 76.5%. Pinned regime with positive GEX and contango VIX historically supports sustained upside with compressed volatility. Bullish options flow and deep ITM stock replacement calls indicate strong institutional conviction.",
-    "key_driver": "Long-term regime stability + Options flow",
-    "primary_driver": "vol_regime",
+    "summary": "30-day accuracy is my strongest (76.5%). Base rate alone favors bullish (74% of months positive). Earnings growth strongest in 5 years per MarketWatch, Fed cut expectations intact, normal yield curve, low VIX. Sector rotation continues.",
+    "key_driver": "Strong base rate + earnings growth + Fed cut expectations",
+    "primary_driver": "regime",
     "predicted_prices": {
-      "SPY": 765.0,
-      "QQQ": 740.0,
+      "SPY": 770.0,
+      "QQQ": 745.0,
       "IWM": 295.0,
-      "NVDA": 230.0,
-      "AAPL": 325.0
+      "NVDA": 225.0,
+      "AAPL": 318.0
     },
     "predicted_range": [
-      755.0,
-      775.0
+      725.0,
+      785.0
     ],
-    "price_target_basis": "Call wall: $7500 strike ($3.28M OTM call premium on SPX) / Historical regime analog (PINNED 30-day median move)",
-    "regime_strategy": "MEAN_REVERSION"
+    "price_target_basis": "Historical regime analog: prior 30-day BULLISH calls in low-vol uptrend averaged +3-4% (SPY April 27 prediction: $713.94\u2192$745.64 = +4.44%). Target $770 = +3.3% from $745.64",
+    "regime_strategy": "TREND_FOLLOWING"
   },
-  "news_impact": "Iran ceasefire and European peace hopes reduce geopolitical risk premium, aligning with falling VIX and contango. AI infrastructure and Fed rate cut expectations support tech/growth momentum, reinforcing bullish options positioning.",
-  "options_flow_impact": "Bullish signal with $1.44B call premium vs $936M put premium. Deep ITM calls on SPY ($5.01M), AAPL ($19.11M), and AMD ($67.69M) signal synthetic long positioning. SPXW put buying ($1.8M sold, $1.2M bought) indicates portfolio hedging rather than directional bearishness.",
+  "news_impact": "Iran ceasefire optimism is the dominant positive narrative \u2014 oil down 7% removes a major tail risk and inflation pressure. S&P 500 earnings growth fastest in 5 years supports fundamentals. No major bearish catalysts in headlines. Inflation concerns remain background noise.",
+  "options_flow_impact": "Live flow data unavailable today (RTH not open or data lag). Prior session showed heavy MU ($823M), AMD ($684M), QQQ ($768M) flow with multileg-dominant structure \u2014 typical institutional hedging/spread activity, not strong directional signal. SPX/SPXW $10.5B is portfolio-level positioning, not directional. Cannot lean on flow today.",
   "risks": [
-    "Sudden VIX spike breaking contango structure and flipping GEX negative.",
-    "Deep ITM put accumulation on META ($62.97M) and SPY ($13.83M) suggests large-scale hedging that could cap upside.",
-    "Next-day directional accuracy historically weak (37.5%), increasing probability of indeterminate outcome."
+    "Iran ceasefire breaks down \u2014 oil reverses higher",
+    "Inflation surprise from sticky services data forces Fed repricing",
+    "CAG bear-deluded contrarian signal may be flagging genuine complacency before a vol expansion",
+    "Frozen price data in recent predictions suggests we may be in pre-market or holiday \u2014 execution risk"
   ],
   "benchmarks": {
     "SPY": {
       "intraday_bias": "BULLISH",
       "next_day_bias": "BULLISH",
       "long_term_bias": "BULLISH",
-      "analysis": "Positive GEX ($387M) and contango VIX create a pinned regime favoring mean reversion. Deep ITM call accumulation ($5.01M) and bullish options flow confirm institutional support. Targets anchored to $7500 call wall and $7450 put wall.",
-      "key_driver": "Positive GEX + Contango VIX structure",
-      "primary_driver": "gex",
-      "conflicting_signals": "Deep ITM put accumulation ($13.83M) suggests portfolio hedging, but does not override bullish GEX/flow in pinned regime.",
-      "predicted_price_2h": 747.5,
-      "predicted_price_nextday": 749.0,
-      "predicted_price_30d": 765.0,
+      "analysis": "SPY at $745.64, all-time high zone. Low VIX, falling oil, stable rates, normal yield curve. Regime-based mean-reversion bullish in PINNED conditions. Tight targets given overshoot bias.",
+      "key_driver": "Iran de-escalation + low_vol_uptrend regime",
+      "primary_driver": "regime",
+      "conflicting_signals": "CAG bear-deluded warns of complacency; below-random recent intraday accuracy in this regime",
+      "predicted_price_2h": 746.8,
+      "predicted_price_nextday": 748.5,
+      "predicted_price_30d": 770.0,
       "predicted_range_2h": [
-        745.0,
-        748.5
+        744.5,
+        748.0
       ],
       "predicted_range_nextday": [
-        744.5,
-        750.0
+        743.0,
+        752.0
       ],
-      "price_target_basis": "Call wall: $7500 strike ($3.28M OTM call premium on SPX) / Put wall: $7450 strike ($387M net GEX support)"
+      "price_target_basis": "PINNED regime caps: intraday <=0.5%, next-day <=1.0%. 30-day from regime analog (+3.3% matches recent realized monthly move)"
     },
     "QQQ": {
       "intraday_bias": "BULLISH",
       "next_day_bias": "BULLISH",
       "long_term_bias": "BULLISH",
-      "analysis": "Tech-heavy index benefits from pinned regime compression and AI infrastructure news. Prior session flow ($768.7M premium) shows institutional accumulation. Targets anchored to SPX call wall with tech beta adjustment.",
-      "key_driver": "Prior session institutional flow + AI news",
-      "primary_driver": "options_flow",
-      "conflicting_signals": "None significant; flow and regime align bullishly.",
+      "analysis": "QQQ at $717.54. AI infrastructure boom + Claude Mania trending. Tech momentum intact. Stable 10Y at 4.558% supports duration-sensitive growth.",
+      "key_driver": "AI infrastructure narrative + stable rates",
+      "primary_driver": "headlines",
+      "conflicting_signals": "10Y at 4.558% is elevated; any rise to 4.7%+ would pressure QQQ disproportionately",
       "predicted_price_2h": 719.0,
-      "predicted_price_nextday": 721.5,
-      "predicted_price_30d": 740.0,
+      "predicted_price_nextday": 721.0,
+      "predicted_price_30d": 745.0,
       "predicted_range_2h": [
-        716.5,
-        720.0
+        715.5,
+        720.5
       ],
       "predicted_range_nextday": [
-        715.0,
-        723.0
+        713.0,
+        725.0
       ],
-      "price_target_basis": "Call wall: $7500 strike ($3.28M OTM call premium on SPX) / Historical regime analog (PINNED 30-day median move)"
+      "price_target_basis": "Regime PINNED rules + historical: prior 30-day QQQ BULLISH call ($664\u2192$717.54 = +8.06%) overshot target; correcting to +3.8% for $745"
     }
   },
   "tickers_to_watch": [
     {
-      "ticker": "MU",
+      "ticker": "NVDA",
       "intraday_bias": "BULLISH",
       "next_day_bias": "BULLISH",
       "long_term_bias": "BULLISH",
-      "reasoning": "Strong call wall at $490 ($3.25M OTM call premium) provides clear resistance/anchor. Prior session flow ($823.8M premium) shows institutional accumulation. Pinned regime favors mean-reversion upside.",
-      "key_driver": "Call wall concentration + Prior session flow",
-      "primary_driver": "options_flow",
-      "conflicting_signals": "None significant; flow and regime align bullishly.",
-      "predicted_price_2h": 492.5,
-      "predicted_price_nextday": 495.0,
-      "predicted_price_30d": 510.0,
-      "predicted_range_2h": [
-        490.0,
-        494.0
-      ],
-      "price_target_basis": "Call wall: $490 strike ($3.25M OTM call premium)"
+      "reasoning": "AI infrastructure narrative dominant in trending topics. NVDA at $215.33 above recent base. 30-day track record on NVDA bullish was correct (April $208\u2192$215 = +3.4%).",
+      "key_driver": "AI infrastructure & data center boom theme",
+      "primary_driver": "headlines",
+      "conflicting_signals": "No live flow data; prior MEDIUM tier accuracy is 12.5%",
+      "predicted_price_2h": 215.9,
+      "predicted_price_nextday": 217.5,
+      "predicted_price_30d": 225.0,
+      "price_target_basis": "Historical analog: prior 30-day NVDA bullish prediction realized +3.4%; targeting similar magnitude ($225 = +4.5%)"
     },
     {
-      "ticker": "GOOGL",
-      "intraday_bias": "BULLISH",
-      "next_day_bias": "BULLISH",
-      "long_term_bias": "BULLISH",
-      "reasoning": "Call wall at $130 ($2.31M OTM call premium) anchors upside target. Bullish options flow and pinned regime support mean-reversion drift.",
-      "key_driver": "Call wall concentration + Pinned regime",
-      "primary_driver": "gex",
-      "conflicting_signals": "None significant.",
-      "predicted_price_2h": 131.5,
-      "predicted_price_nextday": 133.0,
-      "predicted_price_30d": 140.0,
-      "predicted_range_2h": [
-        130.0,
-        132.0
-      ],
-      "price_target_basis": "Call wall: $130 strike ($2.31M OTM call premium)"
+      "ticker": "XLE",
+      "intraday_bias": "BEARISH",
+      "next_day_bias": "BEARISH",
+      "long_term_bias": "NEUTRAL",
+      "reasoning": "Oil down 7% on Iran ceasefire \u2014 direct headwind for energy sector. Brent at $100.21 still elevated but momentum sharply negative.",
+      "key_driver": "Oil -7% on Iran de-escalation",
+      "primary_driver": "headlines",
+      "conflicting_signals": "If ceasefire breaks, oil snaps back violently",
+      "predicted_price_2h": 0,
+      "predicted_price_nextday": 0,
+      "predicted_price_30d": 0,
+      "price_target_basis": "Directional only \u2014 no XLE price data provided; thesis tied to oil -7% headline"
     }
   ],
   "trade_ideas": [
     {
-      "idea": "Long SPY stock with tight stop, targeting call wall",
+      "idea": "SPY upside via tight call spread riding mean-reversion in PINNED regime",
       "ticker": "SPY",
-      "type": "stock",
-      "timeframe": "intraday",
-      "thesis": "Pinned regime with positive GEX favors mean-reversion upside. Deep ITM call accumulation confirms institutional support. Target anchored to $7500 call wall.",
-      "risk": "VIX spike breaking contango or sudden GEX flip.",
-      "instrument": "SPY shares",
-      "entry_zone": "745.50 - 746.50",
-      "stop_invalidation": "744.00",
-      "target": "748.50",
-      "risk_reward": "1:2.0"
-    },
-    {
-      "idea": "Bull call spread on MU targeting call wall",
-      "ticker": "MU",
       "type": "calls",
       "timeframe": "next-day",
-      "thesis": "Call wall at $490 ($3.25M premium) provides clear anchor. Prior session flow ($823.8M) shows institutional accumulation. Pinned regime supports upside.",
-      "risk": "Sector rotation or broader market pullback.",
-      "instrument": "MU $480/$495 calls exp 2026-06-20",
-      "entry_zone": "2.50 - 3.00",
-      "stop_invalidation": "2.00",
-      "target": "4.50",
-      "risk_reward": "1:2.5"
+      "thesis": "Low_vol_uptrend + Iran de-escalation + oil -7% = supportive tape. PINNED regime favors slow grind higher.",
+      "risk": "Frozen recent prices suggest data anomaly; CAG bear-deluded warns of crowd complacency",
+      "instrument": "SPY $748/$752 call debit spread exp 2026-05-29 (Friday)",
+      "entry_zone": "$745.00-$745.80",
+      "stop_invalidation": "SPY closes below $743.00",
+      "target": "SPY $750-752",
+      "risk_reward": "1:2"
     }
   ],
-  "notable_divergences": [
-    {
-      "ticker": "META",
-      "signal": "BULLISH",
-      "flow_direction": "bearish",
-      "detail": "$62.97M deep ITM put premium ($1150\u2013$960 strikes)",
-      "description": "Large deep ITM put accumulation suggests institutional hedging or synthetic short positioning, conflicting with bullish price action and pinned regime.",
-      "inputs_conflicting": "flow vs regime",
-      "significance": "medium",
-      "expirations": [
-        "2026-06-20",
-        "2026-09-18"
-      ]
-    },
-    {
-      "ticker": "SPY",
-      "signal": "BULLISH",
-      "flow_direction": "bearish",
-      "detail": "$13.83M deep ITM put premium ($950\u2013$925 strikes)",
-      "description": "Significant deep ITM put accumulation indicates portfolio-level hedging, conflicting with bullish GEX and options flow.",
-      "inputs_conflicting": "flow vs gex",
-      "significance": "medium",
-      "expirations": [
-        "2026-06-20",
-        "2026-09-18"
-      ]
-    }
-  ],
+  "notable_divergences": [],
   "earnings_warnings": {},
-  "magnitude_flags": [
-    {
-      "ticker": "MU",
-      "flag": "OUTSIZED_MOVE_EXPECTED",
-      "basis": "Call wall at $490 strike ($3.25M OTM call premium)"
-    },
-    {
-      "ticker": "GOOGL",
-      "flag": "OUTSIZED_MOVE_EXPECTED",
-      "basis": "Call wall at $130 strike ($2.31M OTM call premium)"
-    }
-  ],
+  "magnitude_flags": [],
   "signal_attribution": {
-    "primary_driver": "gex",
+    "primary_driver": "vol_regime",
     "weights": {
       "headlines": {
-        "weight": 0.1,
-        "values_cited": "Iran ceasefire, AI infra, Fed rate cut expectations",
-        "influence": "Reduces geopolitical risk premium, aligns with falling VIX and contango."
+        "weight": 0.2,
+        "values_cited": "Iran ceasefire, oil -7%, S&P 500 earnings growth fastest in 5 years",
+        "influence": "Risk-on tailwind supports bullish bias next-day"
       },
       "options_flow": {
-        "weight": 0.2,
-        "values_cited": "Bullish signal, $1.44B call premium vs $936M put, deep ITM calls SPY $5.01M, AAPL $19.11M",
-        "influence": "Confirms institutional accumulation and synthetic long positioning."
+        "weight": 0.05,
+        "values_cited": "No live OPRA data today; prior session $15.5B notional dominated by multileg/index hedging",
+        "influence": "Cannot weight directionally \u2014 institutional structure is hedging-heavy, not signal-rich"
       },
       "gex": {
-        "weight": 0.25,
-        "values_cited": "Net GEX $387M positive, call wall $7500, put wall $7450",
-        "influence": "Positive GEX suppresses realized vol, creates mean-reversion bias, anchors price targets."
+        "weight": 0.05,
+        "values_cited": "No GEX data provided; inferring PINNED from low_vol_uptrend + VIX 16.59",
+        "influence": "Indirectly supports mean-reversion strategy"
       },
       "vix_structure": {
-        "weight": 0.15,
-        "values_cited": "VIX 16.63, contango +9.5% VX2/VX1",
-        "influence": "Contango confirms stable vol regime, supports pinned strategy."
+        "weight": 0.1,
+        "values_cited": "VIX 16.59, stable/low",
+        "influence": "Confirms low-vol regime, supports bullish bias"
       },
       "vol_regime": {
-        "weight": 0.15,
-        "values_cited": "PINNED regime, 63.0% backtested accuracy, Sharpe 5.58",
-        "influence": "Dictates MEAN_REVERSION strategy and tight target ranges."
+        "weight": 0.3,
+        "values_cited": "low_vol_uptrend = PINNED analog, backtested 63% accuracy with mean-reversion bullish",
+        "influence": "Primary driver \u2014 regime rules dictate bullish bias with tight targets despite my 28% accuracy in this regime"
       },
       "prediction_feedback": {
-        "weight": 0.05,
-        "values_cited": "Next-day accuracy 37.5%, MEDIUM tier 33.3% accuracy",
-        "influence": "Drove confidence downgrade to LOW and target anchoring to specific strikes."
+        "weight": 0.15,
+        "values_cited": "28% regime accuracy, 12.5% MEDIUM tier, 30-day at 76.5%",
+        "influence": "Caps confidence at LOW for intraday/next-day; supports MEDIUM for 30-day"
       },
       "event_trees": {
-        "weight": 0.0,
-        "values_cited": "No major event trees detected",
-        "influence": "No event-driven volatility expected; regime dominates."
+        "weight": 0.05,
+        "values_cited": "Iran ceasefire narrative continuation",
+        "influence": "Mild bullish tilt"
       },
       "price_data": {
         "weight": 0.1,
-        "values_cited": "SPY 745.64, QQQ 717.54, IWM 285.12",
-        "influence": "Provides baseline for range compression and mean-reversion calculations."
+        "values_cited": "SPY 745.64, QQQ 717.54, NVDA 215.33, 10Y 4.558%, DXY 99.239, normal yield curve",
+        "influence": "Confirms uptrend intact; DXY stable supports equity risk-on"
       }
     },
     "weights_sum": 1.0,
-    "reasoning_chain": "Positive GEX ($387M) + Contango VIX (+9.5%) \u2192 PINNED regime \u2192 MEAN_REVERSION strategy \u2192 Deep ITM calls ($19.11M AAPL, $5.01M SPY) confirm institutional accumulation \u2192 Bullish call with tight targets anchored to $7500 call wall and $7450 put wall. Confidence downgraded per next-day feedback."
+    "reasoning_chain": "Low_vol_uptrend regime \u2192 PINNED analog \u2192 backtested mean-reversion bullish bias. Iran ceasefire + oil -7% confirms risk-on. Recent feedback (28% regime accuracy) caps confidence at LOW. CAG bear-deluded provides mild contrarian overlay but z-scores are mild, insufficient to override regime base rule. 30-day track record (76.5%) supports higher confidence on long-term call."
   },
-  "generated_at": "2026-05-25T14:00:01Z",
-  "next_update": "2026-05-25T16:00:01Z",
+  "generated_at": "2026-05-25T22:00:12Z",
+  "next_update": "2026-05-26T00:00:12Z",
   "prices_at_generation": {
     "SPY": 745.64,
     "QQQ": 717.54,
@@ -297,25 +239,24 @@
     "SILVER": 76.199,
     "WTI": 96.6,
     "BRENT": 100.21,
-    "VIX": 16.64,
+    "VIX": 16.59,
     "10Y_YIELD": 4.558,
     "30Y_YIELD": 5.064,
     "3M_YIELD": 3.585,
-    "DXY": 99.002,
-    "captured_at": "2026-05-25T14:00:01Z",
-    "MU": 751.0,
-    "GOOGL": 382.97
+    "DXY": 99.239,
+    "captured_at": "2026-05-25T22:00:12Z",
+    "XLE": 59.49
   },
   "regime": "low_vol_uptrend",
   "signal_snapshot": {
-    "pc_ratio": 0.65,
-    "flow_sentiment": "BULLISH",
-    "top_flow_summary": "SPXW $1.2M P, SPXW $0.8M P, SPXW $1.8M P",
-    "vix": 16.64,
+    "pc_ratio": null,
+    "flow_sentiment": null,
+    "top_flow_summary": "none",
+    "vix": 16.59,
     "news_headlines": [
-      "Hartford Municipal Short Duration Fund Q1 2026 Commentary",
-      "Flowers Foods, Inc. (FLO) Q1 2026 Earnings Call Prepared Remarks Transcript",
-      "Reunert Limited (RNRTY) Q2 2026 Earnings Call Transcript"
+      "Tracking John Rogers' Ariel Investments Portfolio - Q1 2026 Update",
+      "Granite Ridge Resources, Inc. (GRNT) Shareholder/Analyst Call Prepared Remarks Transcript",
+      "Oceana Group Limited (OCGPF) Q2 2026 Earnings Call Transcript"
     ],
     "regime": "low_vol_uptrend"
   },
@@ -327,12 +268,12 @@
       "AI Infrastructure & Data Center Boom",
       "S&P 500 Rally & Tech Momentum"
     ],
-    "flow_trades": 10337,
-    "top_trades": 10,
-    "sentiment": "BULLISH",
-    "pc_ratio": 0.65,
+    "flow_trades": 0,
+    "top_trades": 0,
+    "sentiment": null,
+    "pc_ratio": null,
     "price_source": "Yahoo",
-    "feedback_patterns": 1,
-    "strike_clusters": true
+    "feedback_patterns": 3,
+    "strike_clusters": false
   }
 }
