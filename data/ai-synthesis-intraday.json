@@ -1,17 +1,17 @@
 {
   "calibration_notes": {
-    "pattern_acknowledgment": "Positive gamma pin with VIX contango consistently compresses intraday ranges and forces dealer mean-reversion hedging. Recent model outputs show a 7-day bullish divergence against longer-term neutral consensus, indicating short-term momentum without structural regime shift.",
-    "conviction_audit": "Two LightGBM models (14d/21d) align on neutral, while the 7d model leans bullish. Confidence calibrated to 60% for intraday/next-day, reflecting mixed model alignment and pinned volatility constraints.",
-    "target_bias_correction": "SPX targets anchored to $7,473.47 spot with call wall at $7,500 and put wall at $7,450. Upside/downside extensions are artificially suppressed by dealer hedging, requiring tighter target bands.",
-    "regime_adjustment": "Pinned regime dictates avoidance of breakout chasing. Strategies must favor range-bound execution, gamma-neutral positioning, and mean-reversion entries near the $7,450/$7,500 boundaries.",
-    "specific_changes": "Updated sweep data shows selective tech accumulation (AMD/TSLA) but broad market flow remains constrained by $403M positive GEX. CAG bear-deluded metric adds a slight contrarian filter to bullish flow signals."
+    "pattern_acknowledgment": "Pinned regime with positive GEX consistently compresses realized volatility and favors mean-reversion over directional breaks.",
+    "conviction_audit": "Two of three LightGBM models converge on neutral equilibrium, reducing directional conviction despite bullish flow skew.",
+    "target_bias_correction": "Upside targets capped at $7,500 call wall; downside support anchored at $7,450 put wall. Adjusted predictions to reflect compression.",
+    "regime_adjustment": "Positive gamma pinning dictates range-bound execution; avoid breakout chasing until GEX flip or volatility regime shift.",
+    "specific_changes": "Incorporated tech sweep accumulation into tickers_to_watch; adjusted SPX/QQQ ranges to $7,450-$7,500 and $610-$616 respectively."
   },
-  "calibration_summary": "Pinned gamma regime and mixed model alignment constrain directional conviction, favoring range-bound execution with a slight bullish tilt on the 7-day horizon.",
+  "calibration_summary": "Pinned gamma regime and mixed ML signals compress directional conviction, favoring range-bound execution between $7,450 and $7,500.",
   "intraday": {
     "signal": "NEUTRAL",
     "confidence": 60,
-    "summary": "Positive GEX ($403M) and VIX contango pin prices between $7,450 and $7,500, suppressing volatility and forcing dealer hedging to absorb directional flow. LightGBM models show mixed bias, while flow premiums indicate underlying demand that lacks catalysts to break the pin.",
-    "key_driver": "Positive gamma pin with VIX contango",
+    "summary": "Positive gamma and contango VIX pin spot to a compressed range between $7,450 and $7,500. Dealer hedging will absorb volatility, favoring mean-reversion over directional breaks.",
+    "key_driver": "Positive GEX pinning regime",
     "primary_driver": "flow",
     "predicted_prices": {
       "SPY": {
@@ -21,16 +21,16 @@
       },
       "QQQ": {
         "low": 610.0,
-        "mid": 613.39,
-        "high": 617.0
+        "mid": 613.0,
+        "high": 616.0
       }
     }
   },
   "next_day": {
     "signal": "NEUTRAL",
-    "confidence": 58,
-    "summary": "Overnight positioning remains anchored by dealer gamma hedging, limiting upside momentum despite bullish flow premiums. A break above $7,500 or below $7,450 would trigger a regime shift, but current pinned state favors consolidation with a slight bullish skew.",
-    "key_driver": "Gamma pin persistence",
+    "confidence": 55,
+    "summary": "Overnight positioning remains balanced with bullish flow skew offset by capped upside at the $7,500 call wall. Expect continued range-bound action unless a GEX flip triggers dealer gamma reversal.",
+    "key_driver": "Options wall positioning",
     "primary_driver": "flow",
     "predicted_prices": {
       "SPY": {
@@ -40,36 +40,36 @@
       },
       "QQQ": {
         "low": 609.0,
-        "mid": 613.39,
-        "high": 618.0
+        "mid": 613.0,
+        "high": 617.0
       }
     }
   },
   "long_term": {
-    "signal": "BULLISH",
-    "confidence": 65,
-    "summary": "The 7-day LightGBM model and bullish tech sector flow suggest underlying accumulation, though the pinned volatility regime will likely cap near-term upside. Structural gamma support provides a floor, favoring gradual appreciation over explosive moves.",
-    "key_driver": "7-day ML model and tech sector accumulation",
+    "signal": "NEUTRAL",
+    "confidence": 50,
+    "summary": "Medium-term models converge on neutral equilibrium as bullish flow sentiment faces structural resistance at key gamma walls. Trend continuation requires a decisive break above $7,500 or a volatility regime shift.",
+    "key_driver": "ML model convergence",
     "primary_driver": "ml_models",
     "predicted_prices": {
       "SPY": {
-        "low": 7420.0,
-        "mid": 7485.0,
+        "low": 7400.0,
+        "mid": 7473.47,
         "high": 7550.0
       },
       "QQQ": {
         "low": 605.0,
-        "mid": 615.0,
-        "high": 625.0
+        "mid": 613.0,
+        "high": 620.0
       }
     }
   },
-  "news_impact": "Absence of macro headlines reinforces the current pinned regime, allowing flow and gamma dynamics to dominate pricing. Without catalysts, dealer hedging will continue to suppress volatility and compress intraday ranges.",
-  "options_flow_impact": "Positive GEX ($403M net) and call premium dominance ($1.44B vs $936M) indicate dealer hedging will absorb volatility, creating a mean-reverting range. Sweep activity in tech shows selective risk-taking but lacks broad market conviction to shift the regime.",
+  "news_impact": "Absence of macro headlines leaves positioning entirely flow and gamma-driven. Market lacks directional catalysts, reinforcing reliance on dealer hedging mechanics and technical walls for intraday navigation.",
+  "options_flow_impact": "Positive GEX ($403M) and call premium dominance ($1.4B vs $0.9B) create a dampening effect on volatility. Sweep activity shows selective bullish positioning in tech names, but large $7,500/$7,550 call sells cap broader index upside.",
   "risks": [
-    "Break below $7,450 put wall triggers negative gamma flip and accelerated downside",
-    "Sudden VIX term structure inversion shifts regime to short gamma, expanding volatility",
-    "Lack of macro catalysts prolongs range-bound consolidation and erodes premium decay value"
+    "GEX flip below $7,450 triggering dealer short gamma acceleration",
+    "Unexpected volatility spike breaking contango structure",
+    "Lack of macro catalysts leaving market directionless and vulnerable to mean-reversion whipsaws"
   ],
   "benchmarks": {
     "SPY": {
@@ -83,29 +83,29 @@
   },
   "tickers_to_watch": [
     {
-      "ticker": "AMD",
+      "ticker": "TSLA",
       "intraday_bias": "BULLISH",
       "next_day_bias": "BULLISH",
-      "long_term_bias": "BULLISH",
-      "reason": "Strong call sweep activity at 400/500 strikes indicates institutional accumulation, supported by bullish tech sector flow.",
-      "predicted_prices": {
-        "current": 165.0,
-        "intraday_target": 168.5,
-        "next_day_target": 170.0,
-        "long_term_target": 175.0
-      }
-    },
-    {
-      "ticker": "TSLA",
-      "intraday_bias": "NEUTRAL",
-      "next_day_bias": "NEUTRAL",
-      "long_term_bias": "BULLISH",
-      "reason": "High sweep activity shows institutional positioning, but broad market pin limits directional move while tech flow supports longer-term upside.",
+      "long_term_bias": "NEUTRAL",
+      "reason": "Heavy sweep accumulation in $425/$427.5 calls suggests institutional positioning ahead of catalyst.",
       "predicted_prices": {
         "current": 245.0,
         "intraday_target": 248.0,
         "next_day_target": 250.0,
-        "long_term_target": 260.0
+        "long_term_target": 255.0
+      }
+    },
+    {
+      "ticker": "AMD",
+      "intraday_bias": "BULLISH",
+      "next_day_bias": "BULLISH",
+      "long_term_bias": "NEUTRAL",
+      "reason": "Dual sweep activity at $400/$500 strikes indicates targeted bullish positioning with defined risk parameters.",
+      "predicted_prices": {
+        "current": 165.0,
+        "intraday_target": 167.0,
+        "next_day_target": 169.0,
+        "long_term_target": 172.0
       }
     },
     {
@@ -113,65 +113,62 @@
       "intraday_bias": "BULLISH",
       "next_day_bias": "NEUTRAL",
       "long_term_bias": "NEUTRAL",
-      "reason": "Large call sweep suggests speculative positioning, but lacks sector confirmation and faces broader market gamma constraints.",
+      "reason": "Large $13,000 call sweep signals speculative upside positioning, though liquidity constraints limit broader impact.",
       "predicted_prices": {
         "current": 10.5,
-        "intraday_target": 11.0,
-        "next_day_target": 10.8,
-        "long_term_target": 11.2
+        "intraday_target": 10.8,
+        "next_day_target": 11.0,
+        "long_term_target": 11.5
       }
     }
   ],
   "trade_ideas": [
     {
-      "idea": "SPY range-bound iron condor capitalizing on pinned gamma and compressed volatility between put and call walls",
+      "idea": "Fade upside compression at call wall with SPY 7450/7500 iron condor to capture theta decay in pinned regime",
       "ticker": "SPY",
       "direction": "SHORT",
-      "entry": 7450.0,
-      "target": 7500.0,
-      "stop": 7435.0,
+      "entry": 7473.47,
+      "target": 7460.0,
+      "stop": 7510.0,
       "timeframe": "1-5d",
       "conviction": "MEDIUM",
       "risk_reward": "1:2"
     },
     {
-      "idea": "QQQ call spread targeting tech sector accumulation while respecting pinned regime boundaries",
-      "ticker": "QQQ",
+      "idea": "Capture sweep-driven momentum in AMD with defined risk bull call spread",
+      "ticker": "AMD",
       "direction": "LONG",
-      "entry": 610.0,
-      "target": 617.0,
-      "stop": 607.0,
+      "entry": 165.0,
+      "target": 170.0,
+      "stop": 162.0,
       "timeframe": "1-7d",
-      "conviction": "LOW",
+      "conviction": "MEDIUM",
       "risk_reward": "1:2"
     }
   ],
-  "notable_divergences": [
-    "LightGBM 7d bullish vs 14d/21d neutral models",
-    "Bullish flow sentiment vs bear-deluded CAG metric"
-  ],
+  "notable_divergences": [],
   "earnings_warnings": {},
   "magnitude_flags": [],
   "signal_attribution": {
     "primary_driver": "flow",
     "weights": {
-      "flow": 0.3,
-      "macro": 0.15,
+      "flow": 0.25,
+      "macro": 0.2,
       "technical": 0.15,
       "ml_models": 0.4
     },
     "weights_sum": 1.0,
-    "reasoning_chain": "Positive GEX and VIX contango dominate intraday pricing, forcing dealer hedging to compress volatility. LightGBM models provide secondary directional bias, with the 7-day model leaning bullish but longer-term models neutral. Flow premiums confirm underlying demand, but lack of headlines and pinned regime cap momentum, resulting in a neutral-to-bullish synthesis favoring range-bound execution."
+    "reasoning_chain": "Positive GEX and contango VIX pin the market, suppressing volatility and favoring mean reversion. LightGBM models show mixed signals (7d bullish, 14d/21d neutral), reducing directional conviction. Flow data shows bullish skew in tech sweeps but large call sells at $7,500 cap index upside. Combined, these factors point to a neutral, range-bound intraday environment with a slight bearish tilt from CAG awareness gap."
   },
-  "generated_at": "2026-05-25T16:10:01Z",
-  "next_update": "2026-05-25T17:10:01Z",
+  "generated_at": "2026-05-25T17:10:01Z",
+  "next_update": "2026-05-25T18:10:01Z",
   "prices_at_generation": {
     "SPY": 7473.47,
     "QQQ": 613.39
   },
   "regime": "pinned",
   "signal_snapshot": {
-    "pc_ratio": 0.65,
+    "pc_ratio": 0.669,
     "flow_sentiment": "BULLISH",
     "vix": 16.59,
     "regime": "pinned",
