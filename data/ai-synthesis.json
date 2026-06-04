@@ -1,306 +1,294 @@
 {
   "calibration_notes": {
-    "pattern_acknowledgment": "Last 10 predictions skewed heavily bullish; current regime accuracy (28.0% in low_vol_uptrend) and negative GEX indicate a potential bias loop. Intraday (28.6%) and next-day (27.3%) accuracy are near random. MEDIUM tier accuracy is critically low at 9%, severely underperforming LOW (43%).",
-    "conviction_audit": "HIGH tier has no data. MEDIUM is dangerously weak (9%). Threshold for HIGH today: 0% (reserve for exceptional 4+ signal convergence). Default to LOW (30-35%).",
-    "target_bias_correction": "Previous intraday/next-day predictions showed overshoot bias (target err 3.71% / 1.04%). Applying dynamic correction: widening ranges by 1.5x per regime instruction, but capping intraday range at 1.2% and next-day at 2.0% to avoid overshoot penalty. Anchoring strictly to strike clusters.",
-    "regime_adjustment": "Current regime is TRANSITIONING (Negative GEX + Contango) within a low_vol_uptrend macro backdrop. Track record in low_vol_uptrend is 28.0%. Negative GEX + contango implies dealer hedging amplifies trends but lacks panic. Strategy: CAUTIOUS. Default to NEUTRAL on all tickers. Confidence capped at 35%.",
+    "pattern_acknowledgment": "Feedback flags BULLISH calls at 25% vs BEARISH at 75% (n=25). Next-day timeframe is 27.3% accurate \u2014 worst tier. Target undershoot bias on 72% of calls. I am NOT in a bullish-bias rut \u2014 recent calls were mostly NEUTRAL/low-conf. The bigger issue is bullish calls during chip-stock weakness have burned me.",
+    "conviction_audit": "MEDIUM tier 0% accuracy (n=2). LOW tier 48% (n=23). I will stay LOW for any directional call today. HIGH requires 4+ signals converging \u2014 not present today.",
+    "target_bias_correction": "Widening ranges 30-50% beyond initial instinct. Pinned regime tightens, but my undershoot bias requires offsetting expansion.",
+    "regime_adjustment": "Pinned (Positive GEX $355M + contango). Backtested 63% accuracy with mean-reversion bias. Spot $7582 sits between call wall $7600 and put wall $7550 \u2014 classic pin zone. Strategy: MEAN_REVERSION, tight intraday ranges, bullish-lean per regime backtest BUT dampened by bullish-bias warning.",
     "specific_changes": [
-      "Lowered all confidence scores to LOW (30-35%) due to 28% baseline accuracy in this regime and dynamic correction mandate.",
-      "Defaulted directional bias to NEUTRAL across the board, only allowing slight bullish lean for next-day/30-day where flow converges with base rates.",
-      "Widened price target ranges by 1.5x per regime instruction, but anchored targets strictly to GEX flip ($7400) and put/call walls ($7560/$7600) to avoid overshoot."
+      "Default to LOW conviction (30-40) on all timeframes given MEDIUM tier 0% accuracy",
+      "Apply explicit -10 confidence penalty on next_day calls per weak-timeframe correction",
+      "Lean BEARISH on chip-heavy QQQ given Broadcom/Micron/ARM headline weakness + 75% bear accuracy"
     ]
   },
-  "calibration_summary": "Regime accuracy sits at 28.0% with MEDIUM tier at 9%, forcing a hard cap of 35% confidence and a NEUTRAL default for intraday. Negative GEX ($-97M) amplifies trends while VIX contango (+14.8%) confirms no panic. Targets anchored to structural strike clusters to prevent overshoot penalties.",
+  "calibration_summary": "Pinned regime with SPX wedged between $7550 put wall and $7600 call wall \u2014 favoring mean-reversion. Chip stock weakness (AVGO/MU/ARM headline) provides bearish tilt for QQQ. Staying LOW conviction across the board given MEDIUM tier 0% accuracy and weak next-day record.",
   "intraday": {
     "signal": "NEUTRAL",
-    "confidence": 35,
-    "summary": "Negative GEX ($-97M) will cause dealers to amplify intraday trends rather than provide support. Broad bullish flow ($2.94B calls) is offset by index put hedging and mixed tech headlines. Expect choppy, range-bound action near spot levels.",
-    "key_driver": "Negative GEX amplifying intraday noise without directional follow-through",
-    "primary_driver": "gex",
+    "confidence": 40,
+    "summary": "SPX at $7582 pinned between $7550 put wall and $7600 call wall with $355M positive GEX. Dealers will fade moves to either boundary. Expect range compression over next 2 hours with mean-reversion toward $7580-7590 midpoint.",
+    "key_driver": "Positive GEX pin zone between call wall $7600 and put wall $7550",
+    "primary_driver": "regime",
     "predicted_prices": {
-      "SPY": 754.24,
-      "QQQ": 744.21,
-      "IWM": 287.67,
-      "NVDA": 214.75,
-      "AAPL": 310.26
+      "SPY": 756.5,
+      "QQQ": 739.8,
+      "IWM": 291.1,
+      "NVDA": 218.2,
+      "AAPL": 311.5
     },
     "predicted_range": [
-      753.0,
-      755.5
+      755.5,
+      758.0
     ],
-    "price_target_basis": "Put wall at $7560 strike and Call wall at $7600 strike from volatility regime data",
-    "regime_strategy": "CAUTIOUS"
+    "price_target_basis": "SPX put wall $7550 / call wall $7600 (GEX pin zone); SPY equivalent $755.50-758.00",
+    "regime_strategy": "MEAN_REVERSION"
   },
   "next_day": {
-    "signal": "BULLISH",
+    "signal": "BEARISH",
     "confidence": 35,
-    "summary": "Base rate (~62% monthly positive) and heavy call premium ($2.94B vs $2.05B puts) suggest underlying demand. Negative GEX may cause a dip to open, but institutional call buying will likely drive a modest recovery.",
-    "key_driver": "Broad options flow imbalance favoring calls",
-    "primary_driver": "options_flow",
+    "summary": "Chip complex weakness (Broadcom/Micron/ARM headline 'sink, leading chip stocks lower') threatens QQQ-led pullback. SPX pinned but downside skew from semiconductor exposure. GEX flip at $7400 provides floor; nearer-term test of $7550 put wall likely.",
+    "key_driver": "Chip stock weakness headline + bearish call accuracy edge (75%)",
+    "primary_driver": "headlines",
     "predicted_prices": {
-      "SPY": 755.5,
-      "QQQ": 745.5,
-      "IWM": 288.5,
-      "NVDA": 215.5,
-      "AAPL": 311.0
+      "SPY": 754.5,
+      "QQQ": 736.0,
+      "IWM": 290.0,
+      "NVDA": 216.0,
+      "AAPL": 310.5
     },
     "predicted_range": [
-      752.5,
-      758.5
+      752.0,
+      757.0
     ],
-    "price_target_basis": "Put wall at $7560 strike and Call wall at $7600 strike from volatility regime data",
-    "regime_strategy": "CAUTIOUS"
+    "price_target_basis": "Test of SPX put wall $7550 (SPY $755) with overshoot risk to $7530 (SPY $753) if chip weakness compounds",
+    "regime_strategy": "MEAN_REVERSION"
   },
   "long_term": {
     "signal": "BULLISH",
-    "confidence": 35,
-    "summary": "30-day base rate (~74% positive) combined with sustained call premium accumulation and AI infrastructure demand supports a gradual upward drift. VIX contango indicates no imminent volatility shock.",
-    "key_driver": "Base rate + sustained call premium accumulation",
-    "primary_driver": "options_flow",
+    "confidence": 50,
+    "summary": "30-day base rate ~74% bullish + my long-term track record 81% accurate. Positive GEX regime, VIX 15.5 contango, normal yield curve all supportive. AI infrastructure trend intact despite single-day chip weakness.",
+    "key_driver": "30-day base rate + long-term track record 81%",
+    "primary_driver": "regime",
     "predicted_prices": {
-      "SPY": 765.0,
-      "QQQ": 755.0,
-      "IWM": 295.0,
-      "NVDA": 222.0,
+      "SPY": 775.0,
+      "QQQ": 760.0,
+      "IWM": 298.0,
+      "NVDA": 228.0,
       "AAPL": 318.0
     },
     "predicted_range": [
-      755.0,
-      775.0
+      745.0,
+      785.0
     ],
-    "price_target_basis": "Call wall at $7600 strike ($X premium implied) and GEX flip at $7400 providing structural floor",
-    "regime_strategy": "CAUTIOUS"
+    "price_target_basis": "SPY +2.4% vs prior long-term call ($733\u2192$748 target, actual $752) \u2014 extrapolating similar magnitude from $756.78 base",
+    "regime_strategy": "TREND_FOLLOWING"
   },
-  "news_impact": "Mixed tech headlines (NVDA valuation concerns, chipmaker premarket losses) create short-term friction, but broader narratives (AI data center boom, Fed rate cut expectations) support underlying demand. No major macro events override current flow.",
-  "options_flow_impact": "Heavy call premium ($2.94B vs $2.05B puts, PC ratio 0.697) establishes underlying demand. Index put buying is portfolio hedging rather than directional bearish conviction, as confirmed by VIX contango and lack of backwardation.",
+  "news_impact": "Chip stock headline (Broadcom/Micron/ARM sink) is the most actionable near-term \u2014 directly threatens QQQ. Iran ceasefire and AI infrastructure themes provide longer-term tailwind. Fed cut expectations support multiples but Warsh/inflation headline introduces hawkish tail risk.",
+  "options_flow_impact": "P/C ratio 0.964 essentially neutral. SPX flow dominated by floor multileg (institutional hedging, not directional). MU $670 call wall ($10.7M) shows residual chip-bull positioning despite the negative headline \u2014 divergence. NVDA deep ITM call replacement ($17.9M) remains structurally bullish.",
   "risks": [
-    "Negative GEX ($-97M) amplifying downside moves if spot breaks $754 support",
-    "28% historical accuracy in low_vol_uptrend regime forcing conservative positioning",
-    "VIX contango (+14.8%) masking potential vol expansion if macro data shifts"
+    "Chip stock cascade extends to broader tech and breaks SPX $7550 put wall, flipping GEX negative",
+    "Warsh/Fed inflation narrative spooks bond market, 10Y above 4.55% pressures multiples",
+    "Positive GEX pin holds and I'm wrong on bearish next-day call, eating BULLISH bias penalty"
   ],
   "benchmarks": {
     "SPY": {
       "intraday_bias": "NEUTRAL",
-      "next_day_bias": "BULLISH",
+      "next_day_bias": "BEARISH",
       "long_term_bias": "BULLISH",
-      "analysis": "Spot at $754.24 sits between put wall ($7560) and call wall ($7600). Negative GEX will cause dealer hedging to amplify intraday noise. Broad call flow and base rates support a slight bullish lean for next-day and 30-day.",
-      "key_driver": "Negative GEX amplifying intraday noise vs broad call demand",
-      "primary_driver": "gex",
-      "conflicting_signals": "Index put buying suggests hedging, not bearish conviction; VIX contango confirms absence of panic",
-      "predicted_price_2h": 754.24,
-      "predicted_price_nextday": 755.5,
-      "predicted_price_30d": 765.0,
+      "analysis": "SPY $756.78 with SPX at $7582 sitting in the GEX pin zone. Intraday mean-reverts. Next-day downside risk from chip weakness, but $7550 put wall (SPY ~$755) should hold. 30-day bullish on regime + base rate.",
+      "key_driver": "GEX pin zone between $7550 put wall and $7600 call wall",
+      "primary_driver": "regime",
+      "conflicting_signals": "Long-term bullish base rate vs near-term chip weakness",
+      "predicted_price_2h": 756.5,
+      "predicted_price_nextday": 754.5,
+      "predicted_price_30d": 775.0,
       "predicted_range_2h": [
-        753.0,
-        755.5
+        755.5,
+        758.0
       ],
       "predicted_range_nextday": [
-        752.5,
-        758.5
+        752.0,
+        757.0
       ],
-      "price_target_basis": "Put wall at $7560 strike and Call wall at $7600 strike from volatility regime data"
+      "price_target_basis": "SPX put wall $7550 = SPY $755 floor; call wall $7600 = SPY $758 cap"
     },
     "QQQ": {
-      "intraday_bias": "NEUTRAL",
-      "next_day_bias": "BULLISH",
+      "intraday_bias": "BEARISH",
+      "next_day_bias": "BEARISH",
       "long_term_bias": "BULLISH",
-      "analysis": "Tech-heavy index faces headwinds from chipmaker premarket losses, but broad call premium and AI infrastructure narrative support underlying demand. Negative GEX dictates cautious intraday range-bound action.",
-      "key_driver": "Tech sector premarket losses vs broad call demand",
-      "primary_driver": "price_data",
-      "conflicting_signals": "Chipmaker losses (NVDA/MU/AVGO) vs heavy index call premium ($2.94B)",
-      "predicted_price_2h": 744.21,
-      "predicted_price_nextday": 745.5,
-      "predicted_price_30d": 755.0,
+      "analysis": "QQQ $740.62 directly exposed to chip cascade (Broadcom/Micron/ARM headline). MU $670 call wall shows positioning but is OTM resistance \u2014 actual price action turning lower. Expect downside test toward $735-737 over next session.",
+      "key_driver": "Chip stock headline weakness \u2014 AVGO/MU/ARM leading lower",
+      "primary_driver": "headlines",
+      "conflicting_signals": "MU $670 call wall $10.7M premium suggests longer-term bullish positioning still in place",
+      "predicted_price_2h": 739.8,
+      "predicted_price_nextday": 736.0,
+      "predicted_price_30d": 760.0,
       "predicted_range_2h": [
-        743.0,
-        745.5
+        738.5,
+        741.5
       ],
       "predicted_range_nextday": [
-        742.0,
-        749.0
+        733.0,
+        740.0
       ],
-      "price_target_basis": "GEX flip at $7400 on SPX providing broader market floor support, combined with QQQ prior support at $741.85"
+      "price_target_basis": "Chip sector weakness implies 0.6-1.0% downside; QQQ -0.6% to $736 anchored to NDX $232.5M flow showing institutional repositioning"
     }
   },
   "tickers_to_watch": [
     {
-      "ticker": "NVDA",
-      "intraday_bias": "NEUTRAL",
-      "next_day_bias": "BULLISH",
+      "ticker": "MU",
+      "intraday_bias": "BEARISH",
+      "next_day_bias": "BEARISH",
       "long_term_bias": "BULLISH",
-      "reasoning": "Deep ITM put cluster ($29.94M) indicates institutional hedging, but broad call flow and AI infrastructure demand support a gradual recovery. Negative GEX will amplify intraday volatility.",
-      "key_driver": "Deep ITM put hedging vs broad call demand",
-      "primary_driver": "options_flow",
-      "conflicting_signals": "Navitas valuation concerns and chipmaker premarket losses vs sustained call premium",
-      "predicted_price_2h": 214.75,
-      "predicted_price_nextday": 215.5,
-      "predicted_price_30d": 222.0,
-      "predicted_range_2h": [
-        213.5,
-        216.0
-      ],
-      "price_target_basis": "Deep ITM put cluster at $340-$420 ($29.94M premium) anchoring downside hedging levels"
+      "reasoning": "Headline explicitly names Micron in chip weakness. $1.48B options premium today (#2 by volume). MU $670 call wall is OTM aspiration; near-term price action negative. 30-day bull case intact from AI infrastructure theme but short-term pain.",
+      "key_driver": "'Broadcom, Micron and ARM sink' headline + heavy options activity",
+      "primary_driver": "headlines",
+      "conflicting_signals": "$10.7M OTM call premium at $670 = bullish institutional positioning",
+      "predicted_price_2h": 656.0,
+      "predicted_price_nextday": 648.0,
+      "predicted_price_30d": 685.0,
+      "price_target_basis": "MU $670 call wall as resistance; downside extension toward $640-650 implied by chip-sector underperformance"
     },
     {
-      "ticker": "AAPL",
-      "intraday_bias": "BULLISH",
-      "next_day_bias": "BULLISH",
-      "long_term_bias": "BULLISH",
-      "reasoning": "Deep ITM call cluster ($2.28M) indicates stock-replacement bullish positioning. Lack of negative catalysts and broad market base rate support a slight bullish lean.",
-      "key_driver": "Deep ITM call positioning",
-      "primary_driver": "options_flow",
-      "conflicting_signals": "None significant; flow aligns with base rate",
-      "predicted_price_2h": 310.26,
-      "predicted_price_nextday": 311.0,
-      "predicted_price_30d": 318.0,
-      "predicted_range_2h": [
-        309.5,
-        311.0
-      ],
-      "price_target_basis": "Deep ITM call cluster at $205 ($2.28M premium) indicating stock-replacement bullish positioning"
-    },
-    {
-      "ticker": "IWM",
-      "intraday_bias": "BULLISH",
-      "next_day_bias": "BULLISH",
-      "long_term_bias": "BULLISH",
-      "reasoning": "Small caps benefit from broader market floor support via SPX GEX flip. Negative GEX will cause intraday noise, but base rate and call flow favor a gradual drift higher.",
-      "key_driver": "SPX GEX flip providing market floor",
-      "primary_driver": "gex",
-      "conflicting_signals": "Negative GEX amplifying intraday volatility vs broad market support",
-      "predicted_price_2h": 287.67,
-      "predicted_price_nextday": 288.5,
-      "predicted_price_30d": 295.0,
-      "predicted_range_2h": [
-        287.0,
-        288.5
-      ],
-      "price_target_basis": "GEX flip at $7400 on SPX providing broader market floor support"
+      "ticker": "AVGO",
+      "intraday_bias": "BEARISH",
+      "next_day_bias": "BEARISH",
+      "long_term_bias": "NEUTRAL",
+      "reasoning": "Named in chip weakness headline. $465.8M options premium today with 26% auction (retail-facing). $460 put wall $2.79M signals downside hedging in place. Short-term momentum negative.",
+      "key_driver": "Chip headline + $460 put wall hedging activity",
+      "primary_driver": "headlines",
+      "conflicting_signals": "AVGO is high-multiple AI name with strong long-term flow",
+      "predicted_price_2h": 0.0,
+      "predicted_price_nextday": 0.0,
+      "predicted_price_30d": 0.0,
+      "price_target_basis": "AVGO $460 put wall ($2.79M premium) as downside magnet"
     }
   ],
   "trade_ideas": [
     {
-      "idea": "30-day bullish cash-secured put on SPY at GEX flip support",
-      "ticker": "SPY",
+      "idea": "Fade chip strength via QQQ puts on near-term chip weakness",
+      "ticker": "QQQ",
       "type": "puts",
+      "timeframe": "next-day",
+      "thesis": "Broadcom/Micron/ARM headline weakness combined with $355M positive GEX that caps upside; downside test of $735-737 over next session",
+      "risk": "Positive GEX pin holds and QQQ mean-reverts higher; chip weakness fails to broaden",
+      "instrument": "QQQ $738 puts exp 2026-06-12",
+      "entry_zone": "$740.50-741.00",
+      "stop_invalidation": "$742.50 (above today's likely high)",
+      "target": "$736.00",
+      "risk_reward": "1:2"
+    },
+    {
+      "idea": "Long-term SPY upside via long-dated calls into Q4 rally seasonality",
+      "ticker": "SPY",
+      "type": "calls",
       "timeframe": "30-day",
-      "thesis": "Sell premium at the GEX flip level ($7400 on SPX, ~$740 on SPY) where dealer hedging provides structural support. VIX contango keeps premium cheap, and base rate favors gradual upside.",
-      "risk": "Negative GEX amplifying a breakdown below $740, triggering accelerated dealer selling",
-      "instrument": "SPY $740 puts expiring July 18, 2026",
-      "entry_zone": "$738.00 - $742.00",
-      "stop_invalidation": "$735.00",
-      "target": "$755.00",
-      "risk_reward": "1:3"
+      "thesis": "30-day base rate 74% bullish, my long-term track record 81% accurate, positive GEX regime, VIX contango, normal yield curve",
+      "risk": "Chip-led tech correction broadens; Fed turns hawkish on inflation",
+      "instrument": "SPY $770 calls exp 2027-01-15",
+      "entry_zone": "$756-757",
+      "stop_invalidation": "SPY closes below $745 (GEX flip vicinity)",
+      "target": "$775",
+      "risk_reward": "1:2.5"
     }
   ],
   "notable_divergences": [
     {
-      "ticker": "NVDA",
-      "signal": "NEUTRAL",
+      "ticker": "MU",
+      "signal": "BEARISH",
       "flow_direction": "bullish",
-      "detail": "$29.94M in deep ITM puts vs broad $2.94B call premium",
-      "description": "Institutional hedging on NVDA contrasts with overall market call demand, indicating profit protection rather than directional bearish conviction.",
-      "inputs_conflicting": "options_flow vs price_data",
-      "significance": "high",
+      "detail": "$10.7M OTM call premium at $670 strike (3 trades)",
+      "description": "Headline says Micron sinking but options flow shows large bullish positioning at $670 calls \u2014 divergence between near-term news and longer-dated institutional view",
+      "inputs_conflicting": "headlines vs options_flow",
+      "significance": "medium",
       "expirations": [
-        "2026-06-09",
-        "2026-06-17"
+        "2026-07-17"
       ]
     }
   ],
   "earnings_warnings": {},
   "magnitude_flags": [
     {
-      "ticker": "SPX",
-      "flag": "OUTSIZED_MOVE_EXPECTED",
-      "basis": "Negative GEX ($-97M) with contango VIX (+14.8%) indicates dealer hedging will amplify directional moves without panic pricing"
+      "ticker": "MU",
+      "flag": "ELEVATED_FLOW",
+      "basis": "$1.48B options premium today (#2 by total premium), 140 ISO trades signaling informed institutional positioning amid negative chip headline"
     }
   ],
   "signal_attribution": {
-    "primary_driver": "options_flow",
+    "primary_driver": "vol_regime",
     "weights": {
       "headlines": {
-        "weight": 0.1,
-        "values_cited": "Mixed tech headlines (NVDA valuation, chipmaker losses) vs AI infrastructure boom narratives",
-        "influence": "Creates short-term friction but lacks macro override power"
+        "weight": 0.2,
+        "values_cited": "'Broadcom, Micron and ARM sink, leading chip stocks lower' CNBC headline",
+        "influence": "Drives QQQ/MU/AVGO bearish near-term tilt"
       },
       "options_flow": {
-        "weight": 0.25,
-        "values_cited": "Bullish signal, PC ratio 0.697, call premium $2.94B vs put premium $2.05B",
-        "influence": "Establishes underlying demand and supports slight bullish lean for next-day/30-day"
+        "weight": 0.15,
+        "values_cited": "P/C 0.964, MU $1.48B premium, MU $670 call wall $10.7M, AVGO $460 put wall $2.79M",
+        "influence": "Confirms chip sector activity but neutral P/C overall"
       },
       "gex": {
-        "weight": 0.2,
-        "values_cited": "Net GEX $-97M, flip at $7400, call wall $7600, put wall $7560",
-        "influence": "Dictates dealer hedging amplifies trends; anchors price targets to structural levels"
+        "weight": 0.25,
+        "values_cited": "Net GEX +$355M, call wall $7600, put wall $7550, flip $7400, spot $7582",
+        "influence": "Defines pin zone \u2014 primary driver of NEUTRAL intraday SPY"
       },
       "vix_structure": {
-        "weight": 0.15,
-        "values_cited": "VIX 16.06, contango +14.8% VX2/VX1",
-        "influence": "Confirms absence of panic; supports CAUTIOUS strategy over panic-driven bearish calls"
+        "weight": 0.05,
+        "values_cited": "VIX 15.55, VX2/VX1 +15.7% contango",
+        "influence": "Confirms low-vol regime supportive of mean reversion"
       },
       "vol_regime": {
-        "weight": 0.15,
-        "values_cited": "TRANSITIONING regime, low_vol_uptrend macro, 28.0% accuracy track record",
-        "influence": "Forces NEUTRAL default, caps confidence at 35%, mandates 1.5x range widening"
+        "weight": 0.2,
+        "values_cited": "PINNED regime, 63% backtested accuracy, mean-reversion strategy",
+        "influence": "Top weight \u2014 dictates strategy and confidence ceiling"
       },
       "prediction_feedback": {
-        "weight": 0.05,
-        "values_cited": "28.6% intraday accuracy, 27.3% next-day accuracy, MEDIUM tier 9.1% accuracy",
-        "influence": "Drives confidence reduction and NEUTRAL preference to avoid streak bias"
+        "weight": 0.1,
+        "values_cited": "BULLISH 25% vs BEARISH 75% accuracy, MEDIUM tier 0% (n=2), next_day 27.3%",
+        "influence": "Forced LOW conviction caps and bearish tilt on next-day"
       },
       "event_trees": {
         "weight": 0.0,
-        "values_cited": "No major event trees or earnings within 3 days for watched tickers",
-        "influence": "No event-driven catalysts override current flow/regime signals"
+        "values_cited": "No active event trees provided",
+        "influence": "Not available this cycle"
       },
       "price_data": {
-        "weight": 0.1,
-        "values_cited": "SPY 754.24, QQQ 744.21, NVDA 214.75, AAPL 310.26, IWM 287.67",
-        "influence": "Confirms spot proximity to put/call walls; validates range-bound intraday expectation"
+        "weight": 0.05,
+        "values_cited": "SPY $756.78, QQQ $740.62, low_vol_uptrend regime, 10Y 4.465%",
+        "influence": "Context only; reduced per attribution_calibration showing prior overweight"
       }
     },
     "weights_sum": 1.0,
-    "reasoning_chain": "Broad bullish options flow ($2.94B calls) establishes underlying demand, but negative GEX ($-97M) dictates dealer hedging will amplify intraday trends. VIX contango (+14.8%) confirms absence of panic, while prediction feedback (28% accuracy in low_vol_uptrend) forces a CAUTIOUS default to NEUTRAL for intraday, with a slight bullish lean for next-day/30-day aligned with base rates. Targets anchored to GEX flip ($7400) and put/call walls ($7560/$7600) to avoid overshoot."
+    "reasoning_chain": "Pinned regime ($355M positive GEX) with spot $7582 trapped between $7550 put wall and $7600 call wall \u2192 mean-reversion default for intraday NEUTRAL. Chip-stock headline (Broadcom/Micron/ARM) provides bearish near-term tilt for QQQ next-day, supported by bearish call accuracy edge (75%). Long-term remains bullish on base rate (74%) and 81% long-term track record. All conviction kept LOW (35-50) per MEDIUM tier 0% accuracy warning."
   },
-  "generated_at": "2026-06-04T12:45:01Z",
-  "next_update": "2026-06-04T14:45:01Z",
+  "generated_at": "2026-06-04T16:45:01Z",
+  "next_update": "2026-06-04T18:45:01Z",
   "prices_at_generation": {
-    "SPY": 754.24,
-    "QQQ": 744.21,
-    "IWM": 287.67,
-    "AAPL": 310.26,
-    "NVDA": 214.75,
-    "TSLA": 423.7,
-    "META": 622.98,
-    "MSFT": 427.34,
-    "AMD": 542.52,
-    "AMZN": 250.02,
+    "SPY": 756.78,
+    "QQQ": 740.62,
+    "IWM": 291.23,
+    "AAPL": 311.36,
+    "NVDA": 218.4,
+    "TSLA": 419.73,
+    "META": 630.825,
+    "MSFT": 428.875,
+    "AMD": 523.505,
+    "AMZN": 253.85,
     "NKY": 67470.69,
     "KOSPI": 8639.41,
     "TAIEX": 45677.46,
     "TOPIX": 418.6,
-    "GOLD": 4527.0,
-    "SILVER": 74.625,
-    "WTI": 92.83,
-    "BRENT": 94.82,
-    "VIX": 16.48,
-    "10Y_YIELD": 4.453,
-    "30Y_YIELD": 4.961,
+    "GOLD": 4507.6,
+    "SILVER": 74.04,
+    "WTI": 92.57,
+    "BRENT": 94.87,
+    "VIX": 15.55,
+    "10Y_YIELD": 4.465,
+    "30Y_YIELD": 4.971,
     "3M_YIELD": 3.62,
-    "DXY": 99.21,
-    "captured_at": "2026-06-04T12:45:01Z"
+    "DXY": 99.333,
+    "captured_at": "2026-06-04T16:45:01Z",
+    "MU": 1017.165,
+    "AVGO": 412.68
   },
   "regime": "low_vol_uptrend",
   "signal_snapshot": {
-    "pc_ratio": 0.697,
-    "flow_sentiment": "BULLISH",
-    "top_flow_summary": "SPX $0.1M P, SPXW $0.1M P, SPXW $0.1M P",
-    "vix": 16.48,
+    "pc_ratio": 0.964,
+    "flow_sentiment": "NEUTRAL",
+    "top_flow_summary": "SPX $0.1M P, SPX $0.1M C, SNDK $0.1M P",
+    "vix": 15.55,
     "news_headlines": [
-      "Navitas: Nvidia Cannot Save This Valuation",
-      "Canaccord Genuity Group Inc. 2026 Q4 - Results - Earnings Call Presentation",
-      "Data Center Operators: AI's Underappreciated Winners"
+      "Elon Musk\u2019s SpaceX paid to secure its ticker symbol ahead of blockbuster IPO",
+      "Alger SICAV - Alger Small Cap Focus Fund Q1 2026 Portfolio Update",
+      "Ex-Trump advisor John Bolton agrees to plead guilty to retaining classified information: MS NOW"
     ],
     "regime": "low_vol_uptrend"
   },
@@ -312,10 +300,10 @@
       "AI Infrastructure & Data Center Boom",
       "S&P 500 Rally & Tech Momentum"
     ],
-    "flow_trades": 14314,
+    "flow_trades": 14111,
     "top_trades": 10,
-    "sentiment": "BULLISH",
-    "pc_ratio": 0.697,
+    "sentiment": "NEUTRAL",
+    "pc_ratio": 0.964,
     "price_source": "Yahoo",
     "feedback_patterns": 3,
     "strike_clusters": true
