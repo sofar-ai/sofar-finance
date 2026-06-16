@@ -1,203 +1,192 @@
 {
   "calibration_notes": {
-    "pattern_acknowledgment": "Feedback shows 12.5% accuracy in low_vol_uptrend regime (n=8) \u2014 current regime. Intraday accuracy is only 47.4% trailing vs 56.7% next-day and 75.5% 30-day. Recent intraday calls were bullish but markets drifted flat/down \u2014 I have been overshooting targets and overconfident in mean-reversion bounces.",
-    "conviction_audit": "MEDIUM tier 75% accuracy (n=12), LOW tier 69%. No HIGH tier data. Threshold for HIGH today: not used \u2014 requires 4+ signal convergence which is not present. Default to LOW for intraday (current regime weakness) and MEDIUM for next-day/30-day.",
-    "target_bias_correction": "Next-day shows undershoot bias (15.49% target err but 100% directional). Intraday shows 12.43% target err balanced. Correction: tighten intraday ranges to \u22640.4% (PINNED regime), widen next-day slightly toward upside.",
-    "regime_adjustment": "PINNED regime backtested at 63% accuracy with bullish bias preferred (63.4%). However, my personal low_vol_uptrend track record is 12.5% \u2014 conflict. Resolution: follow regime playbook (mean reversion, bullish lean) but cap intraday confidence at LOW (35-45). Spot $7546 is essentially AT the call wall $7550 \u2014 expect compression/slight rejection.",
+    "pattern_acknowledgment": "Feedback loop explicitly flags REGIME_WEAKNESS in 'low_vol_uptrend' with 12.5% accuracy (n=8). I am downgrading confidence and tightening targets to account for this structural failure in the current regime.",
+    "conviction_audit": "HIGH tier outperforming? No data for HIGH tier. MEDIUM tier at 75% accuracy (n=12). Threshold for HIGH today: 0% (withheld due to regime weakness). Using MEDIUM (51-65) max.",
+    "target_bias_correction": "Previous intraday predictions showed undershoot bias (target err 12.43%). I am widening the lower bound of predicted ranges by 0.1% and capping intraday targets at 0.5% to prevent overshoot in this pinned regime.",
+    "regime_adjustment": "Current regime is PINNED (Positive GEX + Contango). Backtested accuracy for PINNED is 63.0% with Sharpe 5.58. However, feedback loop flags 'low_vol_uptrend' as having 12.5% accuracy. I will apply PINNED rules (Mean Reversion, Bullish bias, Tight targets <=0.5% intraday) but cap confidence at MEDIUM (55%) to respect the regime weakness warning.",
     "specific_changes": [
-      "Cap intraday confidence at 42 given personal regime weakness",
-      "Tighten intraday SPY target to within 0.3% of spot (PINNED compression)",
-      "Lean BULLISH on next-day/30d where my accuracy is strong (100%/75.5%)"
+      "Capped confidence at 55% despite bullish flow convergence due to 12.5% historical accuracy in low_vol_uptrend.",
+      "Tightened intraday price targets to <=0.5% range to align with PINNED regime compression expectations.",
+      "Lowered options flow weight from 0.30 to 0.20, increasing vol_regime weight to 0.25 to prioritize structural hedging over directional flow."
     ]
   },
-  "calibration_summary": "Personal low_vol_uptrend accuracy is poor (12.5%) despite regime backtest favoring bullish mean reversion. Compromise: low-confidence neutral-to-bullish intraday with very tight ranges, medium-confidence bullish next-day and 30-day where my track record is strong.",
+  "calibration_summary": "Regime weakness in low_vol_uptrend (12.5% acc) forces MEDIUM confidence and tight targets. PINNED structure ($727M GEX) supports mean-reversion bullish bias, but flow is tempered by historical regime failure. Targets capped at 0.5% intraday to avoid overshoot bias.",
   "intraday": {
     "signal": "BULLISH",
-    "confidence": 38,
-    "summary": "SPX spot $7546 sits ~$4 below call wall $7550 and ~$46 above put wall $7500. Positive GEX $727M with dealers compressing realized vol. P/C 0.528 and $5.7B call premium vs $3.0B put premium tilt mildly bullish but call wall caps upside. Expect drift between $7540-7560 with slight upward bias toward call wall pin.",
-    "key_driver": "Positive GEX pinning at call wall $7550",
-    "primary_driver": "regime",
+    "confidence": 55,
+    "summary": "Positive gamma ($727M) and contango (+14.7%) will suppress realized vol, forcing mean reversion toward the SPX call wall at $7550. SPY should drift 0.3-0.5% higher as dealers hedge short gamma near the $7550 strike.",
+    "key_driver": "Dealer hedging around SPX $7550 call wall",
+    "primary_driver": "gex",
     "predicted_prices": {
-      "SPY": 755.4,
-      "QQQ": 744.6,
-      "IWM": 294.95,
-      "NVDA": 212.8,
-      "AAPL": 296.8
+      "SPY": 756.5,
+      "QQQ": 746.0,
+      "IWM": 295.5,
+      "NVDA": 213.5,
+      "AAPL": 297.0
     },
     "predicted_range": [
-      753.8,
-      756.5
+      754.5,
+      757.0
     ],
-    "price_target_basis": "Call wall at SPX 7550 (positive GEX $727M) implies SPY ~$755.50 pin; put wall 7500 caps downside to SPY $750",
+    "price_target_basis": "OPTIONS FLOW STRIKE CLUSTER: SPX call wall at $7550 ($8.26M premium) acts as magnetic resistance for intraday drift.",
     "regime_strategy": "MEAN_REVERSION"
   },
   "next_day": {
     "signal": "BULLISH",
     "confidence": 60,
-    "summary": "Next-day timeframe has been my strongest (100% n=8). P/C 0.528, $5.7B call premium, deep ITM call stacking in AMD ($265M), AAPL ($109M), NVDA ($45M) signals institutional synthetic longs. PINNED regime with bullish lean (63.4% backtested). Expect drift higher toward SPX 7575-7600 call cluster.",
-    "key_driver": "Institutional deep-ITM call stacking + bullish P/C 0.528",
-    "primary_driver": "flow",
+    "summary": "Pinned regime favors slow drift upward off the put wall ($7500) toward the call wall ($7550). Positive GEX and falling VIX support a 0.5-1.0% daily gain.",
+    "key_driver": "Positive GEX structural support",
+    "primary_driver": "gex",
     "predicted_prices": {
       "SPY": 758.0,
       "QQQ": 747.5,
-      "IWM": 296.5,
-      "NVDA": 214.5,
-      "AAPL": 298.5
+      "IWM": 296.2,
+      "NVDA": 214.2,
+      "AAPL": 297.8
     },
     "predicted_range": [
-      753.0,
-      761.0
+      756.0,
+      760.0
     ],
-    "price_target_basis": "SPXW $7575 call buy ($71.6k premium DTE 1) anchors next-day target; translates to SPY ~$758",
+    "price_target_basis": "OPTIONS FLOW STRIKE CLUSTER: SPX call wall at $7550 ($8.26M premium) + prior support at $7500 creates a 0.7% mean-reversion target.",
     "regime_strategy": "MEAN_REVERSION"
   },
   "long_term": {
     "signal": "BULLISH",
     "confidence": 65,
-    "summary": "30-day timeframe accuracy 75.5%. Yield curve normal (10Y-2Y +0.85%), Fed rate cut expectations, AI infrastructure boom trending, VIX 16.2 contango. Deep ITM call positioning across mega-caps is structural bullish signal. Base rate for 30-day positive ~74%.",
-    "key_driver": "Macro tailwinds (Fed cuts, AI capex) + structural long positioning",
-    "primary_driver": "regime",
+    "summary": "30-day outlook remains bullish as positive GEX and contango suppress vol expansion. Fed rate cut expectations and AI infrastructure flows provide fundamental tailwinds.",
+    "key_driver": "Macro liquidity + structural gamma support",
+    "primary_driver": "vol_regime",
     "predicted_prices": {
-      "SPY": 775.0,
-      "QQQ": 765.0,
-      "IWM": 305.0,
+      "SPY": 770.0,
+      "QQQ": 758.0,
+      "IWM": 302.0,
       "NVDA": 225.0,
       "AAPL": 308.0
     },
     "predicted_range": [
-      740.0,
-      790.0
+      760.0,
+      780.0
     ],
-    "price_target_basis": "30-day base rate +2.5-3% in low-vol uptrend + AVGO/MU call walls extending OTM imply continued upside to SPY $775",
-    "regime_strategy": "TREND_FOLLOWING"
+    "price_target_basis": "HISTORICAL REGIME ANALOG: PINNED regime median 30-day return is +1.8% with 63.0% accuracy; adjusted for current $727M GEX floor.",
+    "regime_strategy": "MEAN_REVERSION"
   },
-  "news_impact": "Headlines are benign \u2014 fund commentaries, individual earnings, retirement planning. No macro shock. Trending topics (Iran ceasefire, AI boom, Fed cuts, S&P rally momentum) are supportive of risk-on. No catalyst for breakdown.",
-  "options_flow_impact": "P/C 0.528 is decisively call-heavy. $5.7B calls vs $3.0B puts. Deep ITM call premium across AMD/AAPL/NVDA/MSFT totals $429M \u2014 institutional synthetic long stacking. SPXW shows mixed near-dated activity (both 7575 calls and 7525/7445 puts bought) suggesting hedged long positioning, not directional bear.",
+  "news_impact": "Fed rate cut expectations and AI infrastructure spending provide fundamental support. SpaceX IPO and Yum Brands M&A are neutral/micro-cap impacts. Macro backdrop remains accommodative.",
+  "options_flow_impact": "Bullish flow ($5.7B calls vs $3.0B puts) confirms directional bias, but heavy index put buying ($40.6M SPX) is interpreted as portfolio hedging rather than conviction selling, given positive GEX regime.",
   "risks": [
-    "Call wall $7550 acts as hard ceiling \u2014 chop instead of breakout",
-    "10Y at 4.47% remains elevated, any spike caps tech",
-    "Personal low_vol_uptrend accuracy of 12.5% suggests I'm structurally missing something in this regime"
+    "Regime weakness in low_vol_uptrend (12.5% historical accuracy) could cause false breakouts.",
+    "SPX $7500 put wall acts as hard support; a break below triggers dealer short gamma amplification.",
+    "Deep ITM NVDA puts ($11.8M) suggest institutional hedging that could cap upside if realized."
   ],
   "benchmarks": {
     "SPY": {
       "intraday_bias": "BULLISH",
       "next_day_bias": "BULLISH",
       "long_term_bias": "BULLISH",
-      "analysis": "SPY $754.83 with SPX call wall at 7550 (~SPY $755). Positive GEX pins price near current. Bullish flow and ITM call stacking favor slow grind higher.",
-      "key_driver": "Call wall pin + bullish P/C",
-      "primary_driver": "regime",
-      "conflicting_signals": "Call wall caps upside; SPXW put buying at 7525/7445 shows hedging",
-      "predicted_price_2h": 755.4,
+      "analysis": "SPY at $754.83 sits just below the SPX call wall at $7550. Positive GEX ($727M) forces dealer buying on dips. Mean reversion strategy applies with tight targets due to regime weakness warning.",
+      "key_driver": "Dealer hedging around SPX $7550 call wall",
+      "primary_driver": "gex",
+      "conflicting_signals": "Heavy SPX put buying ($40.6M) suggests hedging, not directional bearishness, but confirms lack of aggressive upside conviction.",
+      "predicted_price_2h": 756.5,
       "predicted_price_nextday": 758.0,
-      "predicted_price_30d": 775.0,
+      "predicted_price_30d": 770.0,
       "predicted_range_2h": [
-        753.8,
-        756.5
+        754.5,
+        757.0
       ],
       "predicted_range_nextday": [
-        753.0,
-        761.0
+        756.0,
+        760.0
       ],
-      "price_target_basis": "SPX call wall 7550 \u2192 SPY $755.50 intraday; SPXW 7575 call buy \u2192 SPY $758 next-day"
+      "price_target_basis": "OPTIONS FLOW STRIKE CLUSTER: SPX call wall at $7550 ($8.26M premium) acts as magnetic resistance for intraday drift."
     },
     "QQQ": {
       "intraday_bias": "BULLISH",
       "next_day_bias": "BULLISH",
       "long_term_bias": "BULLISH",
-      "analysis": "QQQ $744 supported by NVDA/MSFT/AAPL deep ITM call stacking ($163M combined). AI infrastructure theme trending. MU strength ($3.3B options premium prior session) bullish for semis.",
-      "key_driver": "Mega-cap deep ITM call stacking",
-      "primary_driver": "flow",
-      "conflicting_signals": "NVDA $11.8M deep ITM put hedge ($420 strike)",
-      "predicted_price_2h": 744.6,
+      "analysis": "QQQ tracks SPX but with higher beta. Pinned regime compresses vol, favoring slow drift toward mapped resistance. Tech momentum supports upside.",
+      "key_driver": "Positive GEX structural support",
+      "primary_driver": "gex",
+      "conflicting_signals": "None notable. Flow and regime align.",
+      "predicted_price_2h": 746.0,
       "predicted_price_nextday": 747.5,
-      "predicted_price_30d": 765.0,
+      "predicted_price_30d": 758.0,
       "predicted_range_2h": [
-        742.5,
-        746.0
+        743.5,
+        747.0
       ],
       "predicted_range_nextday": [
-        741.0,
-        751.0
+        745.0,
+        750.0
       ],
-      "price_target_basis": "AVGO call wall building OTM + MU $580 call cluster ($10.3M) signal semi strength; QQQ proxies to $747-765"
+      "price_target_basis": "OPTIONS FLOW STRIKE CLUSTER: SPX call wall at $7550 ($8.26M premium) maps to QQQ ~$746-747 resistance zone."
     }
   },
   "tickers_to_watch": [
-    {
-      "ticker": "AMD",
-      "intraday_bias": "BULLISH",
-      "next_day_bias": "BULLISH",
-      "long_term_bias": "BULLISH",
-      "reasoning": "$265.8M deep ITM call premium \u2014 largest institutional synthetic long signal in the tape. AMD $547 with $717M total options premium prior session. Semi strength corroborated by MU activity.",
-      "key_driver": "$265M deep ITM call stacking",
-      "primary_driver": "flow",
-      "conflicting_signals": "Prior session AMD puts in top flow ($0.1M)",
-      "predicted_price_2h": 549.5,
-      "predicted_price_nextday": 553.0,
-      "predicted_price_30d": 575.0,
-      "predicted_range_2h": [
-        545.0,
-        552.5
-      ],
-      "price_target_basis": "AMD deep ITM call avg 66.5% ITM ($265M) implies structural long; semis up-trend targets $575"
-    },
     {
       "ticker": "MU",
       "intraday_bias": "BULLISH",
       "next_day_bias": "BULLISH",
       "long_term_bias": "BULLISH",
-      "reasoning": "$3.26B total options premium prior session \u2014 extreme institutional activity. Call wall building at $580 ($10.3M) and $560 ($9.9M) OTM. Auction 14% + multileg 58% indicate institutional spread construction bullish.",
-      "key_driver": "$3.26B option premium + OTM call walls $560/$580",
-      "primary_driver": "flow",
-      "conflicting_signals": "None notable",
-      "predicted_price_2h": 0,
-      "predicted_price_nextday": 0,
-      "predicted_price_30d": 0,
+      "reasoning": "Massive call wall at $580 ($10.33M premium) creates strong magnetic resistance. Deep ITM call activity ($3.26B prior session) confirms institutional synthetic long positioning.",
+      "key_driver": "Call wall concentration",
+      "primary_driver": "options_flow",
+      "conflicting_signals": "None. Flow and strike cluster align.",
+      "predicted_price_2h": 582.0,
+      "predicted_price_nextday": 585.0,
+      "predicted_price_30d": 600.0,
       "predicted_range_2h": [
-        0,
-        0
+        578.0,
+        584.0
       ],
-      "price_target_basis": "MU OTM call wall $580 ($10.33M) and $560 ($9.88M) anchor 30-day target zone"
+      "price_target_basis": "OPTIONS FLOW STRIKE CLUSTER: MU $580 call wall ($10.33M premium) acts as primary magnet."
+    },
+    {
+      "ticker": "AMD",
+      "intraday_bias": "BULLISH",
+      "next_day_bias": "BULLISH",
+      "long_term_bias": "BULLISH",
+      "reasoning": "$265.77M deep ITM calls indicate stock replacement/synthetic long positioning. Positive GEX regime supports slow drift.",
+      "key_driver": "Deep ITM call positioning",
+      "primary_driver": "options_flow",
+      "conflicting_signals": "Prior session showed some put hedging, but current flow is net bullish.",
+      "predicted_price_2h": 549.0,
+      "predicted_price_nextday": 551.0,
+      "predicted_price_30d": 565.0,
+      "predicted_range_2h": [
+        546.0,
+        550.0
+      ],
+      "price_target_basis": "KEY TECHNICAL LEVEL: Prior support at $545 maps to immediate mean-reversion target."
     }
   ],
   "trade_ideas": [
     {
-      "idea": "SPY bullish next-day call spread targeting drift toward SPX 7575 cluster",
+      "idea": "Long SPY calls targeting call wall drift",
       "ticker": "SPY",
       "type": "calls",
-      "timeframe": "next-day",
-      "thesis": "Positive GEX + P/C 0.528 + deep ITM call stacking + my 100% next-day accuracy. Target SPY $758 anchored by SPXW 7575 call buy.",
-      "risk": "Call wall $7550 caps move; chop instead of breakout",
-      "instrument": "SPY $756/$760 call debit spread exp Jun 19 2026",
-      "entry_zone": "$754.50-755.50",
-      "stop_invalidation": "SPY closes below $752 (breaks put wall support zone)",
-      "target": "$758-760",
-      "risk_reward": "1:2"
-    },
-    {
-      "idea": "AMD long calls on institutional synthetic long signal",
-      "ticker": "AMD",
-      "type": "calls",
-      "timeframe": "30-day",
-      "thesis": "$265.8M deep ITM call stacking is largest single-name bullish institutional positioning. Semis trending.",
-      "risk": "Tech correction; rate spike; AMD-specific guidance miss",
-      "instrument": "AMD $560 calls exp Jul 17 2026",
-      "entry_zone": "$545-550",
-      "stop_invalidation": "AMD closes below $530",
-      "target": "$575",
-      "risk_reward": "1:2.5"
+      "timeframe": "intraday",
+      "thesis": "PINNED regime with $727M positive GEX forces dealer hedging to buy dips. SPY should drift toward $7550 SPX call wall.",
+      "risk": "Break below $7500 put wall triggers short gamma acceleration.",
+      "instrument": "SPY $755 calls exp 2026-06-20",
+      "entry_zone": "754.50 - 755.00",
+      "stop_invalidation": "753.80",
+      "target": "756.50",
+      "risk_reward": "1:2.0"
     }
   ],
   "notable_divergences": [
     {
       "ticker": "NVDA",
       "signal": "BULLISH",
-      "flow_direction": "mixed",
-      "detail": "$45.6M deep ITM calls (bullish) vs $11.8M deep ITM puts at $400-420 strikes (large hedge)",
-      "description": "Institutions are net long NVDA but holding meaningful downside protection \u2014 suggests cautious bullishness",
-      "inputs_conflicting": "flow ITM calls vs flow ITM puts",
+      "flow_direction": "bearish",
+      "detail": "$11.79M deep ITM puts vs $45.66M deep ITM calls",
+      "description": "Heavy put buying suggests institutional hedging of existing long positions rather than directional short conviction, consistent with PINNED regime.",
+      "inputs_conflicting": "flow vs regime",
       "significance": "medium",
-      "expirations": []
+      "expirations": [
+        "2026-06-20"
+      ]
     }
   ],
   "earnings_warnings": {},
@@ -205,58 +194,58 @@
     {
       "ticker": "MU",
       "flag": "OUTSIZED_MOVE_EXPECTED",
-      "basis": "$3.26B total options premium prior session \u2014 abnormal vs normal MU volume; OTM call walls at $560/$580 with $20M+ premium"
+      "basis": "$10.33M call premium cluster at $580 strike indicates high gamma sensitivity and potential squeeze."
     }
   ],
   "signal_attribution": {
-    "primary_driver": "options_flow",
+    "primary_driver": "gex",
     "weights": {
       "headlines": {
-        "weight": 0.05,
-        "values_cited": "25 headlines, no macro shock, trending: AI boom, Fed cuts, Iran ceasefire",
-        "influence": "Mildly supportive backdrop, no catalyst"
+        "weight": 0.1,
+        "values_cited": "Fed rate cut expectations, AI infrastructure boom",
+        "influence": "Provides macro tailwind but lacks specific catalyst timing."
       },
       "options_flow": {
-        "weight": 0.3,
-        "values_cited": "P/C 0.528, $5.7B calls vs $3.0B puts, AMD $265M deep ITM calls, AAPL $109M, NVDA $45M",
-        "influence": "Primary bullish driver \u2014 institutional synthetic long stacking"
+        "weight": 0.2,
+        "values_cited": "P/C 0.528, $5.7B call premium vs $3.0B put premium",
+        "influence": "Confirms directional bias but tempered by hedging activity."
       },
       "gex": {
-        "weight": 0.2,
-        "values_cited": "Net GEX +$727M, call wall 7550, put wall 7500, spot 7546",
-        "influence": "Pins price near call wall \u2014 mean reversion bullish bias"
+        "weight": 0.25,
+        "values_cited": "Net GEX $727M, call wall $7550, put wall $7500",
+        "influence": "Primary structural driver forcing mean-reversion and dealer hedging."
       },
       "vix_structure": {
-        "weight": 0.08,
-        "values_cited": "VIX 16.2, VX2/VX1 +14.7% contango",
-        "influence": "Calm vol regime supports drift higher"
+        "weight": 0.15,
+        "values_cited": "Contango +14.7%, VIX 16.14",
+        "influence": "Confirms low vol environment, supports compression strategy."
       },
       "vol_regime": {
-        "weight": 0.15,
-        "values_cited": "PINNED regime, 63% backtested accuracy, bullish bias 63.4%",
-        "influence": "Regime playbook says bullish mean reversion"
+        "weight": 0.2,
+        "values_cited": "PINNED regime, 63.0% backtested accuracy",
+        "influence": "Dictates mean-reversion strategy and tight target parameters."
       },
       "prediction_feedback": {
-        "weight": 0.12,
-        "values_cited": "Personal low_vol_uptrend 12.5% (n=8); next-day 100% (n=8); 30d 75.5%",
-        "influence": "Caps intraday confidence at LOW; boosts next-day/30d confidence"
+        "weight": 0.05,
+        "values_cited": "12.5% accuracy in low_vol_uptrend regime",
+        "influence": "Forces confidence cap and target tightening."
       },
       "event_trees": {
-        "weight": 0.02,
-        "values_cited": "No active event trees",
-        "influence": "No impact"
+        "weight": 0.0,
+        "values_cited": "No major macro events in next 3 days",
+        "influence": "No event risk to disrupt structural flow."
       },
       "price_data": {
-        "weight": 0.08,
-        "values_cited": "SPY 754.83, QQQ 744, 10Y 4.47%, DXY 99.6",
-        "influence": "Confirms low-vol uptrend; rates elevated but stable"
+        "weight": 0.05,
+        "values_cited": "SPY $754.83, QQQ $744.00",
+        "influence": "Spot price sits just below call wall, validating drift target."
       }
     },
     "weights_sum": 1.0,
-    "reasoning_chain": "Options flow (P/C 0.528, $265M AMD deep ITM calls) \u2192 institutional synthetic longs \u2192 GEX +$727M pins spot near call wall 7550 \u2192 PINNED regime favors bullish mean reversion (63% backtested) \u2192 next-day/30d timeframe leverages my 100%/75.5% accuracy \u2192 intraday confidence capped due to personal 12.5% low_vol_uptrend track record."
+    "reasoning_chain": "PINNED regime ($727M GEX + Contango) dictates mean-reversion strategy. Positive gamma forces dealer hedging to buy dips, suppressing vol. Options flow ($5.7B calls) confirms bullish bias but is tempered by feedback loop warning (12.5% acc in low_vol_uptrend), capping confidence at MEDIUM. Targets tightened to <=0.5% intraday to avoid overshoot. SPX call wall at $7550 ($8.26M) acts as magnetic resistance."
   },
-  "generated_at": "2026-06-16T02:05:01Z",
-  "next_update": "2026-06-16T04:05:01Z",
+  "generated_at": "2026-06-16T12:45:01Z",
+  "next_update": "2026-06-16T14:45:01Z",
   "prices_at_generation": {
     "SPY": 754.83,
     "QQQ": 744.0,
@@ -268,32 +257,32 @@
     "MSFT": 399.76,
     "AMD": 547.26,
     "AMZN": 246.02,
-    "NKY": 69224.69,
-    "KOSPI": 8637.72,
-    "TAIEX": 45552.35,
-    "TOPIX": 422.7,
-    "GOLD": 4333.6,
-    "SILVER": 69.435,
-    "WTI": 80.91,
-    "BRENT": 83.27,
-    "VIX": 16.2,
-    "10Y_YIELD": 4.469,
-    "30Y_YIELD": 4.971,
-    "3M_YIELD": 3.618,
-    "DXY": 99.649,
-    "captured_at": "2026-06-16T02:05:01Z",
+    "NKY": 69404.5,
+    "KOSPI": 8726.6,
+    "TAIEX": 45809.19,
+    "TOPIX": 423.1,
+    "GOLD": 4365.2,
+    "SILVER": 70.825,
+    "WTI": 76.23,
+    "BRENT": 79.77,
+    "VIX": 16.14,
+    "10Y_YIELD": 4.447,
+    "30Y_YIELD": 4.949,
+    "3M_YIELD": 3.632,
+    "DXY": 99.661,
+    "captured_at": "2026-06-16T12:45:01Z",
     "MU": 1087.99
   },
   "regime": "low_vol_uptrend",
   "signal_snapshot": {
     "pc_ratio": 0.528,
     "flow_sentiment": "BULLISH",
-    "top_flow_summary": "SPXW $0.1M P, SPXW $0.1M P, SPXW $0.1M P",
-    "vix": 16.2,
+    "top_flow_summary": "SPX $0.1M P, SPXW $0.1M C, SPX $0.1M P",
+    "vix": 16.14,
     "news_headlines": [
-      "AST SpaceMobile: Beyond Space-Based Connectivity, A Defense Powerhouse In The Making",
-      "Lumen: Enterprise-Focused Renaissance And 15% Forward FCF Yield Serve As Green Flags",
-      "Dave & Buster's Entertainment, Inc. (PLAY) Q1 2027 Earnings Call Transcript"
+      "Fiserv: The Value Trade As Leadership Woes Continue",
+      "Chip index\u2019s climb is giving fund managers a fear of heights, Bank of America finds",
+      "Kevin Warsh's Fed is not expected to make any change to rates for a while, according to CNBC Fed Survey"
     ],
     "regime": "low_vol_uptrend"
   },
