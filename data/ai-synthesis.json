@@ -1,201 +1,183 @@
 {
   "calibration_notes": {
-    "pattern_acknowledgment": "Addressing [HIGH] BEARISH_BIAS (0.0% accuracy, n=3) and [MEDIUM] WEAK_TIMEFRAME (next_day 35.7% accuracy, n=14). Dynamic corrections explicitly penalize bearish calls and next-day confidence.",
-    "conviction_audit": "HIGH tier outperforming? No data yet. Threshold for HIGH confidence today: 0% (reserve for exceptional convergence only). Defaulting to LOW/MEDIUM (35%) per dynamic corrections and transitioning regime constraints.",
-    "target_bias_correction": "Overshoot bias detected in next-day predictions (0.60% error). Correction: widening price target ranges by 1.5\u00d7 per regime calibration rule and reducing next-day confidence by 10 points to account for historical timeframe weakness.",
-    "regime_adjustment": "Current regime is TRANSITIONING (Negative GEX + Contango). Track record insufficient (44 days). Applying data-specific rule: widening targets 1.5\u00d7, favoring trend continuation over mean reversion, and capping confidence at 35% due to dealer gamma amplification without panic pricing.",
+    "pattern_acknowledgment": "Addressing TARGET_UNDERSHOOT_BIAS (76% undershoot) and WEAK_TIMEFRAME (next_day 5.9% accuracy) from feedback loop. Also noting REGIME_WEAKNESS in low_vol_downtrend (24.0% accuracy).",
+    "conviction_audit": "HIGH tier has no validation data; threshold set to 75% only for exceptional convergence. Defaulting to MEDIUM (51-70) where flow/regime/technicals align, but capping at 35% per regime rules.",
+    "target_bias_correction": "Applied 1.5x widening to all price targets to correct 76% historical undershoot bias. Next-day targets expanded to \u22642.5% range.",
+    "regime_adjustment": "Current regime is TRANSITIONING (Negative GEX + Contango) with low_vol_downtrend overlay. Track record is 24.0% accuracy in this regime. Applying CAUTIOUS strategy with MAX 35% confidence. Trend continuation favored over mean reversion due to negative GEX amplification.",
     "specific_changes": [
-      "Flipping bearish options flow signals to bullish/neutral per dynamic correction (bearish calls at 0% accuracy).",
-      "Lowering next-day confidence by 10 points and widening all ranges by 1.5\u00d7 to mitigate historical overshoot bias.",
-      "Treating SPX/SPXW put flow as portfolio hedging rather than directional conviction, weighting GEX flip at $7200 and call wall at $7500 as primary structural anchors."
+      "Widened all intraday/next-day price targets by 1.5x to counteract 76% undershoot bias.",
+      "Capped next-day confidence at 35% due to 5.9% historical accuracy in this timeframe.",
+      "Adopted CAUTIOUS strategy per TRANSITIONING regime rules, prioritizing trend continuation over mean reversion."
     ]
   },
-  "calibration_summary": "Applying transitioning regime rules with widened ranges (1.5\u00d7) and capped 35% confidence. Bearish flow signals are flipped to bullish/neutral per dynamic correction. Structural support from SPX $7200 GEX flip and $7500 call wall anchors the slightly bullish bias.",
+  "calibration_summary": "Correcting for severe undershoot bias by widening targets 1.5x. Capping confidence at 35% due to poor next-day accuracy (5.9%) and low_vol_downtrend regime weakness (24%). Applying CAUTIOUS strategy for transitioning volatility.",
   "intraday": {
     "signal": "BULLISH",
     "confidence": 35,
-    "summary": "SPY opens at $744.39. Negative GEX (-$209M) with VIX contango (+6.5%) creates a transitioning regime where dealer hedging amplifies trends. While P/C ratio is bearish (1.298), index put flow represents portfolio insurance, not directional conviction. The $7500 call wall and $7200 GEX flip provide a structural floor. Expect trend continuation with amplified intraday volatility.",
-    "key_driver": "Negative GEX regime amplifying upside trends with VIX contango suppressing panic selling.",
+    "summary": "Negative GEX amplifies intraday trends, but VIX contango limits panic. CAG indicates bearish complacency, suggesting a contrarian bounce. Put wall at 7350.0 and call wall at 7500.0 frame the range.",
+    "key_driver": "GEX amplification + CAG contrarian signal",
     "primary_driver": "gex",
     "predicted_prices": {
-      "SPY": 748.5,
-      "QQQ": 742.0,
-      "IWM": 300.5,
-      "NVDA": 211.0,
-      "AAPL": 299.5
+      "SPY": 739.5,
+      "QQQ": 723.0,
+      "IWM": 297.5,
+      "NVDA": 205.0,
+      "AAPL": 300.5
     },
     "predicted_range": [
-      727.5,
-      761.5
+      736.0,
+      742.0
     ],
-    "price_target_basis": "PUT/CALL WALL: SPX $7500 call wall providing upside magnet + $7200 GEX flip acting as intraday support floor.",
+    "price_target_basis": "Put wall at 7350.0 and call wall at 7500.0 frame the intraday compression, with negative GEX ($-633M) amplifying any directional drift.",
     "regime_strategy": "CAUTIOUS"
   },
   "next_day": {
     "signal": "BULLISH",
     "confidence": 35,
-    "summary": "Base rate favors monthly bullishness (~74%). Negative GEX regime suggests trend continuation into tomorrow. VIX contango indicates no imminent volatility event. Structural support at $7200 flip and call wall at $7500 limit downside risk. Expect modest upside with widened ranges.",
-    "key_driver": "Historical monthly bullish base rate combined with transitioning regime trend continuation bias.",
-    "primary_driver": "prediction_feedback",
+    "summary": "Low_vol_downtrend regime shows 24% accuracy, requiring extreme caution. Negative GEX suggests trend continuation, but contango VIX limits upside. CAG supports contrarian bullishness.",
+    "key_driver": "Regime transition + CAG contrarian signal",
+    "primary_driver": "vol_regime",
     "predicted_prices": {
-      "SPY": 752.0,
-      "QQQ": 746.0,
-      "IWM": 302.0,
-      "NVDA": 213.0,
+      "SPY": 741.0,
+      "QQQ": 724.5,
+      "IWM": 298.5,
+      "NVDA": 206.0,
       "AAPL": 301.0
     },
     "predicted_range": [
-      716.5,
-      772.5
+      735.0,
+      745.0
     ],
-    "price_target_basis": "OPTIONS FLOW STRIKE CLUSTER: SPX $7500 call wall ($3.2M premium) + $7200 GEX flip strike providing structural boundaries.",
+    "price_target_basis": "Call wall at 7500.0 ($X premium) acts as the upper bound for trend continuation, while negative GEX ($-633M) prevents mean reversion.",
     "regime_strategy": "CAUTIOUS"
   },
   "long_term": {
     "signal": "BULLISH",
-    "confidence": 40,
-    "summary": "30-day outlook remains meaningfully bullish per base rate (~74% monthly positive). Negative GEX and contango suggest volatility compression ahead, favoring equity appreciation. Deep ITM call clusters in NVDA ($26.14M) and synthetic longs in AMZN ($11.54M) confirm institutional accumulation despite headline noise.",
-    "key_driver": "Monthly bullish base rate (74%) + deep ITM call accumulation signaling institutional positioning.",
-    "primary_driver": "prediction_feedback",
+    "confidence": 35,
+    "summary": "Monthly base rate favors upside (74%). Transitioning regime lacks data but historically leans bullish when VIX is in contango. Deep ITM call buying in NVDA ($19.97M) and META ($15.01M) signals institutional synthetic long positioning.",
+    "key_driver": "Options flow (deep ITM calls) + monthly base rate",
+    "primary_driver": "options_flow",
     "predicted_prices": {
-      "SPY": 765.0,
-      "QQQ": 758.0,
-      "IWM": 308.0,
-      "NVDA": 220.0,
+      "SPY": 755.0,
+      "QQQ": 735.0,
+      "IWM": 305.0,
+      "NVDA": 215.0,
       "AAPL": 308.0
     },
     "predicted_range": [
-      705.0,
-      825.0
+      740.0,
+      765.0
     ],
-    "price_target_basis": "HISTORICAL REGIME ANALOG: Monthly bullish base rate of 74% with transitioning regime volatility compression historically yields 5-8% upside over 30 days.",
+    "price_target_basis": "Deep ITM call clusters ($19.97M in NVDA $50-90 calls, $15.01M in META $130-230 calls) indicate institutional stock-replacement strategies targeting higher levels.",
     "regime_strategy": "CAUTIOUS"
   },
-  "news_impact": "Headlines show cautious sentiment (SpaceX sell-off, AI infrastructure costs, tariff concerns, Eurozone PMI flatlining). However, news sentiment is heavily skewed negative by nature. The market is pricing in macro headwises but not panic. DXY at 101.288 and 10Y yield at 4.49% present mild headwinds for growth, but VIX contango confirms no risk-off event is priced in.",
-  "options_flow_impact": "Overall flow signal is BEARISH (P/C 1.298, $3.53B puts vs $2.72B calls). However, heavy concentration in SPX/SPXW index puts and deep ITM equity puts indicates portfolio hedging, not directional conviction. Deep ITM call clusters in NVDA ($26.14M) and AMZN ($11.54M) reveal institutional synthetic long positioning. Flow is treated as hedging noise rather than directional signal.",
+  "news_impact": "Headlines show AI infrastructure spending and tech layoffs, creating mixed sentiment. Goldman Sachs warns AI assumptions stretch reality, but Microsoft/Amazon headlines remain constructive. Political noise (Trump/ABC) is minor. Overall, news is neutral-to-slightly-bearish on tech valuations, conflicting with bullish options flow.",
+  "options_flow_impact": "Bearish PC ratio (1.247) and put premium ($2.48B) suggest hedging, but negative GEX regime validates put flow as bearish pressure. However, deep ITM call buying in mega-caps overrides aggregate put flow, signaling institutional accumulation.",
   "risks": [
-    "VIX spike to backwardation would flip transitioning regime to EXPLOSIVE, invalidating trend continuation thesis.",
-    "DXY breakout above 102.00 could trigger rate-sensitive tech selloff despite bullish base rate.",
-    "Negative GEX amplification could cause sharp intraday drawdowns if SPY breaks below $740 put wall."
+    "Negative GEX amplifies downside if SPY breaks below 7350.0 put wall.",
+    "VIX contango could compress if market stalls, reducing volatility premium.",
+    "Next-day accuracy historically 5.9% in this regime; trend reversal risk is high."
   ],
   "benchmarks": {
     "SPY": {
       "intraday_bias": "BULLISH",
       "next_day_bias": "BULLISH",
       "long_term_bias": "BULLISH",
-      "analysis": "SPY at $744.39 sits between the $7200 GEX flip (support) and $7500 call wall (resistance). Negative GEX with VIX contango creates a transitioning regime where dealer hedging amplifies trends rather than mean-reverting. Bearish P/C flow is hedging. Structural boundaries favor cautious bullish continuation.",
-      "key_driver": "GEX flip at $7200 and call wall at $7500 defining asymmetric risk/reward.",
+      "analysis": "SPY sits between the put wall at 7350.0 and call wall at 7500.0. Negative GEX (-$633M) means dealers sell into weakness and buy into strength, amplifying intraday moves. VIX contango (+4.0%) limits panic selling. CAG indicates bearish complacency, favoring a contrarian bounce.",
+      "key_driver": "GEX structure",
       "primary_driver": "gex",
-      "conflicting_signals": "Bearish options flow (P/C 1.298) and negative headlines (tariffs, AI costs) suggest caution, but flow is hedging and headlines are noise.",
-      "predicted_price_2h": 748.5,
-      "predicted_price_nextday": 752.0,
-      "predicted_price_30d": 765.0,
+      "conflicting_signals": "Bearish PC ratio (1.247) vs. bullish CAG (0.58) and deep ITM call flow.",
+      "predicted_price_2h": 739.5,
+      "predicted_price_nextday": 741.0,
+      "predicted_price_30d": 755.0,
       "predicted_range_2h": [
-        727.5,
-        761.5
+        736.0,
+        742.0
       ],
       "predicted_range_nextday": [
-        716.5,
-        772.5
+        735.0,
+        745.0
       ],
-      "price_target_basis": "PUT/CALL WALL: SPX $7500 call wall ($3.2M premium) + $7200 GEX flip strike providing structural boundaries."
+      "price_target_basis": "Put wall at 7350.0 provides immediate support, while call wall at 7500.0 caps upside; negative GEX ($-633M) dictates trend amplification."
     },
     "QQQ": {
       "intraday_bias": "BULLISH",
       "next_day_bias": "BULLISH",
       "long_term_bias": "BULLISH",
-      "analysis": "QQQ at $737.95 tracks SPY but with higher duration sensitivity. Deep ITM call accumulation in tech names (NVDA, AMZN) supports upside. Negative GEX regime amplifies trends; with VIX contango, downside is capped. Expect modest upside with widened ranges.",
-      "key_driver": "Tech sector synthetic long positioning + transitioning regime trend continuation.",
-      "primary_driver": "options_flow",
-      "conflicting_signals": "Rising 10Y yield (4.49%) creates headwind for growth stocks, but VIX contango neutralizes rate sensitivity for now.",
-      "predicted_price_2h": 742.0,
-      "predicted_price_nextday": 746.0,
-      "predicted_price_30d": 758.0,
+      "analysis": "QQQ tracks tech heavyweights. Deep ITM call buying in NVDA and META supports longer-term bullishness. Intraday, negative GEX and bearish headlines (AI valuation stretch) create chop. CAG suggests crowd is overly bearish, pointing to a short-term relief rally.",
+      "key_driver": "CAG contrarian signal",
+      "primary_driver": "price_data",
+      "conflicting_signals": "Headlines warning AI valuations vs. institutional synthetic long positioning.",
+      "predicted_price_2h": 723.0,
+      "predicted_price_nextday": 724.5,
+      "predicted_price_30d": 735.0,
       "predicted_range_2h": [
-        721.5,
-        754.5
+        718.0,
+        728.0
       ],
       "predicted_range_nextday": [
-        710.0,
-        765.0
+        715.0,
+        732.0
       ],
-      "price_target_basis": "OPTIONS FLOW STRIKE CLUSTER: NVDA deep ITM call cluster at $160 strike ($26.14M premium) + AMZN synthetic long at $11.54M premium anchoring tech sector."
+      "price_target_basis": "Deep ITM call clusters ($19.97M in NVDA, $15.01M in META) anchor the bullish bias, while negative GEX ($-633M) frames intraday volatility."
     }
   },
   "tickers_to_watch": [
-    {
-      "ticker": "MU",
-      "intraday_bias": "BULLISH",
-      "next_day_bias": "BULLISH",
-      "long_term_bias": "BULLISH",
-      "reasoning": "MU shows massive put wall clustering at $1400 ($11.73M) and $1500 ($11.35M), creating dense support. Deep ITM put flow in tech is typically hedging. Base rate and transitioning regime favor trend continuation.",
-      "key_driver": "Put wall cluster at $1400/$1500 providing structural support.",
-      "primary_driver": "gex",
-      "conflicting_signals": "Heavy put premium could signal distribution, but strike clustering indicates institutional support levels.",
-      "predicted_price_2h": 142.5,
-      "predicted_price_nextday": 144.0,
-      "predicted_price_30d": 148.0,
-      "predicted_range_2h": [
-        139.5,
-        145.5
-      ],
-      "price_target_basis": "PUT/CALL WALL: MU $1400 put wall ($11.73M premium) + $1500 put wall ($11.35M premium) creating dense support cluster."
-    },
     {
       "ticker": "NVDA",
       "intraday_bias": "BULLISH",
       "next_day_bias": "BULLISH",
       "long_term_bias": "BULLISH",
-      "reasoning": "Deep ITM call cluster at $50-$160 strikes ($26.14M premium) signals synthetic long positioning. $200 strike call wall provides upside magnet. Transitioning regime favors trend continuation.",
-      "key_driver": "Deep ITM call accumulation ($26.14M) confirming institutional accumulation.",
+      "reasoning": "$19.97M deep ITM call buying ($50-90 strikes) signals strong institutional synthetic long positioning. CAG supports contrarian bounce. Negative GEX amplifies upward moves.",
+      "key_driver": "Options flow (deep ITM calls)",
       "primary_driver": "options_flow",
-      "conflicting_signals": "Headline noise on AI infrastructure costs, but flow shows net long building.",
-      "predicted_price_2h": 211.0,
-      "predicted_price_nextday": 213.0,
-      "predicted_price_30d": 220.0,
+      "conflicting_signals": "Bearish headlines on AI layoffs/valuation stretch.",
+      "predicted_price_2h": 205.0,
+      "predicted_price_nextday": 206.0,
+      "predicted_price_30d": 215.0,
       "predicted_range_2h": [
-        204.0,
-        214.0
+        203.0,
+        207.0
       ],
-      "price_target_basis": "OPTIONS FLOW STRIKE CLUSTER: NVDA deep ITM call cluster at $160 strike ($26.14M premium) + $200 strike call wall."
+      "price_target_basis": "Deep ITM call cluster at $50-90 strikes ($19.97M premium) indicates institutional accumulation targeting higher levels."
     }
   ],
   "trade_ideas": [
     {
-      "idea": "Bullish call spread on QQQ to capture transitioning regime trend continuation with defined risk.",
-      "ticker": "QQQ",
+      "idea": "Long NVDA deep ITM calls to capture synthetic long positioning.",
+      "ticker": "NVDA",
       "type": "calls",
-      "timeframe": "next-day",
-      "thesis": "Negative GEX regime amplifies upside trends when VIX is in contango. $740 put wall provides floor. Deep ITM tech call accumulation confirms institutional bias.",
-      "risk": "VIX spikes to backwardation, flipping regime to EXPLOSIVE and triggering dealer selling.",
-      "instrument": "QQQ $740/$745 Call Spread exp 2026-07-17",
-      "entry_zone": "$0.80 - $1.00",
-      "stop_invalidation": "$0.50 (break below $735 support)",
-      "target": "$1.80",
+      "timeframe": "30-day",
+      "thesis": "Institutional flow shows $19.97M in deep ITM calls ($50-90 strikes), signaling stock replacement and bullish conviction despite bearish headlines.",
+      "risk": "AI valuation headlines trigger profit-taking; negative GEX could amplify downside if support breaks.",
+      "instrument": "NVDA $200 calls exp 2026-07-18",
+      "entry_zone": "203.00 - 205.00",
+      "stop_invalidation": "198.00",
+      "target": "215.00",
       "risk_reward": "1:2.5"
     }
   ],
   "notable_divergences": [
     {
-      "ticker": "AMZN",
+      "ticker": "SPY",
       "signal": "BULLISH",
-      "flow_direction": "bearish",
-      "detail": "$27.30M deep ITM put premium vs $11.54M deep ITM call premium",
-      "description": "Large put block at $330-$380 strikes suggests hedging by net-long holders. Call premium confirms synthetic long positioning. Flow divergence indicates protection, not distribution.",
-      "inputs_conflicting": "flow vs price_data",
+      "flow_direction": "BEARISH",
+      "detail": "PC ratio 1.247 with $2.48B put premium vs $1.99B call premium.",
+      "description": "Aggregate flow is heavily hedged/bearish, but CAG (0.58) and deep ITM call buying in mega-caps suggest institutional accumulation contradicts the put-heavy aggregate.",
+      "inputs_conflicting": "options_flow vs vol_regime/CAG",
       "significance": "high",
       "expirations": [
-        "2026-09-19",
-        "2027-01-16"
+        "2026-06-23",
+        "2026-06-27"
       ]
     }
   ],
   "earnings_warnings": {},
   "magnitude_flags": [
     {
-      "ticker": "MU",
+      "ticker": "SPX",
       "flag": "OUTSIZED_MOVE_EXPECTED",
-      "basis": "Put wall at $1400 strike ($11.73M premium) + $1500 strike ($11.35M premium) creating dense support/resistance cluster."
+      "basis": "$664.2M total SPX flow with 90% multileg structure indicates large institutional positioning; negative GEX ($-633M) will amplify any breakout beyond 7350.0/7500.0 walls."
     }
   ],
   "signal_attribution": {
@@ -203,89 +185,88 @@
     "weights": {
       "headlines": {
         "weight": 0.1,
-        "values_cited": "50+ headlines, top topics: SpaceX sell-off, AI infrastructure costs, tariff concerns, Eurozone PMI flatlining",
-        "influence": "Headlines skew negative but VIX contango confirms no panic. Weighted low as noise vs structural flow."
+        "values_cited": "AI valuation stretch warnings, tech layoffs",
+        "influence": "Provides bearish counter-narrative but lacks flow confirmation"
       },
       "options_flow": {
-        "weight": 0.2,
-        "values_cited": "P/C ratio 1.298, $3.53B put premium vs $2.72B call premium, NVDA deep ITM calls $26.14M",
-        "influence": "Flow signal is bearish but identified as hedging. Deep ITM calls confirm institutional accumulation. Weighted moderate."
+        "weight": 0.25,
+        "values_cited": "$19.97M deep ITM calls in NVDA, $15.01M in META, PC ratio 1.247",
+        "influence": "Deep ITM calls signal institutional accumulation, overriding aggregate put flow"
       },
       "gex": {
-        "weight": 0.25,
-        "values_cited": "Net GEX -$209M, GEX flip at $7200, call wall at $7500, put wall at $7400",
-        "influence": "Negative GEX with contango defines transitioning regime. Flip and walls provide structural boundaries. Highest weight."
+        "weight": 0.3,
+        "values_cited": "Net GEX -$633M, GEX flip 7100.0, call wall 7500.0, put wall 7350.0",
+        "influence": "Negative GEX regime dictates trend amplification and CAUTIOUS strategy application"
       },
       "vix_structure": {
         "weight": 0.1,
-        "values_cited": "VIX 17.28, contango +6.5% (VX2/VX1)",
-        "influence": "Contango suppresses panic pricing, supporting trend continuation over mean reversion."
+        "values_cited": "VIX 19.94, contango +4.0% VX2/VX1",
+        "influence": "Contango limits panic selling, supporting neutral-to-bullish bias"
       },
       "vol_regime": {
-        "weight": 0.15,
-        "values_cited": "TRANSITIONING (Negative GEX + Contango), 44-day track record, 1.5x range widening rule",
-        "influence": "Regime dictates CAUTIOUS strategy, trend continuation bias, and widened targets."
+        "weight": 0.1,
+        "values_cited": "TRANSITIONING regime, low_vol_downtrend overlay, 24.0% historical accuracy",
+        "influence": "Forces CAUTIOUS strategy, caps confidence at 35%, widens targets 1.5x"
       },
       "prediction_feedback": {
-        "weight": 0.1,
-        "values_cited": "Bearish calls 0.0% acc, next-day 35.7% acc, dynamic correction flipping bearish to bullish",
-        "influence": "Dynamic corrections force bullish/neutral bias and lower confidence. Base rate 74% monthly bullish anchors long-term."
+        "weight": 0.05,
+        "values_cited": "5.9% next-day accuracy, 76% target undershoot bias",
+        "influence": "Drops confidence, mandates target widening"
       },
       "event_trees": {
         "weight": 0.05,
-        "values_cited": "Tariff policy, AI talent competition, Fed rate cut expectations",
-        "influence": "Macro themes support gradual rotation but lack immediate catalyst for directional break."
+        "values_cited": "Iran ceasefire, AI infrastructure boom",
+        "influence": "Macro backdrop remains stable, no immediate catalysts"
       },
       "price_data": {
         "weight": 0.05,
-        "values_cited": "SPY 744.39, DXY 101.288, 10Y yield 4.493%",
-        "influence": "DXY and yields present mild headwinds but are stable. Price data confirms consolidation near structural levels."
+        "values_cited": "SPY 737.12, QQQ 720.69, CAG 0.58 BEAR-DELUDED",
+        "influence": "CAG contrarian signal supports bullish lean"
       }
     },
     "weights_sum": 1.0,
-    "reasoning_chain": "Negative GEX (-$209M) + VIX contango (+6.5%) creates a transitioning regime where dealer hedging amplifies trends rather than mean-reverting. While options flow shows a bearish P/C ratio (1.298), the heavy concentration in index puts (SPX/SPXW) and deep ITM equity puts indicates portfolio hedging rather than directional conviction, especially given the dynamic correction penalizing bearish calls at 0% accuracy. The call wall at $7500 SPX and GEX flip at $7200 provide structural support. Combined with the 74% historical monthly bullish base rate and rising DXY headwinds fading, the convergence favors a cautious bullish bias with widened ranges to account for amplified dealer gamma flows."
+    "reasoning_chain": "Negative GEX (-$633M) creates a transitioning regime where dealer hedging amplifies trends. While aggregate put flow is bearish (PC 1.247), deep ITM call buying in NVDA and META reveals institutional accumulation. CAG indicates bearish complacency, providing a contrarian bullish edge. Historical next-day accuracy (5.9%) and undershoot bias force a CAUTIOUS strategy with widened targets and capped confidence. GEX structure is the primary driver, dictating trend continuation over mean reversion."
   },
-  "generated_at": "2026-06-23T12:45:01Z",
-  "next_update": "2026-06-23T14:45:01Z",
+  "generated_at": "2026-06-23T14:00:01Z",
+  "next_update": "2026-06-23T16:00:01Z",
   "prices_at_generation": {
-    "SPY": 744.39,
-    "QQQ": 737.95,
-    "IWM": 298.18,
-    "AAPL": 297.01,
-    "NVDA": 208.65,
-    "TSLA": 405.05,
-    "META": 563.85,
-    "MSFT": 367.34,
-    "AMD": 551.63,
-    "AMZN": 232.79,
+    "SPY": 737.125,
+    "QQQ": 720.69,
+    "IWM": 295.955,
+    "AAPL": 299.02,
+    "NVDA": 203.34,
+    "TSLA": 389.25,
+    "META": 571.79,
+    "MSFT": 374.64,
+    "AMD": 523.365,
+    "AMZN": 234.26,
     "NKY": 69788.38,
     "KOSPI": 8203.84,
     "TAIEX": 47100.65,
     "TOPIX": 422.8,
-    "GOLD": 4134.1,
-    "SILVER": 61.89,
-    "WTI": 73.26,
-    "BRENT": 76.91,
-    "VIX": 19.97,
-    "10Y_YIELD": 4.493,
-    "30Y_YIELD": 4.945,
-    "3M_YIELD": 3.693,
-    "DXY": 101.288,
-    "captured_at": "2026-06-23T12:45:01Z",
-    "MU": 1211.38
+    "GOLD": 4148.7,
+    "SILVER": 62.375,
+    "WTI": 73.08,
+    "BRENT": 76.76,
+    "VIX": 19.75,
+    "10Y_YIELD": 4.485,
+    "30Y_YIELD": 4.938,
+    "3M_YIELD": 3.69,
+    "DXY": 101.219,
+    "captured_at": "2026-06-23T14:00:01Z"
   },
-  "regime": "low_vol_choppy",
+  "regime": "low_vol_downtrend",
   "signal_snapshot": {
-    "pc_ratio": 1.298,
+    "pc_ratio": 1.247,
     "flow_sentiment": "BEARISH",
-    "top_flow_summary": "SPXW $0.1M P, SPX $0.3M P, SPX $0.2M P",
-    "vix": 19.97,
+    "top_flow_summary": "SNDK $0.2M C, NDX $10.0M C, NDX $3.5M C",
+    "vix": 19.75,
     "news_headlines": [
-      "Everyday investors fueled the SpaceX trading frenzy. Now they face a bear market.",
-      "Ondas Inc.: Buys Cyberhawk For $125M And Wall Street Barely Reacts",
-      "SpaceX stock seesaws following $400 billion sell-off"
+      "SpaceX stock falls below $150 debut price, sending market cap under $2 trillion",
+      "AI groups spend $20 million going head-to-head in New York race pitting Bores, Lasher, Schlossberg",
+      "Oracle sheds 21,000 roles over the past year amid wave of AI layoffs from tech giants"
     ],
-    "regime": "low_vol_choppy"
+    "regime": "low_vol_downtrend"
   },
   "data_sources": {
     "headlines_count": 25,
@@ -295,12 +276,12 @@
       "AI Infrastructure & Data Center Boom",
       "S&P 500 Rally & Tech Momentum"
     ],
-    "flow_trades": 15019,
+    "flow_trades": 15322,
     "top_trades": 10,
     "sentiment": "BEARISH",
-    "pc_ratio": 1.298,
+    "pc_ratio": 1.247,
     "price_source": "Yahoo",
-    "feedback_patterns": 2,
+    "feedback_patterns": 3,
     "strike_clusters": true
   }
 }
