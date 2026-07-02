@@ -48,8 +48,13 @@ pipeline is Linear (team SOF, `LINEAR_PIPELINE_CONVENTIONS_V1`); durable records
   exp-02f03f64's 1.0735 (honest-era). Options proposed in the findings note (annotate era column
   [recommended] / overwrite / convention-only); operator decision pending. Do NOT rank experiments on
   `backtest_sharpe` across the 2026-05-28 boundary.
-- `exp-02f03f64.honest_reaudit_status` stays NULL by design; validation id 16 is the evidential
-  record.
+- **`honest_reaudit_status` question CLOSED (late supplement):** operator verified the column
+  vocabulary (failed=16 / survived=2; the 16 reconciles exactly with the "16 noise of 19" reaudit
+  cohort), then ran a 1-row guarded UPDATE (`WHERE … IS NULL`, idempotent) setting
+  `exp-02f03f64='survived'`, evidence = validation id 16 (v1.2, Δ +0.1203). Post-update: survived=3,
+  and both graduated survivors read `survived` with tonight's `graduated_at` — fully symmetric. (The
+  row's delta/timestamp fields stay NULL; its evidence lives in the validation row.) Note this does
+  NOT touch the separate `backtest_sharpe` fiction/honest-era split, which remains open.
 
 ## Production impact (what the next session must know)
 
