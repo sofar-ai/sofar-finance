@@ -35,8 +35,17 @@ pipeline is Linear (team SOF, `LINEAR_PIPELINE_CONVENTIONS_V1`); durable records
     source counts (FULL, exact).
   - **Idempotency proof = first live firing of the five-state classifier:** both reruns →
     `[grad-classify] ALREADY-COMPLETE`, exit 0.
+- **D1 EXECUTED by operator, immediately after D2** (record: `d9328ad`, `D1_EXECUTED_V1`): the four
+  reaudit-failed noise signals version-moved out of v1.0 → `v_retired_20260609` (== the 2026-06-09
+  reaudit retirement cohort). Pre-count 31,643 exactly (zero drift since 06-16); post-verify v1.0
+  remainder 0, retired counts 6,966 / 8,237 / 8,335 / 8,105 = 31,643 exact; `v_research_002` sandbox
+  copies untouched; reversible by design. **First attempt failed SAFELY:** the tracker's pre-written
+  `'v_retired_reaudit_20260609'` (26 chars) exceeded `signal_version` varchar(20) →
+  `StringDataRightTruncation`, zero rows touched — micro-finding
+  `PREWRITTEN_SQL_EXCEEDED_COLUMN_WIDTH_V1` (runbook SQL gets logic-reviewed but not
+  length-validated; check `information_schema` at draft time).
 - **Linear bookkeeping:** SOF-5 Done, SOF-6 Done (earlier: survivors don't inherit the FRED leak),
-  SOF-10 Done, SOF-13 filed (director proposal path), SOF-14 filed (Discord 403).
+  SOF-9 Done, SOF-10 Done, SOF-13 filed (director proposal path), SOF-14 filed (Discord 403).
 
 ## Decisions
 
@@ -62,14 +71,22 @@ pipeline is Linear (team SOF, `LINEAR_PIPELINE_CONVENTIONS_V1`); durable records
   `spy_macro_vol_relative_zscore` (8,269 rows), SPY, 1993→present, sourced from
   `treasury_rates.spread_10y_3m` + `prices_daily` (no FRED-leak inheritance —
   `D2_SURVIVORS_DO_NOT_INHERIT_FRED_LEAK_V1`).
-- **Sunday 07-05 retrain** (17:00/17:15/17:30 ET) picks them up in the candidate pool. Running **D1**
-  (SOF-9, four noise signals out of v1.0 — SQL ready, Awaiting Operator) before then would give the
-  retrain a fully de-noised v1.0 in one pass.
+- **v1.0 lost the four noise signals** (D1 executed tonight too): −31,643 rows to
+  `v_retired_20260609`. Net tonight: v1.0 = **minus 4 noise, plus 2 honest graduates** — the clean
+  honest-era namespace.
+- **Sunday 07-05 retrain** (17:00/17:15/17:30 ET) pre-registration: no degradation expected from the
+  removals (champions never consumed the noise four); **the open question is champion uptake of the
+  two newcomers** — do they earn non-trivial importance on first exposure? Panel-family consumers get
+  a cleaner SPY cell at the next rebuild.
 - Graduation queue is clean: 0 pending / 20 superseded / 5 auto_executed.
 
 ## Sentinels (tonight)
 
-- `D2_EXECUTED_HONEST_ERA_V1` — the execution record (`6f794c1`).
+- `D2_EXECUTED_HONEST_ERA_V1` — the D2 execution record (`6f794c1`, amended `6a1124d`).
+- `D1_EXECUTED_V1` — the D1 execution record (`d9328ad`); mapping `v_retired_20260609` == the
+  2026-06-09 reaudit retirement cohort.
+- `PREWRITTEN_SQL_EXCEEDED_COLUMN_WIDTH_V1` — length-validate runbook SQL against
+  `information_schema` at draft time.
 - `D2_VALIDATION_RUNBOOK_PREREGISTERED_V1` — the runbook it followed (`aa06050`).
 - `GRADUATION_QUEUE_STATE_V1`, `D2_SURVIVORS_HAVE_NO_SANDBOX_VALIDATION_V1`,
   `DIRECTOR_PROPOSAL_PATH_UNGUARDED_V1` — queue investigation (`31918ae`).
@@ -83,5 +100,6 @@ pipeline is Linear (team SOF, `LINEAR_PIPELINE_CONVENTIONS_V1`); durable records
 - Findings notes (sofar-scripts `diagnostics/`): `findings-d2-executed-2026-07-01.md`,
   `findings-d2-validation-prep-2026-07-01.md`, `findings-graduation-queue-state-2026-07-01.md`,
   `findings-graduator-hardening-2026-06-17.md`.
-- Linear: SOF-5/6/10 Done · SOF-8/9 Awaiting Operator · SOF-13/14 Todo · SOF-7 Todo (cohort eval,
-  unblocked) · SOF-11 Todo (UPS).
+- Linear: SOF-5/6/9/10 Done · SOF-8 Awaiting Operator (FRED) · SOF-13/14 Todo · SOF-7 Todo (cohort
+  eval, unblocked) · SOF-11 Todo (UPS).
+- D1 record: `diagnostics/findings-d1-executed-2026-07-01.md` (sofar-scripts `d9328ad`).

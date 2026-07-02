@@ -94,9 +94,24 @@ Network: 8-port 10GbE switch planned; two Sparks linked via 200GbE ConnectX cabl
 
 Both derive from `treasury_rates.spread_10y_3m` + `prices_daily` (no FRED-leak inheritance). They enter
 the champion candidate pool at the Sunday 2026-07-05 retrain. Graduation queue is clean (0 pending /
-20 superseded / 5 auto_executed). Still pending on v1.0: **D1 version-move** of the four reaudit-failed
-noise signals (SOF-9, Awaiting Operator). Record: sofar-scripts
-`diagnostics/findings-d2-executed-2026-07-01.md` + the 2026-07-01 handoff.
+20 superseded / 5 auto_executed).
+
+**Same night (D1 executed — `D1_EXECUTED_V1`):** the four 2026-06-09 reaudit-failed noise signals were
+version-moved OUT of v1.0 → `v_retired_20260609` (== the 2026-06-09 reaudit retirement cohort;
+reversible move, not delete):
+
+| signal | rows moved |
+|---|---|
+| `spy_atr_spread_vol_divergence` | 6,966 |
+| `spy_bond_vol_lead_ratio` | 8,237 |
+| `spy_momentum_vol_decoupling` | 8,335 |
+| `spy_vol_price_coherence` | 8,105 |
+| **total** | **31,643** (v1.0 remainder 0; `v_research_002` copies untouched) |
+
+Net 2026-07-01: **v1.0 = minus 4 noise signals, plus 2 honest graduates** — clean honest-era namespace
+going into the 07-05 retrain (pre-registered open question: champion uptake of the two newcomers).
+Records: sofar-scripts `diagnostics/findings-d2-executed-2026-07-01.md` +
+`findings-d1-executed-2026-07-01.md` + the 2026-07-01 handoff.
 
 ---
 
