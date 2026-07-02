@@ -1,6 +1,6 @@
 # SOFAR System State
 
-**Updated:** 2026-04-25 (initial seed under CONTINUITY_PROTOCOL_V1)
+**Updated:** 2026-07-01 (targeted: D2 graduation — see "Production signal set" section. Bulk of file still reflects the 2026-04-25/05-11 state; refresh pass needed.)
 **Purpose:** Single source of truth for "what is the system doing right now"
 **Format:** see CONTINUITY-PROTOCOL.md § Layer 3
 
@@ -79,6 +79,24 @@ Network: 8-port 10GbE switch planned; two Sparks linked via 200GbE ConnectX cabl
 | Polymarket | (TBD) | production | **Known issue:** registry row has `table_name='ingestion_log'` but data lands in `signal_values`. Fix queued. |
 | CFTC TFF (`cftc_cot_tff`) | 1 | **pilot** | Initial backfill 2007-2026 complete (20,120 rows). Awaiting first weekly cron fire. |
 | CFTC DCOT (`cftc_cot_dcot`) | 1 | **pilot** | Initial backfill 2007-2026 complete (30,222 rows). Awaiting first weekly cron fire. |
+
+---
+
+## Production signal set (v1.0) — changes
+
+**2026-07-01 (D2 executed — `D2_EXECUTED_HONEST_ERA_V1`):** two signals graduated into
+`market.signal_values` v1.0 via the hardened sandbox-graduator (manual, operator-executed):
+
+| signal | experiment | v1.0 rows | history | honest v1.2 Δ Sharpe | delta_PSR |
+|---|---|---|---|---|---|
+| `spy_macro_spread_vol_ratio` | exp-02f03f64 | 8,264 | 1993-05-25 → present | +0.1203 (pre-reg +0.1231) | 0.898 |
+| `spy_macro_vol_relative_zscore` | exp-ce3ced9c | 8,269 | 1993-05-24 → present | +0.1306 (pre-reg +0.1349) | 0.746 |
+
+Both derive from `treasury_rates.spread_10y_3m` + `prices_daily` (no FRED-leak inheritance). They enter
+the champion candidate pool at the Sunday 2026-07-05 retrain. Graduation queue is clean (0 pending /
+20 superseded / 5 auto_executed). Still pending on v1.0: **D1 version-move** of the four reaudit-failed
+noise signals (SOF-9, Awaiting Operator). Record: sofar-scripts
+`diagnostics/findings-d2-executed-2026-07-01.md` + the 2026-07-01 handoff.
 
 ---
 
