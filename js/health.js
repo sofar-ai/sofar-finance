@@ -29,6 +29,7 @@ const HealthCheck = (() => {
     polymarket:     { warn: 1500, err: 2900, label: 'Polymarket Macro', emoji: '🔮' },
     dark_pool:      { warn: 1500, err: 2900, label: 'Dark Pool Data', emoji: '🏊' },
     morning_brief:  { warn: 1500, err: 2900, label: 'Morning Brief', emoji: '☀️' },
+    pipeline_health:{ warn: 1560, err: 4620, label: 'EOD Pipeline Assert', emoji: '🚦' },
   };
 
   const FEEDS = [
@@ -53,6 +54,7 @@ const HealthCheck = (() => {
     { key: 'attribution_cal',url: 'data/attribution-calibration.json', tsField: 'last_updated' },
     { key: 'audit_latest',   url: 'data/audit-latest.json',           tsField: 'generated_at' },
     { key: 'pred_archive',   url: 'data/prediction-archive.json',     tsField: '_last_entry' },
+    { key: 'pipeline_health', url: 'data/pipeline-health.json',       tsField: 'generated_at' },
   ];
 
   function todayStr() { return new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' }); }
@@ -165,6 +167,10 @@ const HealthCheck = (() => {
       if (feed.key === 'attribution_cal') {
         extra.cycles = data.history ? data.history.length : 0;
       }
+      if (feed.key === 'pipeline_health') {
+        extra.failed = Array.isArray(data.failed) ? data.failed : [];
+        extra.assertFailed = extra.failed.length > 0;
+      }
 
       let ageMins = null;
       if (ts) { ageMins = (Date.now() - new Date(ts).getTime()) / 60000; }
@@ -238,6 +244,8 @@ const HealthCheck = (() => {
     var cls = result.status === 'missing' ? 'stale'
             : result.status === 'error' ? 'err'
             : statusClass(result.age, th, isMarketFeed);
+    // EOD_OUTPUT_ASSERT_V1: a failed assert writes a FRESH file — force red.
+    if (result.key === 'pipeline_health' && result.extra && result.extra.assertFailed) cls = 'err';
     var badge = { cls: cls, text: statusLabel(cls) };
     var rows = [];
 
@@ -267,6 +275,7 @@ const HealthCheck = (() => {
     if (e.totalPredictions) rows.push({ label: 'Total checks', value: e.totalPredictions });
     if (e.accuracy !== undefined) rows.push({ label: 'Dir accuracy', value: e.accuracy + '%' });
     if (e.cycles !== undefined) rows.push({ label: 'Cal cycles', value: e.cycles });
+    if (e.failed && e.failed.length) rows.push({ label: 'Failed asserts', value: e.failed.join(', '), cls: 'hc-value-err' });
 
     if (isMarketFeed && !isMarketHours() && cls === 'ok' && result.age > th.warn) {
       rows.push({ label: 'Note', value: 'Market closed — data from last session', cls: 'hc-value-muted' });
