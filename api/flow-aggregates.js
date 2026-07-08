@@ -196,49 +196,18 @@ export default async function handler(req, res) {
       last_trade_ts: m.last_trade_ts,
     }));
 
-    // COMPANY_NAMES_API_V1 — demand-insertion: register unknown symbols so the
-    // weekly FMP cron (ingest-fmp-company-names.py) can populate names for
-    // wildcards (CAR, CRWV) that ranked into top 25 today. Bounded to 25 rows
-    // per request, ON CONFLICT DO NOTHING so it's idempotent.
-    const unknownSymbols = topTickers
-      .filter(t => !t.company_name)
-      .map(t => t.symbol);
-    if (unknownSymbols.length > 0) {
-      try {
-        await sql`
-          INSERT INTO ticker_names (symbol, source)
-          SELECT unnest(${unknownSymbols}::text[]), 'demand'
-          ON CONFLICT (symbol) DO NOTHING
-        `;
-      } catch (e) {
-        console.error('ticker_names demand-insert failed:', e);
-        // Non-fatal — UI still works without name registration
-      }
-    }
+    // COMPANY_NAMES_API_V1 demand-insertion MOVED to
+    // unusual-flow-detector.py (SOF-32, FLOW_AGGREGATES_GET_WRITE_REMOVED_V1)
+    // — a GET handler must not write. Names still come from the
+    // LEFT JOIN ticker_names above; registration of new symbols now
+    // happens cron-side within 15 min of first ranking.
 
-    // ── 6. Baselines ──────────────────────────────────────────────────
-    let baselineMap = {};
-    try {
-      const baselines = await sql`
-        SELECT symbol, pc_mean_20d, pc_std_20d, premium_mean_20d, premium_std_20d, days_in_baseline
-        FROM flow_baselines
-        WHERE as_of_date = (
-          SELECT MAX(as_of_date) FROM flow_baselines WHERE as_of_date <= ${sessionDate}
-        )
-      `;
-      for (const b of baselines) {
-        baselineMap[b.symbol] = {
-          pc_mean_20d: b.pc_mean_20d !== null ? parseFloat(b.pc_mean_20d) : null,
-          pc_std_20d: b.pc_std_20d !== null ? parseFloat(b.pc_std_20d) : null,
-          premium_mean_20d: b.premium_mean_20d !== null ? parseFloat(b.premium_mean_20d) : null,
-          premium_std_20d: b.premium_std_20d !== null ? parseFloat(b.premium_std_20d) : null,
-          days: b.days_in_baseline,
-        };
-      }
-    } catch (e) {
-      console.error('flow-aggregates baselines query error:', e);
-      baselineMap = {};
-    }
+    // ── 6. Baselines — KILLED (SOF-32 item 3, FLOW_BASELINES_KILLED_V1).
+    // flow_baselines was stillborn: 0 rows ever, in both market and production.
+    // baselineMap stays an empty map so per_symbol[].pc_zscore keeps its shape
+    // (null) — identical to live behavior since April (options-flow.js reads
+    // pc_zscore in 5 places). Table DROP is a separate HARD RULE 1 decision.
+    const baselineMap = {};
 
     // ── 7. Per-symbol with z-scores ───────────────────────────────────
     const perSymbol = sessionMetrics.map(m => {
@@ -293,7 +262,6 @@ export default async function handler(req, res) {
         exchanges: s.exchanges,
       })),
       sector_flow: sectorFlow,
-      baselines_available: Object.keys(baselineMap).length > 0,
       // API_BIFURCATE_V1 — context for the frontend
       data_status: {
         current_session_date: today,
