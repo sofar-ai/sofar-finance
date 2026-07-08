@@ -43,7 +43,9 @@
       items: [
         { href: 'performance.html', label: 'Performance' },
         { href: 'audit.html',       label: 'Audit' },
-        { href: 'paper-trading.html', label: 'Paper Trading' },
+        { href: 'paper-pnl.html',   label: 'Paper P&L' },
+        { href: 'pipeline-truth.html', label: 'Pipeline Truth' },
+        { href: 'signal-correlations.html', label: 'Correlations' },
       ],
     },
     {

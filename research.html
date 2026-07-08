@@ -229,7 +229,7 @@
           </div>
           <!-- Research Feed (scraped items) -->
           <div class="sd-section">
-            <div class="sd-section-title">📰 Latest Research (scraped daily)</div>
+            <div class="sd-section-title">📰 Latest Research (research DB, 7d)</div>
             <div id="sd-research-feed">Loading...</div>
           </div>
         </div>
@@ -582,34 +582,32 @@
     var feedEl = document.getElementById('sd-research-feed');
     var count = document.getElementById('sd-research-count');
     var loaded = false;
-    for (var d = 0; d < 7 && !loaded; d++) {
-      var dt = new Date();
-      dt.setDate(dt.getDate() - d);
-      var dateStr = dt.toISOString().split('T')[0];
-      try {
-        var res = await fetch('data/research-scored/scout-scored-' + dateStr + '.json?t=' + Date.now());
-        if (res.ok) {
-          var data = await res.json();
-          var items = (data.items || []).slice(0, 15);
-          count.textContent = items.length + ' items from ' + dateStr;
-          feedEl.innerHTML = items.map(function(item) {
-            var score = item.relevance_score || item.score || 0;
-            var scoreColor = score >= 7 ? '#22c55e' : score >= 4 ? '#f59e0b' : '#6b7280';
-            return '<div class="sd-research-card">' +
-              '<div style="display:flex;justify-content:space-between;align-items:center;">' +
-              '<div class="sd-research-title">' + (item.title || 'Untitled').substring(0, 65) + '</div>' +
-              '<div class="sd-research-score" style="color:' + scoreColor + ';">' + score + '/10</div>' +
-              '</div>' +
-              '<div class="sd-research-source">' + (item.source || '') + (item.category ? ' · ' + item.category : '') + '</div>' +
-              '</div>';
-          }).join('');
-          loaded = true;
-        }
-      } catch(e) {}
-    }
+    try {
+      var res = await fetch('data/research-scored.json?t=' + Date.now());
+      if (res.ok) {
+        var data = await res.json();
+        var items = (data.items || []).filter(function (it) { return it.feed !== 'lab'; }).slice(0, 15);
+        count.textContent = (data.scout_count || items.length) + ' scout docs in ' + (data.window_days || 7) + 'd (research DB)';
+        feedEl.innerHTML = items.map(function (item) {
+          var nObs = item.n_observations || 0;
+          var obsColor = nObs >= 3 ? '#22c55e' : nObs >= 1 ? '#f59e0b' : '#6b7280';
+          var meta = (item.source || '') + (item.category ? ' · ' + item.category : '') +
+                     (item.evidence ? ' · ' + item.evidence + ' evidence' : '') +
+                     ((item.tickers && item.tickers.length) ? ' · ' + item.tickers.slice(0, 4).join(' ') : '');
+          return '<div class="sd-research-card">' +
+            '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+            '<div class="sd-research-title">' + (item.title || 'Untitled').substring(0, 65) + '</div>' +
+            '<div class="sd-research-score" style="color:' + obsColor + ';">' + nObs + ' obs</div>' +
+            '</div>' +
+            '<div class="sd-research-source">' + meta + '</div>' +
+            '</div>';
+        }).join('');
+        loaded = items.length > 0;
+      }
+    } catch (e) {}
     if (!loaded) {
       count.textContent = 'No recent data';
-      feedEl.innerHTML = '<div style="color:#4b5563;font-size:11px;font-family:var(--font-mono);padding:12px;">No scored research available. Summarizer runs daily at 11 AM ET.</div>';
+      feedEl.innerHTML = '<div style="color:#4b5563;font-size:11px;font-family:var(--font-mono);padding:12px;">No research intake published. Publisher: publish-research-scored.py (daily, post-summarizer).</div>';
     }
   })();
   // ─────────────────────────────────────────────────────────────────────

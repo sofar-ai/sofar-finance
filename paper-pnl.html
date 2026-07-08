@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Paper P&L — SOFAR FINANCE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0d1117">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* PREDICTION_TRACKING_PAPER_PNL_V1 — replaces the retired paper-trading simulator page */
+    .pp-wrap { max-width: 1200px; margin: 0 auto; padding: 16px; }
+    .pp-note { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px;
+               padding: 10px 14px; font-size: 12px; color: var(--text-secondary); margin-bottom: 16px;
+               font-family: 'IBM Plex Mono', monospace; }
+    .pp-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 14px; }
+    .pp-card { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; padding: 14px; }
+    .pp-card h3 { margin: 0 0 10px; font-size: 14px; }
+    .pp-row { display: flex; justify-content: space-between; font-size: 12px; padding: 3px 0;
+              font-family: 'IBM Plex Mono', monospace; }
+    .pp-row .k { color: var(--text-secondary); }
+    .pp-pos { color: var(--green, #22c55e); } .pp-neg { color: var(--red, #ef4444); }
+    .pp-muted { color: var(--text-secondary); }
+    table.pp-tbl { width: 100%; border-collapse: collapse; font-size: 11px;
+                   font-family: 'IBM Plex Mono', monospace; margin-top: 12px; }
+    .pp-tbl th, .pp-tbl td { padding: 4px 6px; text-align: right; border-bottom: 1px solid var(--border); }
+    .pp-tbl th:first-child, .pp-tbl td:first-child { text-align: left; }
+    .pp-tbl-wrap { overflow-x: auto; }
+    .pp-empty { padding: 40px; text-align: center; color: var(--text-secondary); font-size: 13px; }
+  </style>
+</head>
+<body class="page-scrollable">
+  <div id="nav-root"></div>
+  <script src="js/nav.js"></script>
+  <script>document.addEventListener('DOMContentLoaded',()=>{NavComponent.setMeta(`<span class="live-dot"></span><span id="pp-status">Loading…</span>`);});</script>
+
+  <div class="pp-wrap" id="pp-main">
+    <div class="pp-empty">Loading paper P&L…</div>
+  </div>
+
+  <script>
+  'use strict';
+  // Degradation contract (SOF-33 design note): the predecessor CRASHED on its
+  // own corrupt file for 18 days. This page must render SOMETHING on every
+  // failure mode: missing file, bad JSON, missing fields, empty sources.
+  (async function () {
+    var main = document.getElementById('pp-main');
+    var status = function (t) { var el = document.getElementById('pp-status'); if (el) el.textContent = t; };
+    var d = null;
+    try {
+      var r = await fetch('data/paper-pnl.json?t=' + Date.now());
+      if (r.ok) d = await r.json();
+    } catch (e) { /* fall through to empty state */ }
+    if (!d || typeof d !== 'object' || !d.sources) {
+      main.innerHTML = '<div class="pp-empty">No paper-P&L data yet — publisher (publish-paper-pnl.py) has not run, or the feed is unreadable.<br>Nothing is broken on this page; it degrades by design.</div>';
+      status('no data');
+      return;
+    }
+    status('as of ' + (d.date || '?'));
+    var fmt = function (v, dp, suf) { return (v === null || v === undefined) ? '—' : (Number(v).toFixed(dp === undefined ? 2 : dp) + (suf || '')); };
+    var cls = function (v) { return v > 0 ? 'pp-pos' : v < 0 ? 'pp-neg' : ''; };
+    var html = '<div class="pp-note">Method: ' +
+      ((d.method && d.method.trade_rule) || '') + ' · ' +
+      ((d.method && d.method.cum_note) || '') + ' · ' +
+      ((d.method && d.method.sharpe_rule) || '') + '</div><div class="pp-grid">';
+    var order = ['lgbm_7d', 'lgbm_14d', 'lgbm_21d'];
+    order.forEach(function (src) {
+      var s = d.sources[src];
+      if (!s) return;
+      var no = s.honest_nonoverlap || {};
+      html += '<div class="pp-card"><h3>' + src + ' <span class="pp-muted">(' + (s.horizon_days || '?') + 'd horizon)</span></h3>' +
+        '<div class="pp-row"><span class="k">predictions / resolved / pending</span><span>' + fmt(s.n_predictions, 0) + ' / ' + fmt(s.n_resolved, 0) + ' / ' + fmt(s.n_pending, 0) + '</span></div>' +
+        '<div class="pp-row"><span class="k">traded (non-neutral)</span><span>' + fmt(s.n_traded, 0) + ' <span class="pp-muted">(+' + fmt(s.n_neutral_no_trade, 0) + ' neutral, no trade)</span></span></div>' +
+        '<div class="pp-row"><span class="k">hit rate (traded)</span><span>' + (s.hit_rate_traded === null || s.hit_rate_traded === undefined ? '—' : (100 * s.hit_rate_traded).toFixed(1) + '%') + '</span></div>' +
+        '<div class="pp-row"><span class="k">directional accuracy (all)</span><span>' + (s.directional_accuracy_all === null || s.directional_accuracy_all === undefined ? '—' : (100 * s.directional_accuracy_all).toFixed(1) + '%') + '</span></div>' +
+        '<div class="pp-row"><span class="k">cum return (overlapping sum)</span><span class="' + cls(s.cum_return_sum_pct) + '">' + fmt(s.cum_return_sum_pct, 2, '%') + '</span></div>' +
+        '<div class="pp-row"><span class="k">avg / trade</span><span class="' + cls(s.avg_trade_return_pct) + '">' + fmt(s.avg_trade_return_pct, 3, '%') + '</span></div>' +
+        '<div class="pp-row"><span class="k">honest non-overlap n</span><span>' + fmt(no.n, 0) + '</span></div>' +
+        '<div class="pp-row"><span class="k">non-overlap mean ± std</span><span>' + fmt(no.mean_pct, 3, '%') + ' ± ' + fmt(no.std_pct, 3, '%') + '</span></div>' +
+        '<div class="pp-row"><span class="k">annualized Sharpe</span><span>' + (no.annualized_sharpe === null || no.annualized_sharpe === undefined ? '<span class="pp-muted">withheld</span>' : fmt(no.annualized_sharpe, 3)) + '</span></div>' +
+        (no.sharpe_note ? '<div class="pp-row"><span class="k" style="font-size:10px">' + no.sharpe_note + '</span></div>' : '') +
+        '</div>';
+    });
+    html += '</div>';
+
+    // recent predictions table (all sources merged, newest first, cap 30)
+    var rows = [];
+    order.forEach(function (src) {
+      var s = d.sources[src];
+      ((s && s.predictions) || []).forEach(function (p) { rows.push([src, p]); });
+    });
+    rows.sort(function (a, b) { return (b[1].entry_date || '').localeCompare(a[1].entry_date || ''); });
+    html += '<div class="pp-card" style="margin-top:14px"><h3>Recent predictions</h3><div class="pp-tbl-wrap"><table class="pp-tbl">' +
+      '<tr><th>entry</th><th>source</th><th>dir</th><th>prob</th><th>resolved</th><th>correct</th><th>raw move %</th><th>trade ret %</th></tr>';
+    rows.slice(0, 30).forEach(function (rp) {
+      var src = rp[0], p = rp[1] || {};
+      var tr = p.trade_return_pct;
+      html += '<tr><td>' + (p.entry_date || '—') + '</td><td>' + src + '</td><td>' + (p.direction || '—') + '</td>' +
+        '<td>' + fmt(p.probability, 3) + '</td><td>' + (p.resolved ? 'y' : 'pending') + '</td>' +
+        '<td>' + (p.correct === true ? '✓' : p.correct === false ? '✗' : '—') + '</td>' +
+        '<td>' + fmt(p.raw_pnl_pct, 3) + '</td>' +
+        '<td class="' + cls(tr) + '">' + (p.direction === 'NEUTRAL' ? 'no trade' : fmt(tr, 3)) + '</td></tr>';
+    });
+    html += '</table></div></div>';
+    main.innerHTML = html;
+  })();
+  </script>
+</body>
+</html>

@@ -181,30 +181,25 @@ const HealthCheck = (() => {
   }
 
   async function fetchResearch() {
+    // RESEARCH_SCORED_DB_REPOINT_V1 — single DB-published file replaces the
+    // frozen data/research-scored/ directory probes (dead since 2026-04-22).
     var today = todayStr();
-    var yesterday = new Date(new Date().getTime() - 86400000).toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
     var results = [];
-    for (var i = 0; i < 2; i++) {
-      var prefix = i === 0 ? 'scout' : 'lab';
-      var found = false;
-      for (var d = 0; d < 5; d++) {
-        var dt = new Date(); dt.setDate(dt.getDate() - d);
-        var date = dt.toISOString().split('T')[0];
-        try {
-          var r = await fetch('data/research-scored/' + prefix + '-scored-' + date + '.json?t=' + Date.now());
-          if (r.ok) {
-            var data = await r.json();
-            var items = data.items || (Array.isArray(data) ? data : []);
-            results.push({ key: 'research_' + prefix, status: 'loaded', age: d === 0 ? 0 : 1440, ts: data.scored_at || date, extra: { count: items.length, date: date } });
-            found = true;
-            break;
-          }
-        } catch (e) {}
+    try {
+      var r = await fetch('data/research-scored.json?t=' + Date.now());
+      if (r.ok) {
+        var data = await r.json();
+        var ts = data.scored_at || data.generated_at || null;
+        var ageMins = ts ? (Date.now() - new Date(ts).getTime()) / 60000 : null;
+        [['research_scout', data.scout_count], ['research_lab', data.lab_count]].forEach(function (kv) {
+          results.push({ key: kv[0], status: 'loaded', age: ageMins, ts: ts, extra: { count: kv[1] || 0, date: today } });
+        });
+        return results;
       }
-      if (!found) {
-        results.push({ key: 'research_' + prefix, status: 'missing', age: null, ts: null, extra: { date: today } });
-      }
-    }
+    } catch (e) {}
+    ['research_scout', 'research_lab'].forEach(function (k) {
+      results.push({ key: k, status: 'missing', age: null, ts: null, extra: { date: today } });
+    });
     return results;
   }
 

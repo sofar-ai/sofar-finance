@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pipeline Truth — SOFAR FINANCE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0d1117">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* PIPELINE_TRUTH_BOARD_V1 — the honest-measurement era board */
+    .pt-wrap { max-width: 1240px; margin: 0 auto; padding: 16px; }
+    .pt-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 14px; }
+    .pt-tile { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; padding: 12px; text-align: center; }
+    .pt-tile .v { font-size: 22px; font-family: 'IBM Plex Mono', monospace; }
+    .pt-tile .k { font-size: 11px; color: var(--text-secondary); }
+    .pt-card { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-bottom: 14px; }
+    .pt-card h3 { margin: 0 0 10px; font-size: 14px; }
+    table.pt-tbl { width: 100%; border-collapse: collapse; font-size: 11px; font-family: 'IBM Plex Mono', monospace; }
+    .pt-tbl th, .pt-tbl td { padding: 4px 6px; text-align: right; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    .pt-tbl th:first-child, .pt-tbl td:first-child { text-align: left; }
+    .pt-tbl-wrap { overflow-x: auto; max-height: 460px; overflow-y: auto; }
+    .pt-badge { padding: 1px 6px; border-radius: 8px; font-size: 10px; }
+    .pt-active { background: rgba(34,197,94,.15); color: var(--green, #22c55e); }
+    .pt-stale { background: rgba(239,68,68,.15); color: var(--red, #ef4444); }
+    .pt-note { font-size: 11px; color: var(--text-secondary); font-family: 'IBM Plex Mono', monospace; margin: 6px 0; }
+    .pt-empty { padding: 40px; text-align: center; color: var(--text-secondary); font-size: 13px; }
+    .pt-svg { width: 100%; height: 150px; }
+  </style>
+</head>
+<body class="page-scrollable">
+  <div id="nav-root"></div>
+  <script src="js/nav.js"></script>
+  <script>document.addEventListener('DOMContentLoaded',()=>{NavComponent.setMeta(`<span class="live-dot"></span><span id="pt-status">Loading…</span>`);});</script>
+
+  <div class="pt-wrap" id="pt-main"><div class="pt-empty">Loading pipeline truth…</div></div>
+
+  <script>
+  'use strict';
+  (async function () {
+    var main = document.getElementById('pt-main');
+    var status = function (t) { var el = document.getElementById('pt-status'); if (el) el.textContent = t; };
+    var d = null;
+    try {
+      var r = await fetch('data/pipeline-truth.json?t=' + Date.now());
+      if (r.ok) d = await r.json();
+    } catch (e) {}
+    if (!d || !d.signals) {
+      main.innerHTML = '<div class="pt-empty">No pipeline-truth data yet — publisher (publish-pipeline-truth.py) has not run.</div>';
+      status('no data'); return;
+    }
+    status('signals to ' + (d.latest_signal_date || '?'));
+    var fmt = function (v, dp) { return (v === null || v === undefined) ? '—' : Number(v).toFixed(dp === undefined ? 2 : dp); };
+
+    var grads = [];
+    (d.signals || []).forEach(function (s) {
+      (s.graduations || []).forEach(function (g) { grads.push([s.signal_name, g]); });
+    });
+
+    var html = '<div class="pt-tiles">' +
+      '<div class="pt-tile"><div class="v">' + (d.n_signals || 0) + '</div><div class="k">v1.0 signals</div></div>' +
+      '<div class="pt-tile"><div class="v">' + (d.n_active || 0) + '</div><div class="k">active (≤7d)</div></div>' +
+      '<div class="pt-tile"><div class="v">' + ((d.n_signals || 0) - (d.n_active || 0)) + '</div><div class="k">stale</div></div>' +
+      '<div class="pt-tile"><div class="v">' + grads.length + '</div><div class="k">graduations</div></div>' +
+      '</div>';
+
+    // Champion walk-forward Sharpe series — inline SVG, no vendor libs
+    function sparkline(points) {
+      var vals = points.map(function (p) { return p.walk_forward_sharpe; }).filter(function (v) { return v !== null && v !== undefined; });
+      if (vals.length < 2) return '<div class="pt-note">insufficient archive points</div>';
+      var w = 560, h = 130, pad = 26;
+      var mn = Math.min.apply(null, vals), mx = Math.max.apply(null, vals);
+      if (mx === mn) { mx += 0.1; mn -= 0.1; }
+      var xs = function (i) { return pad + (w - 2 * pad) * i / (points.length - 1); };
+      var ys = function (v) { return h - pad - (h - 2 * pad) * (v - mn) / (mx - mn); };
+      var path = '', circles = '';
+      points.forEach(function (p, i) {
+        var v = p.walk_forward_sharpe;
+        if (v === null || v === undefined) return;
+        path += (path ? ' L' : 'M') + xs(i).toFixed(1) + ' ' + ys(v).toFixed(1);
+        circles += '<circle cx="' + xs(i).toFixed(1) + '" cy="' + ys(v).toFixed(1) + '" r="2.5" fill="#58a6ff"><title>' +
+          (p.trained_at || p.committed_at || '') + ' — wf Sharpe ' + fmt(v, 3) + ' (n=' + (p.walk_forward_scored || '?') + ', ' + (p.model_version || '') + ')</title></circle>';
+      });
+      return '<svg class="pt-svg" viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none">' +
+        '<text x="4" y="' + (ys(mx) + 4) + '" font-size="9" fill="#8b949e">' + fmt(mx, 2) + '</text>' +
+        '<text x="4" y="' + (ys(mn) + 4) + '" font-size="9" fill="#8b949e">' + fmt(mn, 2) + '</text>' +
+        '<path d="' + path + '" stroke="#58a6ff" fill="none" stroke-width="1.5"/>' + circles + '</svg>';
+    }
+    html += '<div class="pt-card"><h3>Champion walk-forward Sharpe (weekly training archive)</h3>';
+    ['7d', '14d', '21d'].forEach(function (hzn) {
+      var pts = (d.champion_series || {})[hzn] || [];
+      var last = pts.length ? pts[pts.length - 1] : {};
+      html += '<div class="pt-note">' + hzn + ' — latest: wf Sharpe ' + fmt(last.walk_forward_sharpe, 3) +
+        ', acc ' + fmt(last.walk_forward_accuracy, 3) + ' (n=' + (last.walk_forward_scored || '?') + ', ' +
+        (last.model_version || '?') + ', trained ' + (last.trained_at ? String(last.trained_at).slice(0, 10) : '?') + ')</div>' +
+        sparkline(pts);
+    });
+    html += '</div>';
+
+    html += '<div class="pt-card"><h3>Graduations (honest metrics, verbatim from experiments)</h3><div class="pt-tbl-wrap"><table class="pt-tbl">' +
+      '<tr><th>signal</th><th>graduated</th><th>to</th><th>backtest SR</th><th>CPCV SR</th><th>n</th><th>reaudit</th><th>honest ΔSR</th></tr>';
+    grads.sort(function (a, b) { return (b[1].graduated_at || '').localeCompare(a[1].graduated_at || ''); });
+    grads.forEach(function (gg) {
+      var g = gg[1];
+      html += '<tr><td>' + gg[0] + '</td><td>' + (g.graduated_at ? g.graduated_at.slice(0, 10) : '—') + '</td>' +
+        '<td>' + (g.to_version || '—') + '</td><td>' + fmt(g.backtest_sharpe, 3) + '</td><td>' + fmt(g.cpcv_sharpe, 3) + '</td>' +
+        '<td>' + (g.n_scored || '—') + '</td><td>' + (g.honest_reaudit_status || '—') + '</td><td>' + fmt(g.honest_sharpe_delta, 3) + '</td></tr>';
+    });
+    if (!grads.length) html += '<tr><td colspan="8" class="pt-note">none recorded</td></tr>';
+    html += '</table></div></div>';
+
+    html += '<div class="pt-card"><h3>v1.0 signal set (era annotations)</h3><div class="pt-tbl-wrap"><table class="pt-tbl">' +
+      '<tr><th>signal</th><th>status</th><th>first</th><th>last</th><th>days</th><th>graduated?</th></tr>';
+    (d.signals || []).forEach(function (s) {
+      html += '<tr><td>' + s.signal_name + '</td>' +
+        '<td><span class="pt-badge ' + (s.status === 'active' ? 'pt-active' : 'pt-stale') + '">' + s.status +
+        (s.status !== 'active' && s.stale_days ? ' ' + s.stale_days + 'd' : '') + '</span></td>' +
+        '<td>' + s.first_date + '</td><td>' + s.last_date + '</td><td>' + s.n_days + '</td>' +
+        '<td>' + ((s.graduations || []).length ? '🎓 ' + s.graduations.length : '') + '</td></tr>';
+    });
+    html += '</table></div>';
+    html += (d.method_notes || []).map(function (n) { return '<div class="pt-note">· ' + n + '</div>'; }).join('');
+    html += '</div>';
+    main.innerHTML = html;
+  })();
+  </script>
+</body>
+</html>

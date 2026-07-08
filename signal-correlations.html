@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Signal Correlations — SOFAR FINANCE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0d1117">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* SIGNAL_CORRELATION_MATRIX_V1 — correlate-before-crediting, on the wall */
+    .sc-wrap { max-width: 1240px; margin: 0 auto; padding: 16px; }
+    .sc-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 14px; }
+    .sc-tile { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; padding: 12px; text-align: center; }
+    .sc-tile .v { font-size: 22px; font-family: 'IBM Plex Mono', monospace; }
+    .sc-tile .k { font-size: 11px; color: var(--text-secondary); }
+    .sc-card { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-bottom: 14px; }
+    .sc-card h3 { margin: 0 0 8px; font-size: 14px; }
+    .sc-note { font-size: 11px; color: var(--text-secondary); font-family: 'IBM Plex Mono', monospace; margin: 6px 0; }
+    #sc-canvas { image-rendering: pixelated; border: 1px solid var(--border); max-width: 100%; }
+    #sc-hover { font-size: 11px; font-family: 'IBM Plex Mono', monospace; color: var(--text-secondary); min-height: 16px; }
+    table.sc-tbl { width: 100%; border-collapse: collapse; font-size: 11px; font-family: 'IBM Plex Mono', monospace; }
+    .sc-tbl th, .sc-tbl td { padding: 4px 6px; text-align: right; border-bottom: 1px solid var(--border); }
+    .sc-tbl th:first-child, .sc-tbl td:first-child, .sc-tbl th:nth-child(2), .sc-tbl td:nth-child(2) { text-align: left; }
+    .sc-dup { color: var(--red, #ef4444); font-weight: 600; }
+    .sc-empty { padding: 40px; text-align: center; color: var(--text-secondary); font-size: 13px; }
+  </style>
+</head>
+<body class="page-scrollable">
+  <div id="nav-root"></div>
+  <script src="js/nav.js"></script>
+  <script>document.addEventListener('DOMContentLoaded',()=>{NavComponent.setMeta(`<span class="live-dot"></span><span id="sc-status">Loading…</span>`);});</script>
+
+  <div class="sc-wrap" id="sc-main"><div class="sc-empty">Loading correlation matrix…</div></div>
+
+  <script>
+  'use strict';
+  (async function () {
+    var main = document.getElementById('sc-main');
+    var status = function (t) { var el = document.getElementById('sc-status'); if (el) el.textContent = t; };
+    var d = null;
+    try {
+      var r = await fetch('data/signal-correlations.json?t=' + Date.now());
+      if (r.ok) d = await r.json();
+    } catch (e) {}
+    if (!d || !d.matrix || !d.labels) {
+      main.innerHTML = '<div class="sc-empty">No correlation data yet — publisher (publish-signal-correlations.py) has not run.</div>';
+      status('no data'); return;
+    }
+    status((d.window ? d.window.start + ' → ' + d.window.end : '') + ' · ' + d.n_signals + ' signals');
+
+    var html = '<div class="sc-tiles">' +
+      '<div class="sc-tile"><div class="v">' + (d.n_signals || 0) + '</div><div class="k">base v1.0 signals</div></div>' +
+      '<div class="sc-tile"><div class="v">' + (d.mean_abs_rho === null || d.mean_abs_rho === undefined ? '—' : d.mean_abs_rho.toFixed(3)) + '</div><div class="k">mean |ρ| (this window)</div></div>' +
+      '<div class="sc-tile"><div class="v">' + (d.prev_window_mean_abs_rho === null || d.prev_window_mean_abs_rho === undefined ? '—' : d.prev_window_mean_abs_rho.toFixed(3)) + '</div><div class="k">mean |ρ| (prev window)</div></div>' +
+      '<div class="sc-tile"><div class="v ' + ((d.n_pairs_over_dup_threshold || 0) > 0 ? 'sc-dup' : '') + '">' + (d.n_pairs_over_dup_threshold || 0) + '</div><div class="k">pairs |ρ| ≥ 0.95 (dup gate)</div></div>' +
+      '</div>';
+
+    html += '<div class="sc-card"><h3>Spearman |ρ| heatmap (hover for pair)</h3>' +
+      '<canvas id="sc-canvas"></canvas><div id="sc-hover"></div>' +
+      '<div class="sc-note">blue → red = |ρ| 0 → 1 · diagonal is self-correlation · ' +
+      ((d.method && d.method.universe) || '') + '</div></div>';
+
+    html += '<div class="sc-card"><h3>Top pairs by |ρ| (drift vs previous window)</h3><table class="sc-tbl">' +
+      '<tr><th>#</th><th>pair</th><th>ρ now</th><th>ρ prev</th><th>Δ</th></tr>';
+    (d.top_pairs || []).forEach(function (p, i) {
+      var dup = Math.abs(p.rho) >= 0.95;
+      var delta = (p.prev_rho === null || p.prev_rho === undefined) ? null : (p.rho - p.prev_rho);
+      html += '<tr><td>' + (i + 1) + '</td><td' + (dup ? ' class="sc-dup"' : '') + '>' + p.a + ' × ' + p.b + (dup ? ' ⚠' : '') + '</td>' +
+        '<td>' + p.rho.toFixed(3) + '</td><td>' + (p.prev_rho === null || p.prev_rho === undefined ? '—' : p.prev_rho.toFixed(3)) + '</td>' +
+        '<td>' + (delta === null ? '—' : (delta >= 0 ? '+' : '') + delta.toFixed(3)) + '</td></tr>';
+    });
+    html += '</table><div class="sc-note">· ' + ((d.method && d.method.gate_ref) || '') +
+      ' · pairs at/above 0.95 are the redundancy the experiment gate would reject if proposed today</div></div>';
+    main.innerHTML = html;
+
+    // heatmap
+    try {
+      var n = d.labels.length;
+      var cell = Math.max(3, Math.min(8, Math.floor(760 / n)));
+      var cv = document.getElementById('sc-canvas');
+      cv.width = n * cell; cv.height = n * cell;
+      cv.style.width = Math.min(760, n * cell) + 'px';
+      var ctx = cv.getContext('2d');
+      for (var i = 0; i < n; i++) {
+        for (var j = 0; j < n; j++) {
+          var v = d.matrix[i] ? d.matrix[i][j] : null;
+          if (v === null || v === undefined) { ctx.fillStyle = '#21262d'; }
+          else {
+            var a = Math.abs(v);
+            var rr = Math.round(13 + a * (239 - 13)), gg = Math.round(17 + (1 - a) * 60), bb = Math.round(23 + (1 - a) * (166 - 23));
+            ctx.fillStyle = 'rgb(' + rr + ',' + gg + ',' + bb + ')';
+          }
+          ctx.fillRect(j * cell, i * cell, cell, cell);
+        }
+      }
+      var hover = document.getElementById('sc-hover');
+      cv.addEventListener('mousemove', function (ev) {
+        var rect = cv.getBoundingClientRect();
+        var scale = cv.width / rect.width;
+        var j = Math.floor((ev.clientX - rect.left) * scale / cell);
+        var i = Math.floor((ev.clientY - rect.top) * scale / cell);
+        if (i >= 0 && i < n && j >= 0 && j < n) {
+          var v = d.matrix[i] ? d.matrix[i][j] : null;
+          hover.textContent = d.labels[i] + ' × ' + d.labels[j] + ' — ρ = ' + (v === null ? 'n/a' : v);
+        }
+      });
+    } catch (e) { /* heatmap is decorative; table above carries the data */ }
+  })();
+  </script>
+</body>
+</html>
