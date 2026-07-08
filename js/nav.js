@@ -5,7 +5,7 @@
  *
  * Groups:
  *   Markets  → index, options-flow, vol-regime
- *   AI       → ai-analysis, macro-events, ticker-dives, daily-summary
+ *   AI       → ai-analysis, ticker-dives, daily-summary
  *   Performance → performance
  *   Config   → config (standalone)
  */
@@ -30,7 +30,6 @@
       default: 'ai-analysis.html',
       items: [
         { href: 'ai-analysis.html',   label: 'AI Analysis'  },
-        { href: 'macro-events.html',  label: 'Macro Events' },
         { href: 'ticker-dives.html',  label: 'Deep Dives'   },
         { href: 'daily-summary.html', label: 'Daily Summary'},
         { href: 'research.html',       label: 'Research'     },
