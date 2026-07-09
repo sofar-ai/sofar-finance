@@ -139,12 +139,12 @@
   const SIG_COLORS = {
     gex:'#60a5fa', vix_structure:'#a78bfa', options_flow:'#fb923c',
     headlines:'#4ade80', vol_regime:'#f87171', prediction_feedback:'#94a3b8',
-    event_trees:'#fbbf24', price_data:'#374151',
+    price_data:'#374151',
   };
   const SIG_LABELS = {
     gex:'GEX', vix_structure:'VIX Curve', options_flow:'Options Flow',
     headlines:'Headlines', vol_regime:'Vol Regime', prediction_feedback:'Feedback',
-    event_trees:'Event Trees', price_data:'Price Data',
+    price_data:'Price Data',
   };
   const SCRAPERS = [
     {id:'headlines_rss',  label:'Headlines RSS',  thresh:120},
@@ -153,7 +153,6 @@
     {id:'gex',            label:'GEX Calculator', thresh:120},
     {id:'vix_structure',  label:'VIX Structure',  thresh:120},
     {id:'vol_regime',     label:'Vol Regime',     thresh:120},
-    {id:'event_trees',    label:'Event Monitor',  thresh:360},
     {id:'prediction_feedback', label:'Backcheck', thresh:480},
   ];
 
@@ -194,7 +193,11 @@
       ? `Primary: ${attr.primary_driver} — ${attr.reasoning_chain || 'No chain provided'}`
       : (snap ? 'No signal attribution in this snapshot (pre-Layer 2 run)' : 'No snapshot available');
 
-    const missingBadge = health.missing_sources?.length
+    // AUDIT_BADGE_NULL_STATE_HONEST_V1 (SOF-39): the old fallback showed
+    // green "All sources present" on a NULL snapshot. No-data warns, never green.
+    const missingBadge = !snap
+      ? `<span style="color:#f59e0b;font-family:'IBM Plex Mono',monospace;font-size:10px">⚠ No snapshot loaded — source audit unavailable</span>`
+      : health.missing_sources?.length
       ? `<span style="color:#ef4444;font-family:'IBM Plex Mono',monospace;font-size:10px">⚠ Missing: ${health.missing_sources.join(', ')}</span>`
       : `<span style="color:#22c55e;font-family:'IBM Plex Mono',monospace;font-size:10px">✓ All sources present</span>`;
     const staleBadge = health.stale_sources?.length
@@ -585,7 +588,9 @@
     // Load snapshots via API (lists files in data/synthesis-snapshots/)
     let snapshots = [];
     try {
-      const listR = await fetch(`/api/list-snapshots?t=${t}`);
+      // AUDIT_SNAPSHOT_INDEX_V1 (SOF-39): static index maintained by the
+      // snapshot writer — no GitHub API / token on the render path.
+      const listR = await fetch(`data/synthesis-snapshots/index.json?t=${t}`);
       if (listR.ok) {
         const { files = [] } = await listR.json();
         const recent = files.slice(-10);  // last 10 snapshots
