@@ -2,8 +2,11 @@
 // GET  → returns current trigger state from GitHub
 // POST → sets state to "pending" (poller picks it up within 1 minute)
 
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
-const GITHUB_REPO  = process.env.GITHUB_REPO  || 'sofar-ai/sofar-finance';
+// ENV_CREDENTIAL_TRIM_AT_READ_V1 (SOF-39): a pasted trailing newline in a
+// Vercel env credential reaches the request header/URL and THROWS in the
+// runtime (FUNCTION_INVOCATION_FAILED, observed live 2026-07-08) — trim at read.
+const GITHUB_TOKEN = (process.env.GITHUB_TOKEN || '').trim();
+const GITHUB_REPO  = (process.env.GITHUB_REPO || 'sofar-ai/sofar-finance').trim();
 const FILE_PATH    = 'data/refresh-trigger.json';
 const API_URL      = `https://api.github.com/repos/${GITHUB_REPO}/contents/${FILE_PATH}`;
 

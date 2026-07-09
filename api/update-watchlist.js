@@ -2,8 +2,11 @@
 // GET  → returns current watchlist
 // POST → {tickers: [...]} → validates and writes watchlist.json
 
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
-const GITHUB_REPO  = process.env.GITHUB_REPO || 'sofar-ai/sofar-finance';
+// ENV_CREDENTIAL_TRIM_AT_READ_V1 (SOF-39): a pasted trailing newline in a
+// Vercel env credential reaches the request header/URL and THROWS in the
+// runtime (FUNCTION_INVOCATION_FAILED, observed live 2026-07-08) — trim at read.
+const GITHUB_TOKEN = (process.env.GITHUB_TOKEN || '').trim();
+const GITHUB_REPO  = (process.env.GITHUB_REPO || 'sofar-ai/sofar-finance').trim();
 const FILE_PATH    = 'data/watchlist.json';
 const API_URL      = `https://api.github.com/repos/${GITHUB_REPO}/contents/${FILE_PATH}`;
 

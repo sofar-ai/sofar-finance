@@ -70,7 +70,9 @@ async function fetchYahoo(yahooTicker, displayTicker) {
 
 export default async function handler(req, res) {
   const { ticker = 'SPY' } = req.query;
-  const finnhubKey = process.env.FINNHUB_API_KEY;
+  // ENV_CREDENTIAL_TRIM_AT_READ_V1 (SOF-39): same crash class — a newline
+  // is an illegal URL char and throws before any fetch happens.
+  const finnhubKey = (process.env.FINNHUB_API_KEY || '').trim();
 
   try {
     let quote;
