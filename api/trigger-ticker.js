@@ -39,7 +39,10 @@ async function putFile(content, sha, message) {
   return res.json();
 }
 
-module.exports = async (req, res) => {
+// API_CJS_TO_ESM_CONVERSION_V1 (SOF-39): package.json went type:module on
+// 2026-04-11 (69dcab7ed7); module.exports crashed at module scope ever since
+// (ReferenceError -> FUNCTION_INVOCATION_FAILED, before the handler ran).
+export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
