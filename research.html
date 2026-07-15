@@ -143,7 +143,7 @@
           <div class="sd-model-banner">
             <div style="display:flex;justify-content:space-between;align-items:center;">
               <div>
-                <div class="sd-model-label">LIGHTGBM v6 WALK-FORWARD</div>
+                <div class="sd-model-label">LIGHTGBM v7 WALK-FORWARD — HONEST ERA</div>
                 <div class="sd-model-stat" id="sd-accuracy">Loading...</div>
               </div>
               <div style="text-align:right;">
@@ -187,15 +187,8 @@
           </div>
         </div>
         <div class="sd-scroll" id="sd-right">
-          <!-- Pilot Data Sources -->
-          <div class="sd-section">
-            <div class="sd-section-title">🛰️ Pilot Data Sources
-              <span class="sd-section-count" id="sd-pilot-count">—</span>
-            </div>
-            <div id="sd-pilot-list">
-              <div class="sd-loading">Loading…</div>
-            </div>
-          </div>
+          <!-- SOF38_FICTION_PANELS_FIX_V1: Pilot Data Sources placeholder
+               removed (never deployed; /api/data-source-registry never built). -->
           <!-- Data Scout Escalations -->
           <div class="sd-section">
             <div class="sd-section-title">⚠️ Data Scout Escalations
@@ -205,25 +198,21 @@
               <div class="sd-loading">Loading…</div>
             </div>
           </div>
-          <!-- Model Progression -->
+          <!-- SOF38_FICTION_PANELS_FIX_V1: "Model Progression" (fiction-era
+               Sharpes 3.56/4.27/4.80, frozen ~Apr 11) and "Key Discoveries"
+               (the 4.8-Sharpe / 65.2% WR claims) REMOVED — they contradicted
+               the honest champion series two clicks away. -->
           <div class="sd-section">
-            <div class="sd-section-title">📈 Model Progression</div>
-            <div class="sd-card">
-              <div class="sd-stat-row"><span class="sd-stat-label">Mar 20 — Linear v5</span><span class="sd-stat-val" style="color:#ef4444;">No edge</span></div>
-              <div class="sd-stat-row"><span class="sd-stat-label">Apr 11 — LightGBM v7 (7d)</span><span class="sd-stat-val" style="color:#3b82f6;">Sharpe 3.56</span></div>
-              <div class="sd-stat-row"><span class="sd-stat-label">Apr 11 — LightGBM v7 (14d)</span><span class="sd-stat-val" style="color:#3b82f6;">Sharpe 4.27</span></div>
-              <div class="sd-stat-row"><span class="sd-stat-label">Apr 11 — LightGBM v7 (21d) ★</span><span class="sd-stat-val" style="color:#22c55e;">Sharpe 4.80</span></div>
-              <div class="sd-stat-row"><span class="sd-stat-label">Apr 11 — LightGBM v7 (7-day)</span><span class="sd-stat-val" style="color:#3b82f6;">Sharpe 1.40</span></div>
-            </div>
-          </div>
-          <!-- Key Discoveries -->
-          <div class="sd-section">
-            <div class="sd-section-title">🔬 Key Discoveries</div>
+            <div class="sd-section-title">📈 Model performance history</div>
             <div class="sd-card">
               <div style="font-size:11px;color:#c9d1d9;line-height:1.5;">
-                <strong style="color:#22c55e;">Lagged features dominate:</strong> Yesterday's Williams %R is the #1 feature. The model learned momentum trajectories, not snapshots.<br><br>
-                <strong style="color:#3b82f6;">Feature engineering > LLM creativity:</strong> 133 features (75 technical + 58 macro). 21-day champion model: Sharpe 4.80, 65.2% win rate.<br><br>
-                <strong style="color:#f59e0b;">Multi-horizon validated:</strong> 21d champion (Sharpe 4.80, 65.2% WR) uses 133 combined tech+macro features. Macro signals only help at 21d horizon — zero edge at shorter timeframes.
+                Honest champion series (weekly walk-forward, era-annotated) →
+                <a href="pipeline-truth.html" style="color:#3b82f6;">pipeline-truth</a> ·
+                live deployed accuracy trend →
+                <a href="paper-pnl.html" style="color:#3b82f6;">paper P&amp;L</a>.<br>
+                <span style="color:#94a3b8;">Fiction-era numbers (Sharpe 3.56–4.80; pre-2026-05-28
+                measurement defect) removed per SOF-38 — current honest 21d champion:
+                see banner above, same source as pipeline-truth.</span>
               </div>
             </div>
           </div>
@@ -392,42 +381,10 @@
   // ─────────────────────────────────────────────────────────────────────
   async function loadDataGapsAndPilots() {
     // Pilot sources — try /api/data-gaps with action=pilots, fall back to action=stats
-    var pilotEl = document.getElementById('sd-pilot-list');
-    var pilotCount = document.getElementById('sd-pilot-count');
     var escEl = document.getElementById('sd-escalation-list');
     var escCount = document.getElementById('sd-escalation-count');
-    try {
-      // Pilots: expect /api/data-gaps?action=pilots OR /api/data-gaps?status=pilot
-      // FRONTEND_PATCH_V1: /api/data-gaps doesn't query data_source_registry.
-      // No endpoint exists yet to query the pilot registry — TODO add /api/data-source-registry
-      var pilots = [];
-      // Render pilots
-      pilotCount.textContent = pilots.length + ' pilot' + (pilots.length === 1 ? '' : 's');
-      if (!pilots.length) {
-        pilotEl.innerHTML = '<div class="sd-empty">Pilot registry endpoint not deployed yet. Data Scout has ingested fred:DGS10 (visible to Director context). Frontend visibility pending /api/data-source-registry.</div>';
-      } else {
-        pilotEl.innerHTML = pilots.map(function(p) {
-          var src = p.source || '?';
-          var ident = p.identifier || '?';
-          var target = p.target_table || '';
-          var rows = p.total_rows != null ? Number(p.total_rows).toLocaleString() : '—';
-          var started = p.pilot_started_at ? new Date(p.pilot_started_at).toLocaleDateString() : '';
-          var status = (p.status || 'pilot').toLowerCase();
-          var statusClass = status === 'approved' ? 'sd-badge-green' : status === 'rejected' ? 'sd-badge-red' : status === 'monitor' ? 'sd-badge-yellow' : 'sd-badge-blue';
-          return '<div class="sd-pilot-card">' +
-            '<div style="display:flex;justify-content:space-between;align-items:center;">' +
-              '<div class="sd-pilot-name">' + escapeHtml(src) + ':' + escapeHtml(ident) + '</div>' +
-              '<span class="sd-badge ' + statusClass + '">' + status + '</span>' +
-            '</div>' +
-            '<div class="sd-pilot-meta">→ ' + escapeHtml(target) + ' · ' + rows + ' rows · started ' + started + '</div>' +
-            (p.description ? '<div style="font-size:10px;color:#94a3b8;margin-top:4px;line-height:1.4;">' + escapeHtml(p.description.substring(0, 150)) + '</div>' : '') +
-          '</div>';
-        }).join('');
-      }
-    } catch (err) {
-      pilotEl.innerHTML = '<div class="sd-error">Failed to load pilots: ' + err.message + '</div>';
-      pilotCount.textContent = 'error';
-    }
+    // SOF38_FICTION_PANELS_FIX_V1: pilots half removed with its placeholder
+    // panel (endpoint never built); escalations half unchanged below.
     // Escalations: gaps in needs_human_routing / needs_paid_source / quality_review states
     try {
       // FRONTEND_PATCH_V1: API ignores ?action= filter. Always filter client-side.
@@ -479,56 +436,41 @@
   // Existing: Signal data + leaderboard
   // ─────────────────────────────────────────────────────────────────────
   (async function loadSignalData() {
+    // SOF38_FICTION_PANELS_FIX_V1: sourced from data/lgbm-metadata-21d.json —
+    // the same honest artifact pipeline-truth uses. NO fiction fallbacks:
+    // any failure renders '—', never a stale number.
+    var meta = null;
     try {
-      var res = await fetch('data/lgbm-prediction.json?t=' + Date.now());
-      if (!res.ok) return;
-      var pred = await res.json();
-      fetch('data/lgbm-prediction-21d.json?t=' + Date.now()).then(r => r.json()).then(function(p21) {
-        document.getElementById('sd-accuracy').textContent = 'Sharpe ' + (p21.walk_forward_sharpe || '4.80');
-      }).catch(function() {
-        document.getElementById('sd-accuracy').textContent = 'Sharpe 4.80';
-      });
-      document.getElementById('sd-feature-count').textContent = pred.signals_used || 75;
-    } catch(e) {}
+      var r = await fetch('data/lgbm-metadata-21d.json?t=' + Date.now());
+      if (r.ok) meta = await r.json();
+    } catch (e) {}
+    var accEl = document.getElementById('sd-accuracy');
+    if (meta && meta.walk_forward_sharpe != null) {
+      accEl.textContent = 'Sharpe ' + meta.walk_forward_sharpe + ' · ' +
+        (meta.walk_forward_accuracy != null ? meta.walk_forward_accuracy + '%' : '—') +
+        ' (n=' + (meta.walk_forward_scored != null ? meta.walk_forward_scored : '—') + ')';
+    } else { accEl.textContent = '—'; }
+    document.getElementById('sd-feature-count').textContent = (meta && meta.feature_count) || '—';
+    document.getElementById('sd-total-signals').textContent = (meta && meta.feature_count) || '—';
     try {
-      var topFeatures = [
-        {name:'williams_r_lag1', imp:187, cat:'engineered'},
-        {name:'stochastic_k', imp:179, cat:'base'},
-        {name:'bb_position', imp:168, cat:'base'},
-        {name:'bb_position_lag1', imp:167, cat:'engineered'},
-        {name:'stochastic_k_lag1', imp:157, cat:'engineered'},
-        {name:'williams_r', imp:132, cat:'base'},
-        {name:'bb_position_mom2', imp:65, cat:'engineered'},
-        {name:'range_ratio', imp:41, cat:'base'},
-        {name:'stochastic_k_mom2', imp:27, cat:'engineered'},
-        {name:'rsi_5', imp:23, cat:'base'},
-        {name:'range_ratio_lag1', imp:17, cat:'engineered'},
-        {name:'willr_x_range', imp:16, cat:'interaction'},
-        {name:'cci_20_lag1', imp:14, cat:'engineered'},
-        {name:'rsi5_x_volratio', imp:14, cat:'interaction'},
-        {name:'cci_20', imp:12, cat:'base'},
-        {name:'rsi_5_lag1', imp:11, cat:'engineered'},
-        {name:'vol_ratio_lag1', imp:10, cat:'engineered'},
-        {name:'stochastic_k_lag2', imp:9, cat:'engineered'},
-        {name:'williams_r_mom2', imp:9, cat:'engineered'},
-        {name:'roc_5', imp:8, cat:'base'},
-      ];
-      var maxImp = topFeatures[0].imp;
       var lb = document.getElementById('sd-leaderboard');
-      lb.innerHTML = topFeatures.map(function(f, i) {
-        var pct = Math.round(f.imp / maxImp * 100);
-        var catColor = f.cat === 'engineered' ? '#3b82f6' : f.cat === 'interaction' ? '#a855f7' : '#22c55e';
-        var catLabel = f.cat === 'engineered' ? 'ENG' : f.cat === 'interaction' ? 'INT' : 'BASE';
-        return '<div class="sd-stat-row">' +
-          '<span class="sd-stat-label" style="min-width:24px;color:#4b5563;">' + (i+1) + '.</span>' +
-          '<span class="sd-stat-label" style="flex:1;">' + f.name + '</span>' +
-          '<span class="sd-badge" style="background:' + catColor + '22;color:' + catColor + ';border:1px solid ' + catColor + '44;margin-right:6px;">' + catLabel + '</span>' +
-          '<span class="sd-stat-val" style="min-width:30px;text-align:right;">' + f.imp + '</span>' +
-          '</div>' +
-          '<div class="sd-bar"><div class="sd-bar-fill" style="width:' + pct + '%;background:' + catColor + ';"></div></div>';
-      }).join('');
-      document.getElementById('sd-total-signals').textContent = '80';
-    } catch(e) { console.warn(e); }
+      var fi = meta && meta.feature_importance;
+      if (!fi) { lb.innerHTML = '<div class="sd-empty">No importance data — metadata feed unavailable.</div>'; return; }
+      var top = Object.keys(fi).map(function (k) { return { name: k, imp: fi[k] }; })
+        .sort(function (a, b) { return b.imp - a.imp; }).slice(0, 20);
+      var maxImp = top.length ? (top[0].imp || 1) : 1;
+      lb.innerHTML = '<div style="font-size:10px;color:#94a3b8;margin-bottom:6px;">Live from lgbm-metadata-21d.json (' +
+        (meta.model_version || '?') + ', trained ' + (meta.trained_at ? String(meta.trained_at).slice(0, 10) : '—') + ')</div>' +
+        top.map(function (f, i) {
+          var pct = Math.round(f.imp / maxImp * 100);
+          return '<div class="sd-stat-row">' +
+            '<span class="sd-stat-label" style="min-width:24px;color:#4b5563;">' + (i + 1) + '.</span>' +
+            '<span class="sd-stat-label" style="flex:1;">' + f.name + '</span>' +
+            '<span class="sd-stat-val" style="min-width:30px;text-align:right;">' + f.imp + '</span>' +
+            '</div>' +
+            '<div class="sd-bar"><div class="sd-bar-fill" style="width:' + pct + '%;background:#3b82f6;"></div></div>';
+        }).join('');
+    } catch (e) { console.warn(e); }
   })();
   // ─────────────────────────────────────────────────────────────────────
   // Existing: Experiment history

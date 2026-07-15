@@ -38,6 +38,61 @@
 
   <div class="pt-wrap" id="pt-main"><div class="pt-empty">Loading pipeline truth…</div></div>
 
+  <!-- UNIVERSE_PANEL_V1 (SOF-56): tier chips + probation badges + coverage.
+       Feed: data/pipeline-truth.json .universe (publisher extension). -->
+  <div class="pt-wrap" id="uni-wrap">
+    <div style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:8px;padding:14px;margin-top:14px;">
+      <h3 style="margin:0 0 10px;font-size:14px;">Universe <span id="uni-meta" style="color:var(--text-secondary);font-weight:400;font-size:11px;"></span></h3>
+      <div id="uni-panel" style="font-size:12px;color:var(--text-secondary);">Loading universe…</div>
+    </div>
+  </div>
+  <script>
+  'use strict';
+  (async function () {
+    var host = document.getElementById('uni-panel');
+    var d = null;
+    try {
+      var r = await fetch('data/pipeline-truth.json?t=' + Date.now());
+      if (r.ok) d = await r.json();
+    } catch (e) { /* degrade */ }
+    var u = d && d.universe;
+    if (!u) { host.textContent = 'No universe block yet — publisher extension has not run. Degrades by design.'; return; }
+    if (u._error) { host.textContent = 'Universe block error (publisher fail-soft): ' + u._error; return; }
+    document.getElementById('uni-meta').textContent = 'config v' + u.config_version + ' · updated ' + u.updated;
+    var esc = function (s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'); };
+    var chip = function (m) {
+      var badge = m.probation ? ' <span style="background:#f59e0b22;color:#f59e0b;border:1px solid #f59e0b55;border-radius:3px;padding:0 3px;font-size:9px;">PROBATION</span>' : '';
+      var title = m.added_date ? ('added ' + m.added_date + ' — ' + (m.added_reason || '')) : 'pre-config era';
+      return '<span title="' + esc(title) + '" style="display:inline-block;background:var(--bg-primary,#161b22);border:1px solid var(--border,#30363d);border-radius:4px;padding:1px 6px;margin:2px;font-family:monospace;font-size:11px;">' + esc(m.ticker) + badge + '</span>';
+    };
+    var html = '';
+    var tierNames = { signal: 'Signal', options_greeks: 'Options + Greeks', iv_surface: 'IV Surface', ml_cohort_derived: 'ML Cohort (derived)' };
+    Object.keys(tierNames).forEach(function (t) {
+      var members = (u.tiers && u.tiers[t]) || [];
+      html += '<div style="margin:6px 0;"><span style="display:inline-block;min-width:150px;color:var(--text-secondary);">' + tierNames[t] + ' (' + members.length + ')</span>' + members.map(chip).join('') + '</div>';
+    });
+    if ((u.watch || []).length) {
+      html += '<div style="margin:6px 0;"><span style="display:inline-block;min-width:150px;color:var(--text-secondary);">Watch</span>' + u.watch.map(function (t) { return chip({ ticker: t + ' 👀', added_reason: 'WATCH — SOF-45 trigger armed' }); }).join('') + '</div>';
+    }
+    var cov = u.coverage || {};
+    var ogr = ((u.tiers && u.tiers.options_greeks) || []).map(function (m) { return m.ticker; });
+    html += '<div style="overflow-x:auto;margin-top:10px;"><table style="border-collapse:collapse;font-family:monospace;font-size:11px;width:100%;">' +
+      '<tr style="color:var(--text-secondary);"><th style="text-align:left;padding:3px 6px;">options name</th><th style="text-align:right;">contracts</th><th style="text-align:right;">days</th><th style="text-align:left;padding-left:10px;">range</th><th style="text-align:right;">cov≈</th><th style="text-align:left;padding-left:10px;">flags</th></tr>' +
+      ogr.map(function (t) {
+        var c = cov[t];
+        if (!c) return '<tr><td style="padding:3px 6px;">' + esc(t) + '</td><td colspan="4" style="text-align:right;color:var(--text-secondary);">no rows yet</td><td style="padding-left:10px;"><span style="color:#f59e0b;">EMPTY</span></td></tr>';
+        var flags = (c.gap_flag ? '<span style="color:#ef4444;">GAP</span> ' : '') + (c.stale_flag ? '<span style="color:#f59e0b;">STALE</span>' : '');
+        return '<tr><td style="padding:3px 6px;">' + esc(t) + '</td><td style="text-align:right;">' + Number(c.contracts).toLocaleString() + '</td><td style="text-align:right;">' + c.days + '</td><td style="padding-left:10px;">' + c.first + ' → ' + c.last + '</td><td style="text-align:right;">' + c.coverage_ratio_approx + '</td><td style="padding-left:10px;">' + (flags || '<span style="color:#22c55e;">ok</span>') + '</td></tr>';
+      }).join('') + '</table></div>';
+    var adds = (u.membership_history && u.membership_history.adds) || [];
+    if (adds.length) {
+      html += '<div style="margin-top:8px;color:var(--text-secondary);font-size:11px;">Recent adds: ' + adds.map(function (a) { return esc(a.ticker) + ' (' + esc(a.added_date) + ')'; }).join(' · ') + ' — ' + esc(u.membership_history.drops_note) + '</div>';
+    }
+    html += '<div style="margin-top:4px;color:var(--text-secondary);font-size:10px;">' + (u.notes || []).map(esc).join(' · ') + '</div>';
+    host.innerHTML = html;
+  })();
+  </script>
+
   <script>
   'use strict';
   (async function () {

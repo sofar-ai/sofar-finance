@@ -41,6 +41,72 @@
     <div class="pp-empty">Loading paper P&L…</div>
   </div>
 
+  <!-- ACCURACY_TREND_HONEST_N_V1 (SOF-48): per-horizon rolling live accuracy.
+       Feed: data/accuracy-trend.json (publish-accuracy-trend.py, nightly).
+       Grey segments = honest non-overlap n below floor: uninterpretable. -->
+  <div class="pp-wrap" id="acc-trend-wrap">
+    <div class="pp-card" style="margin-top:14px">
+      <h3>Live directional accuracy — per horizon <span class="pp-muted">(traded only; grey = below honest-n floor)</span></h3>
+      <div id="acc-trend" class="pp-empty">Loading accuracy trend…</div>
+    </div>
+  </div>
+  <script>
+  'use strict';
+  (async function () {
+    var host = document.getElementById('acc-trend');
+    var d = null;
+    try {
+      var r = await fetch('data/accuracy-trend.json?t=' + Date.now());
+      if (r.ok) d = await r.json();
+    } catch (e) { /* degrade */ }
+    if (!d || !d.series) {
+      host.innerHTML = 'No accuracy-trend data yet — publisher (publish-accuracy-trend.py) has not run. Degrades by design.';
+      return;
+    }
+    var W = 560, H = 190, PL = 34, PR = 8, PT = 10, PB = 22;
+    var COLORS = { rolling_30d: '#60a5fa', rolling_60d: '#a78bfa', cumulative: '#22c55e' };
+    var esc = function (s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;'); };
+    function chart(src) {
+      var ser = d.series[src]; if (!ser) return '';
+      var all = ser.cumulative || [];
+      if (!all.length) return '';
+      var d0 = new Date(all[0][0]).getTime(), d1 = new Date(all[all.length - 1][0]).getTime();
+      var x = function (ds) { return PL + (W - PL - PR) * (new Date(ds).getTime() - d0) / Math.max(1, d1 - d0); };
+      var y = function (a) { return PT + (H - PT - PB) * (1 - a); };
+      var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;max-width:' + W + 'px">';
+      [0, 0.25, 0.5, 0.75, 1].forEach(function (g) {
+        svg += '<line x1="' + PL + '" x2="' + (W - PR) + '" y1="' + y(g) + '" y2="' + y(g) + '" stroke="var(--border,#333)" stroke-width="' + (g === 0.5 ? 1 : 0.4) + '"' + (g === 0.5 ? ' stroke-dasharray="4 3"' : '') + '/>' +
+               '<text x="2" y="' + (y(g) + 3) + '" font-size="8" fill="var(--text-secondary,#888)">' + (g * 100) + '%</text>';
+      });
+      ((d.annotations && d.annotations.major) || []).forEach(function (a) {
+        var t = new Date(a.date).getTime(); if (t < d0 || t > d1) return;
+        svg += '<line x1="' + x(a.date) + '" x2="' + x(a.date) + '" y1="' + PT + '" y2="' + (H - PB) + '" stroke="#f59e0b" stroke-width="0.8" stroke-dasharray="3 3"><title>' + esc(a.date + ' — ' + a.label) + '</title></line>';
+      });
+      for (var t = d0; t <= d1; t += 86400000) {
+        if (new Date(t).getUTCDay() === 0) svg += '<line x1="' + x(new Date(t).toISOString().slice(0, 10)) + '" x2="' + x(new Date(t).toISOString().slice(0, 10)) + '" y1="' + (H - PB) + '" y2="' + (H - PB + 4) + '" stroke="var(--text-secondary,#888)" stroke-width="0.6"><title>Sunday retrain</title></line>';
+      }
+      Object.keys(COLORS).forEach(function (wk) {
+        var pts = ser[wk] || [], seg = '', mode = null, out = '';
+        pts.forEach(function (p) {
+          if (p[1] === null) { if (seg) { out += seg; } seg = ''; mode = null; return; }
+          var m = p[5] ? 'grey' : 'solid';
+          if (m !== mode && seg) { out += seg; seg = ''; }
+          if (!seg) seg = '<polyline fill="none" stroke="' + (m === 'grey' ? 'var(--text-secondary,#777)' : COLORS[wk]) + '" stroke-width="' + (m === 'grey' ? 0.8 : 1.6) + '"' + (m === 'grey' ? ' stroke-dasharray="2 2" opacity="0.55"' : '') + ' points="';
+          mode = m; seg += x(p[0]) + ',' + y(p[1]) + ' ';
+        });
+        if (seg) out += seg;
+        // close every polyline tag
+        svg += out.split('points="').map(function (c, i) { return i === 0 ? c : c + '"/>'; }).join('points="');
+      });
+      var last = ser.cumulative[ser.cumulative.length - 1];
+      return '<div style="margin-top:10px"><div class="pp-row"><span class="k">' + esc(src) + '</span><span>cumulative ' + (last[1] === null ? '—' : (100 * last[1]).toFixed(1) + '%') + ' <span class="pp-muted">(traded n=' + last[2] + ', honest n=' + last[3] + (last[5] ? ' — BELOW FLOOR ' + d.floor + ', uninterpretable' : '') + ')</span></span></div>' + svg + '</svg></div>';
+    }
+    var html = '<div class="pp-note">Feed: accuracy-trend.json · traded-only accuracy, point-in-time by resolution date · honest non-overlap floor = ' + esc(d.floor) + ' (grey below) · <span style="color:#60a5fa">30d</span> / <span style="color:#a78bfa">60d</span> / <span style="color:#22c55e">cumulative</span> · amber dashes: era boundary + graduate adoption · baseline ticks: Sunday retrains</div>';
+    ['lgbm_7d', 'lgbm_14d', 'lgbm_21d'].forEach(function (s) { html += chart(s); });
+    host.innerHTML = html;
+  })();
+  </script>
+
   <script>
   'use strict';
   // Degradation contract (SOF-33 design note): the predecessor CRASHED on its
