@@ -93,6 +93,45 @@
       return svg;
     }
 
+    function pcStrip(sym, s) {
+      // SOF-49 addition: intraday P/C VOLUME ratio strip (today, per snapshot)
+      var hist = (s.history || []).filter(function (r) { return r.length >= 6 && (r[4] || r[5]); });
+      var byTs = {};
+      hist.forEach(function (r) {
+        var e = byTs[r[0]] = byTs[r[0]] || { c: 0, p: 0 };
+        e.c += r[4]; e.p += r[5];
+      });
+      var pts = Object.keys(byTs).sort().map(function (ts) {
+        var e = byTs[ts];
+        return [ts, e.c ? e.p / e.c : null];
+      }).filter(function (x) { return x[1] != null; });
+      var today = pts.length ? pts[pts.length - 1][0].slice(0, 10) : null;
+      pts = pts.filter(function (x) { return x[0].slice(0, 10) === today; });
+      var cur = s.pc_volume && s.pc_volume.ratio;
+      if (!pts.length && cur == null) return '';
+      var W = 560, H = 70, PL = 42, PR = 8, PT = 6, PB = 14;
+      var vals = pts.map(function (x) { return x[1]; }).concat(cur != null ? [cur] : []);
+      var ymin = Math.min.apply(null, vals.concat([0.5])), ymax = Math.max.apply(null, vals.concat([1.5]));
+      var x = function (iso) {
+        var t = new Date(iso), mins = t.getHours() * 60 + t.getMinutes();
+        return PL + (W - PL - PR) * Math.min(1, Math.max(0, (mins - 570) / 390));
+      };
+      var y = function (v) { return PT + (H - PT - PB) * (1 - (v - ymin) / (ymax - ymin)); };
+      var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;max-width:' + W + 'px">';
+      svg += '<line x1="' + PL + '" x2="' + (W - PR) + '" y1="' + y(1) + '" y2="' + y(1) + '" stroke="var(--border,#333)" stroke-width="0.6" stroke-dasharray="4 3"/>' +
+             '<text x="2" y="' + (y(1) + 3) + '" font-size="8" fill="var(--text-secondary,#888)">1.0</text>';
+      if (pts.length) {
+        svg += '<polyline fill="none" stroke="#f59e0b" stroke-width="1.6" points="' +
+          pts.map(function (p) { return x(p[0]) + ',' + y(p[1]); }).join(' ') + '"/>';
+        pts.forEach(function (p) {
+          svg += '<circle cx="' + x(p[0]) + '" cy="' + y(p[1]) + '" r="2" fill="#f59e0b"><title>' + esc(p[0].slice(11, 16) + ' — P/C vol ' + p[1].toFixed(2)) + '</title></circle>';
+        });
+      }
+      svg += '</svg>';
+      return '<h3 style="margin-top:10px">P/C volume ratio <span class="sk-muted">(intraday, per snapshot' +
+        (cur != null ? ' · now ' + cur.toFixed(2) : '') + ')</span></h3>' + svg;
+    }
+
     function heatmap(sym, s) {
       var cells = s.heatmap || [];
       if (!cells.length) return '';
@@ -138,7 +177,7 @@
         html += '<div class="sk-card"><h3>' + esc(sym) + ' <span class="sk-muted">spot ' + esc(s.spot) +
           ' · front ' + esc(front.expiration || '?') + ' skew ' + (front.skew_25d != null ? (100 * front.skew_25d).toFixed(2) + ' vol pts' : '—') +
           ' (25Δp ' + (100 * (front.put25_iv || 0)).toFixed(1) + ' / 25Δc ' + (100 * (front.call25_iv || 0)).toFixed(1) + ')</span></h3>' +
-          lineSVG(sym, s) +
+          lineSVG(sym, s) + pcStrip(sym, s) +
           '<h3 style="margin-top:12px">Strike × expiry IV <span class="sk-muted">(latest snapshot)</span></h3>' + heatmap(sym, s) +
           '</div>';
       });
