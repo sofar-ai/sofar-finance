@@ -21,6 +21,7 @@
         { href: 'index.html',        label: 'Dashboard'    },
         { href: 'options-flow.html', label: 'Options Flow' },
         { href: 'vol-regime.html',   label: 'Vol Regime'   },
+        { href: 'skew.html',         label: 'Intraday Skew' },
         { href: 'rates.html',        label: 'Rates & Dollar' },
       ],
     },

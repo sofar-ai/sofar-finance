@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Intraday Skew — SOFAR FINANCE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0d1117">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* SKEW_INTRADAY_V1 (SOF-49): 25Δ RR skew line + strike×expiry IV heatmap.
+       ~15-min RTH snapshots, NOT tick streaming — honesty stamped on page. */
+    .sk-wrap { max-width: 1200px; margin: 0 auto; padding: 16px; }
+    .sk-note { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px;
+               padding: 10px 14px; font-size: 12px; color: var(--text-secondary); margin-bottom: 16px;
+               font-family: 'IBM Plex Mono', monospace; }
+    .sk-card { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px;
+               padding: 14px; margin-bottom: 14px; }
+    .sk-card h3 { margin: 0 0 10px; font-size: 14px; }
+    .sk-muted { color: var(--text-secondary); font-weight: 400; font-size: 11px; }
+    .sk-stale { background: #f59e0b22; border: 1px solid #f59e0b55; color: #f59e0b;
+                border-radius: 6px; padding: 6px 10px; font-size: 12px; margin-bottom: 12px;
+                font-family: 'IBM Plex Mono', monospace; }
+    table.sk-heat { border-collapse: collapse; font-family: 'IBM Plex Mono', monospace;
+                    font-size: 10px; }
+    .sk-heat th, .sk-heat td { padding: 2px 4px; text-align: right; border: 1px solid var(--bg-primary,#0d1117); }
+    .sk-heat th { color: var(--text-secondary); font-weight: 400; }
+    .sk-heat-wrap { overflow-x: auto; }
+    .sk-empty { padding: 40px; text-align: center; color: var(--text-secondary); font-size: 13px; }
+  </style>
+</head>
+<body class="page-scrollable">
+  <div id="nav-root"></div>
+  <script src="js/nav.js"></script>
+  <script>document.addEventListener('DOMContentLoaded',()=>{NavComponent.setMeta(`<span class="live-dot"></span><span id="sk-status">Loading…</span>`);});</script>
+
+  <div class="sk-wrap" id="sk-main">
+    <div class="sk-empty">Loading intraday skew…</div>
+  </div>
+
+  <script>
+  'use strict';
+  // Degradation contract: missing/malformed feed -> quiet empty state, never
+  // a crash. Closed market -> last-known-good WITH its timestamp (null-never-green).
+  (function () {
+    var REFRESH_MS = 5 * 60 * 1000;   // page self-refresh; feed cadence ~15min RTH
+    var main = document.getElementById('sk-main');
+    var status = function (t) { var el = document.getElementById('sk-status'); if (el) el.textContent = t; };
+    var esc = function (s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;'); };
+
+    function lineSVG(sym, s) {
+      // today's front-expiry skew line + recent-day overlays (muted)
+      var hist = s.history || [];
+      var byDay = {};
+      hist.forEach(function (r) {
+        var day = r[0].slice(0, 10);
+        (byDay[day] = byDay[day] || []).push(r);
+      });
+      Object.keys(byDay).forEach(function (d) {
+        var front = byDay[d].reduce(function (m, r) { return r[1] < m ? r[1] : m; }, '9999-12-31');
+        byDay[d] = byDay[d].filter(function (r) { return r[1] === front; });
+      });
+      var days = Object.keys(byDay).sort();
+      var today = days[days.length - 1];
+      var W = 560, H = 170, PL = 42, PR = 8, PT = 8, PB = 20;
+      var all = days.flatMap(function (d) { return byDay[d].map(function (r) { return r[2]; }); });
+      if (!all.length) return '<div class="sk-empty">No skew history yet — line begins with the first live snapshot.</div>';
+      var ymin = Math.min.apply(null, all), ymax = Math.max.apply(null, all);
+      if (ymax - ymin < 0.004) { ymax += 0.002; ymin -= 0.002; }
+      var x = function (iso) {
+        var t = new Date(iso), mins = t.getHours() * 60 + t.getMinutes();
+        return PL + (W - PL - PR) * Math.min(1, Math.max(0, (mins - 570) / 390)); // 09:30–16:00 ET
+      };
+      var y = function (v) { return PT + (H - PT - PB) * (1 - (v - ymin) / (ymax - ymin)); };
+      var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;max-width:' + W + 'px">';
+      [ymin, (ymin + ymax) / 2, ymax].forEach(function (g) {
+        svg += '<line x1="' + PL + '" x2="' + (W - PR) + '" y1="' + y(g) + '" y2="' + y(g) + '" stroke="var(--border,#333)" stroke-width="0.4"/>' +
+               '<text x="2" y="' + (y(g) + 3) + '" font-size="8" fill="var(--text-secondary,#888)">' + (100 * g).toFixed(1) + 'vp</text>';
+      });
+      days.forEach(function (d) {
+        var pts = byDay[d].map(function (r) { return x(r[0]) + ',' + y(r[2]); }).join(' ');
+        var isToday = d === today;
+        svg += '<polyline fill="none" points="' + pts + '" stroke="' + (isToday ? '#60a5fa' : 'var(--text-secondary,#666)') + '"' +
+               ' stroke-width="' + (isToday ? 1.8 : 0.8) + '"' + (isToday ? '' : ' opacity="0.45"') + '><title>' + esc(d) + '</title></polyline>';
+        if (isToday) byDay[d].forEach(function (r) {
+          svg += '<circle cx="' + x(r[0]) + '" cy="' + y(r[2]) + '" r="2" fill="#60a5fa"><title>' + esc(r[0].slice(11, 16) + ' — ' + (100 * r[2]).toFixed(2) + ' vol pts (' + r[3] + ')') + '</title></circle>';
+        });
+      });
+      svg += '</svg>';
+      return svg;
+    }
+
+    function heatmap(sym, s) {
+      var cells = s.heatmap || [];
+      if (!cells.length) return '';
+      var exps = [], strikes = [], byKey = {}, ivs = [];
+      cells.forEach(function (c) {  // [symbol, expiration, strike, iv]
+        if (exps.indexOf(c[1]) < 0) exps.push(c[1]);
+        if (strikes.indexOf(c[2]) < 0) strikes.push(c[2]);
+        byKey[c[1] + '|' + c[2]] = c[3]; ivs.push(c[3]);
+      });
+      exps.sort(); strikes.sort(function (a, b) { return a - b; });
+      var mn = Math.min.apply(null, ivs), mx = Math.max.apply(null, ivs);
+      var color = function (v) {
+        var t = (v - mn) / Math.max(1e-9, mx - mn);
+        return 'rgba(' + Math.round(60 + 195 * t) + ',' + Math.round(160 - 100 * t) + ',90,0.85)';
+      };
+      var html = '<div class="sk-heat-wrap"><table class="sk-heat"><tr><th>exp \\ K</th>' +
+        strikes.map(function (k) { return '<th>' + k + '</th>'; }).join('') + '</tr>';
+      exps.forEach(function (e) {
+        html += '<tr><th>' + esc(e.slice(5)) + '</th>' + strikes.map(function (k) {
+          var v = byKey[e + '|' + k];
+          if (v == null) return '<td></td>';
+          return '<td style="background:' + color(v) + ';color:#0d1117;" title="' +
+            esc(e + ' ' + k + ' — IV ' + (100 * v).toFixed(1) + '%') + '">' + (100 * v).toFixed(0) + '</td>';
+        }).join('') + '</tr>';
+      });
+      return html + '</table></div><div class="sk-muted" style="margin-top:4px">IV %, strikes within ±12% of spot; green low → red high (scaled to this snapshot)</div>';
+    }
+
+    function render(d) {
+      if (!d || !d.symbols || !Object.keys(d.symbols).length) {
+        main.innerHTML = '<div class="sk-empty">No skew data yet — the calculator (skew-intraday-calculator.py) has not produced a feed. Degrades by design.</div>';
+        status('no data'); return;
+      }
+      var asOf = new Date(d.as_of);
+      var ageMin = (Date.now() - asOf.getTime()) / 60000;
+      var stale = ageMin > 25;
+      status('as of ' + asOf.toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit' }) + ' ET' + (d.mode.indexOf('eod') === 0 ? ' (EOD)' : ''));
+      var html = '<div class="sk-note">25Δ risk-reversal skew = IV(25Δ put) − IV(25Δ call), ~15-min RTH snapshots (NOT tick data) · ' + esc(d.method) + '</div>';
+      if (stale) html += '<div class="sk-stale">Last-known-good snapshot: ' + esc(d.as_of) + ' (' + (d.mode.indexOf('eod') === 0 ? 'EOD seed' : Math.round(ageMin) + ' min old — market likely closed') + ')</div>';
+      Object.keys(d.symbols).forEach(function (sym) {
+        var s = d.symbols[sym];
+        var front = (s.expiries || [])[0] || {};
+        html += '<div class="sk-card"><h3>' + esc(sym) + ' <span class="sk-muted">spot ' + esc(s.spot) +
+          ' · front ' + esc(front.expiration || '?') + ' skew ' + (front.skew_25d != null ? (100 * front.skew_25d).toFixed(2) + ' vol pts' : '—') +
+          ' (25Δp ' + (100 * (front.put25_iv || 0)).toFixed(1) + ' / 25Δc ' + (100 * (front.call25_iv || 0)).toFixed(1) + ')</span></h3>' +
+          lineSVG(sym, s) +
+          '<h3 style="margin-top:12px">Strike × expiry IV <span class="sk-muted">(latest snapshot)</span></h3>' + heatmap(sym, s) +
+          '</div>';
+      });
+      main.innerHTML = html;
+    }
+
+    function load() {
+      fetch('data/skew-intraday.json?t=' + Date.now())
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(render)
+        .catch(function () { render(null); });
+    }
+    load();
+    setInterval(load, REFRESH_MS);
+  })();
+  </script>
+</body>
+</html>
