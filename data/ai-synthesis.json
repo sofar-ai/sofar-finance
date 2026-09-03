@@ -1,277 +1,294 @@
 {
   "calibration_notes": {
-    "pattern_acknowledgment": "Feedback loop shows MEDIUM tier underperforms LOW (50% vs 71% accuracy). I will default to LOW confidence unless 3+ signals converge. Next-day accuracy is strong at 69%, so I will lean into next-day predictions with slightly higher confidence.",
-    "conviction_audit": "HIGH tier has no backtested data. I will reserve HIGH for exceptional convergence (4+ signals aligned). Today, I cap confidence at MEDIUM (60%) per dynamic correction warning, despite PINNED regime favoring MEDIUM-HIGH.",
-    "target_bias_correction": "Previous next-day predictions showed an undershoot bias (8.57% error). I will widen the upper bound of all next-day price targets by +0.3% to account for this mechanical underestimation.",
-    "regime_adjustment": "Current regime is PINNED (Positive GEX + Contango). Backtested 63% accuracy with Sharpe 5.58. Strategy is MEAN REVERSION with BULLISH bias. I will tighten intraday targets to <=0.5% and next-day to <=1.0% as GEX suppresses realized volatility.",
+    "pattern_acknowledgment": "Feedback shows LOW tier (79%, n=14) outperforming MEDIUM (64%, n=11) \u2014 I over-confidence-inflate when 2 signals half-align. My last 5 long-term SPY/QQQ calls flipped wrong at 65% conf on 8/5 (composite 0.087/0.116). Intraday (73%) and next-day (70%) are my strong timeframes; I should lean there, not on 30-day forced targets. NVDA bullish calls have been consistently correct (composite 0.888-0.933).",
+    "conviction_audit": "HIGH tier has no data \u2014 reserve for 4+ converging signals. Not triggered today. Threshold for HIGH today: 72%+ (not used). Default to LOW/MEDIUM given PINNED regime with only 39% confidence.",
+    "target_bias_correction": "Feedback shows undershoot bias (intraday err 6.30%, next-day 10.89% undershoot). In PINNED regime I must TIGHTEN ranges anyway, so I'll set targets slightly wider toward the call/put walls than instinct suggests to correct undershoot, but cap intraday at ~0.5%.",
+    "regime_adjustment": "PINNED (positive GEX $704M, VIX 14.6 contango). Backtested 63% accuracy, mean-reversion dominant. Spot 7740 sits between put wall 7700 and call wall 7750 \u2014 expect compression/pinning. Bias BULLISH-preferred per regime rules. CAG BEAR-DELUDED (0.91) is a mild contrarian-bearish signal but weak; I weight it lightly against the bullish regime.",
     "specific_changes": [
-      "Apply +0.3% upward adjustment to next-day price targets to correct historical undershoot bias.",
-      "Cap confidence at 60% per dynamic correction, avoiding HIGH tier until 4+ signals align.",
-      "Increase vol_regime weight to 0.25 per attribution calibration, overriding previous overweighting of price_data."
+      "Cap intraday range at 0.5% given GEX pinning near call wall 7750",
+      "Use LOW-MEDIUM confidence not HIGH; lean into intraday/next-day timeframes where I score 70%+",
+      "Keep NVDA bullish (deep ITM call flow $170M + strong track record) but tighten 30-day target"
     ]
   },
-  "calibration_summary": "Pinned regime + positive GEX + bullish flow convergence supports a mean-reversion bullish bias. Confidence capped at 60% due to dynamic corrections penalizing MEDIUM tier. Next-day targets widened by +0.3% to correct historical undershoot. CAG indicates a contrarian bullish edge as the crowd remains bear-deluded.",
+  "calibration_summary": "PINNED regime with spot pinned between put wall 7700 and call wall 7750 favors mild mean-reversion / bullish lean at low-medium conviction. Options flow is net bullish (PC 0.778, $2.7B call premium) and deep ITM call stacks in NVDA/AMD/AAPL confirm institutional longs. I lean into intraday/next-day where my accuracy is 70%+, keep confidence modest per MEDIUM-underperforms-LOW correction.",
   "intraday": {
     "signal": "BULLISH",
-    "confidence": 60,
-    "summary": "Positive GEX ($436M) and VIX contango (+10.8%) force dealer mean-reversion hedging, compressing intraday ranges. Bullish options flow (PC ratio 0.694, $2.3B call premium) and Fed rate-stability headlines provide a structural floor. Expect a slow grind higher toward the $7720 call wall.",
-    "key_driver": "Dealer gamma hedging mechanics in pinned regime",
-    "primary_driver": "vol_regime",
+    "confidence": 55,
+    "summary": "SPX spot 7740 is pinned just below the 7750 call wall with positive GEX ($704M) dampening vol. Dealers buy dips toward the 7700 put wall. Net call premium $2.7B vs $2.1B put (PC 0.778) supports a modest grind higher into resistance. Expect compression with slight upward drift.",
+    "key_driver": "Positive GEX pinning spot between put wall 7700 and call wall 7750",
+    "primary_driver": "regime",
     "predicted_prices": {
-      "SPY": 770.5,
-      "QQQ": 713.5,
-      "IWM": 295.0,
-      "NVDA": 229.0,
-      "AAPL": 327.5
+      "SPY": 774.2,
+      "QQQ": 718.6,
+      "IWM": 295.6,
+      "NVDA": 228.9,
+      "AAPL": 330.6
     },
     "predicted_range": [
-      769.0,
-      771.5
+      772.2,
+      775.5
     ],
-    "price_target_basis": "OPTIONS FLOW STRIKE CLUSTER: SPX $7720 call wall ($3.86M premium) acting as intraday magnet for mean-reversion bounce.",
+    "price_target_basis": "Call wall SPX $7750 (spot 7740) acts as ceiling; SPY analog ~$774.5. Put wall 7700 floor supports dips",
     "regime_strategy": "MEAN_REVERSION"
   },
   "next_day": {
     "signal": "BULLISH",
-    "confidence": 60,
-    "summary": "Pinned regime favors bullish mean-reversion with wider upside potential as dealer hedging unwinds overnight. CAG (0.91 bear-deluded) confirms contrarian bullish edge. Expect SPY to test $773-$775 range as call buying pressure ($2.3B premium) translates to spot demand.",
-    "key_driver": "Contrarian bullish edge from CAG + pinned regime mean-reversion",
-    "primary_driver": "vol_regime",
+    "confidence": 54,
+    "summary": "Positive GEX + VIX 14.6 contango keeps realized vol suppressed. Net bullish flow and $170M deep ITM NVDA call stacks favor continued grind. Spot needs to break above 7750 call wall for acceleration; absent that, expect drift within 0.8% of prior close with bullish tilt.",
+    "key_driver": "Net bullish options flow (PC 0.778) + deep ITM institutional call stacks",
+    "primary_driver": "flow",
     "predicted_prices": {
-      "SPY": 773.0,
-      "QQQ": 716.0,
+      "SPY": 775.8,
+      "QQQ": 720.5,
       "IWM": 296.5,
-      "NVDA": 231.0,
-      "AAPL": 330.0
+      "NVDA": 230.2,
+      "AAPL": 331.5
     },
     "predicted_range": [
-      770.0,
-      776.0
+      770.5,
+      778.0
     ],
-    "price_target_basis": "KEY TECHNICAL LEVEL: Prior support at $770.00 on SPY chart + $700 MU call wall ($8.16M) indicating sector-wide call buying pressure.",
+    "price_target_basis": "Above SPX call wall 7750 opens next leg; SPY analog target $775.8 mapped from GEX flip 7560 support / call wall resistance",
     "regime_strategy": "MEAN_REVERSION"
   },
   "long_term": {
     "signal": "BULLISH",
-    "confidence": 55,
-    "summary": "30-day outlook remains meaningfully bullish per base rates (74% monthly positive). Positive GEX structure and Fed pause expectations support sustained upside. Deep ITM call replacement flow across mega-caps confirms institutional synthetic long positioning.",
-    "key_driver": "Institutional synthetic long positioning via deep ITM calls",
-    "primary_driver": "options_flow",
+    "confidence": 52,
+    "summary": "30-day base rate is ~74% up. Positive GEX, contango, normal yield curve (10Y-2Y +1.0%), and record 401k balances support a constructive backdrop. Deep ITM call stacks across NVDA/AMD/AAPL/MSFT ($170M/$151M/$137M/$135M) signal institutional net-long positioning. Main risks: bond market stress (10Y 4.75%, 30Y 5.23%) and complacency (VIX 14.6).",
+    "key_driver": "Institutional deep ITM call positioning + benign macro/vol regime",
+    "primary_driver": "flow",
     "predicted_prices": {
-      "SPY": 785.0,
-      "QQQ": 725.0,
-      "IWM": 302.0,
-      "NVDA": 238.0,
+      "SPY": 790.0,
+      "QQQ": 735.0,
+      "IWM": 303.0,
+      "NVDA": 240.0,
       "AAPL": 338.0
     },
     "predicted_range": [
-      775.0,
-      795.0
+      758.0,
+      800.0
     ],
-    "price_target_basis": "OPTIONS FLOW STRIKE CLUSTER: Deep ITM call replacement flow ($91.25M on $50-$255 strikes for AAPL) confirming institutional synthetic long positioning.",
+    "price_target_basis": "NVDA deep ITM call flow $170M supports $240 target (~5% up); SPY 30d target from continuation of low_vol_uptrend + base rate",
     "regime_strategy": "MEAN_REVERSION"
   },
-  "news_impact": "Fed Governor Waller's rate-stability stance reduces macro uncertainty, supporting pinned regime. Clean sweep/divided Congress headlines reduce policy risk premium. Bond market volatility headlines are noise in a low-vol regime; DXY stability (99.066) confirms no risk-off rotation.",
-  "options_flow_impact": "Bullish flow dominates (PC ratio 0.694, $2.3B call premium vs $1.6B put premium). SPX/SPXW index call buying ($0.4M+ single trades) reflects institutional upside conviction. Deep ITM call flow across NVDA, AAPL, MSFT confirms synthetic long positioning rather than directional speculation.",
+  "news_impact": "Headlines skew mixed-to-cautionary: 'Markets Waist Deep In Investor Complacency', bond market stress, China K-shaped recovery. These support the CAG BEAR-DELUDED read (complacency risk) but lack an acute catalyst. Bullish micro-stories dominate the tape (AI hardware consolidation, Apple earnings-growth buying, small-cap quality leadership), reinforcing a constructive-but-not-euphoric tilt. I weight headlines modestly \u2014 no single event-driver.",
+  "options_flow_impact": "Aggregate flow is net BULLISH: call premium $2.7B vs put $2.1B, PC 0.778. NVDA/AMD show massive deep ITM call stacks ($170M/$151M) = stock-replacement synthetic longs. Top trades are NVDA/AMD deep ITM calls (Sept 18 exp). SPX flow is 70% multileg/60% floor = institutional spread/hedging, treated as portfolio positioning not directional bear. This anchors my BULLISH lean across timeframes.",
   "risks": [
-    "GEX flip at $7500: A break below this level would shift dealer flows to amplifying downside, invalidating mean-reversion thesis.",
-    "VIX backwardation reversal: If VIX spikes above 18, pinned regime collapses into tension/explosive, requiring strategy switch to trend-following.",
-    "Yield curve steepening: 10Y yield rising above 4.90% could pressure tech/growth (QQQ) more than broad market."
+    "Break below GEX flip 7560 would flip dealers to amplifying, accelerating any selloff",
+    "Bond market stress (30Y 5.23%, 10Y 4.75%) tightening financial conditions could hit tech/QQQ",
+    "CAG BEAR-DELUDED (0.91) + VIX 14.6 complacency = crowd underpricing tail risk"
   ],
   "benchmarks": {
     "SPY": {
       "intraday_bias": "BULLISH",
       "next_day_bias": "BULLISH",
       "long_term_bias": "BULLISH",
-      "analysis": "Spot at $769.57 sits between put wall $7700 and call wall $7720. Positive GEX ($436M) and contango VIX structure force dealer mean-reversion hedging. Bullish flow (PC 0.694) and CAG contrarian edge support upside grind toward $7720.",
-      "key_driver": "Dealer gamma hedging mechanics in pinned regime",
-      "primary_driver": "vol_regime",
-      "conflicting_signals": "SPXW $0.1M put buying (DTE:1) represents short-term hedging, not directional conviction.",
-      "predicted_price_2h": 770.5,
-      "predicted_price_nextday": 773.0,
-      "predicted_price_30d": 785.0,
+      "analysis": "SPY $773.17 with SPX spot pinned between put wall 7700 and call wall 7750. Positive GEX suppresses vol, favoring a grind toward the call wall. Net bullish flow supports it. Below 7560 GEX flip is the invalidation.",
+      "key_driver": "GEX pinning + net bullish flow",
+      "primary_driver": "regime",
+      "conflicting_signals": "CAG BEAR-DELUDED contrarian-bearish; 30Y yield 5.23% headwind",
+      "predicted_price_2h": 774.2,
+      "predicted_price_nextday": 775.8,
+      "predicted_price_30d": 790.0,
       "predicted_range_2h": [
-        769.0,
-        771.5
+        772.2,
+        775.5
       ],
       "predicted_range_nextday": [
-        770.0,
-        776.0
+        770.5,
+        778.0
       ],
-      "price_target_basis": "OPTIONS FLOW STRIKE CLUSTER: SPX $7720 call wall ($3.86M premium) acting as intraday magnet for mean-reversion bounce."
+      "price_target_basis": "SPX call wall 7750 resistance / put wall 7700 support mapped to SPY"
     },
     "QQQ": {
       "intraday_bias": "BULLISH",
       "next_day_bias": "BULLISH",
       "long_term_bias": "BULLISH",
-      "analysis": "QQQ at $712.57 benefits from sector-wide call buying pressure ($700 MU call wall $8.16M) and deep ITM call replacement flow. Pinned regime suppresses tech volatility, allowing steady upside toward $716-$718.",
-      "key_driver": "Sector-wide call buying pressure + pinned regime compression",
-      "primary_driver": "options_flow",
-      "conflicting_signals": "NVDA deep ITM put flow ($5.57M) suggests some mega-cap tech hedging, but net flow remains strongly bullish.",
-      "predicted_price_2h": 713.5,
-      "predicted_price_nextday": 716.0,
-      "predicted_price_30d": 725.0,
+      "analysis": "QQQ $717.58 supported by NVDA/AMD/MSFT deep ITM call stacks. Rate sensitivity is the risk: 10Y at 4.75% and a further rise would pressure growth. Positive GEX regime dampens downside; bullish tilt with modest conviction.",
+      "key_driver": "Mega-cap deep ITM call positioning (NVDA $170M, MSFT $135M)",
+      "primary_driver": "flow",
+      "conflicting_signals": "Rising 10Y yield 4.75% is a tech headwind",
+      "predicted_price_2h": 718.6,
+      "predicted_price_nextday": 720.5,
+      "predicted_price_30d": 735.0,
       "predicted_range_2h": [
-        712.0,
-        715.0
+        716.0,
+        720.0
       ],
       "predicted_range_nextday": [
         713.0,
-        719.0
+        723.0
       ],
-      "price_target_basis": "KEY TECHNICAL LEVEL: Prior support at $710.00 on QQQ chart + $700 MU call wall ($8.16M) indicating sector-wide call buying pressure."
+      "price_target_basis": "QQQ ~2.4% to 30d target driven by NVDA deep ITM call flow; near-term pinned by NDX GEX"
     }
   },
   "tickers_to_watch": [
     {
-      "ticker": "MU",
+      "ticker": "NVDA",
       "intraday_bias": "BULLISH",
       "next_day_bias": "BULLISH",
       "long_term_bias": "BULLISH",
-      "reasoning": "Massive call wall at $700 ($8.16M premium) + $122.8M institutional flow today. Deep ITM call replacement flow confirms synthetic long positioning. Pinned regime supports mean-reversion upside toward call wall.",
-      "key_driver": "Call wall concentration + institutional flow",
-      "primary_driver": "options_flow",
-      "conflicting_signals": "None. Flow and regime strongly align bullish.",
-      "predicted_price_2h": 126.5,
-      "predicted_price_nextday": 128.0,
-      "predicted_price_30d": 132.0,
+      "reasoning": "$170.82M deep ITM call stacks (stock replacement synthetic longs) plus top 3 premium trades all NVDA Sept-18 calls ($11.3M/$10.1M/$9.9M on ASK). My NVDA bullish calls scored 0.888-0.933 recently. Deep ITM puts only $24M = hedge, not conviction.",
+      "key_driver": "$170M deep ITM call stacks + $31M top ASK-side call sweeps",
+      "primary_driver": "flow",
+      "conflicting_signals": "$24M deep ITM put hedge; broad tech rate sensitivity",
+      "predicted_price_2h": 228.9,
+      "predicted_price_nextday": 230.2,
+      "predicted_price_30d": 240.0,
       "predicted_range_2h": [
-        125.5,
-        127.5
+        227.0,
+        230.5
       ],
-      "price_target_basis": "OPTIONS FLOW STRIKE CLUSTER: $700 call wall ($8.16M premium) acting as primary magnet for upside expansion."
+      "price_target_basis": "Deep ITM call flow $170M supports $240 (~5% up); near-term above spot 227.84"
+    },
+    {
+      "ticker": "AMD",
+      "intraday_bias": "BULLISH",
+      "next_day_bias": "BULLISH",
+      "long_term_bias": "BULLISH",
+      "reasoning": "$151.45M deep ITM call stacks + two $9M+ ASK-side Sept-18 call sweeps. Deep ITM puts only $12.75M. Clear institutional net-long structure alongside NVDA in AI hardware consolidation theme.",
+      "key_driver": "$151M deep ITM call stacks + $18.9M top call sweeps",
+      "primary_driver": "flow",
+      "conflicting_signals": "High OTM %, aggressive positioning could reverse if AI sentiment cracks",
+      "predicted_price_2h": 461.5,
+      "predicted_price_nextday": 464.0,
+      "predicted_price_30d": 485.0,
+      "predicted_range_2h": [
+        457.0,
+        464.0
+      ],
+      "price_target_basis": "Deep ITM call flow $151M supports ~5.5% 30d upside from spot 459.29"
     }
   ],
   "trade_ideas": [
     {
-      "idea": "Long SPY calls to capture pinned regime mean-reversion upside toward call wall",
+      "idea": "Long NVDA via calls on deep ITM institutional accumulation",
+      "ticker": "NVDA",
+      "type": "calls",
+      "timeframe": "30-day",
+      "thesis": "$170M deep ITM call stacks + top premium sweeps all bullish on ASK; strong recent NVDA track record (composite 0.9+). Positive GEX regime limits downside.",
+      "risk": "Break of GEX flip 7560 broad-market or rate spike hits tech beta",
+      "instrument": "NVDA $230 calls exp 2026-09-18",
+      "entry_zone": "$227-229",
+      "stop_invalidation": "$222 (below recent consolidation)",
+      "target": "$240",
+      "risk_reward": "1:2.2"
+    },
+    {
+      "idea": "SPY bullish grind toward call wall via short-dated calls",
       "ticker": "SPY",
       "type": "calls",
       "timeframe": "next-day",
-      "thesis": "Positive GEX ($436M) + VIX contango + bullish flow (PC 0.694) create structural floor. CAG indicates contrarian bullish edge. Expect grind to $773-$775.",
-      "risk": "Break below GEX flip at $7500 or VIX spike above 18 invalidates mean-reversion thesis.",
-      "instrument": "SPY $770 calls exp 20260904",
-      "entry_zone": "769.00 - 770.50",
-      "stop_invalidation": "767.50",
-      "target": "773.50",
-      "risk_reward": "1:2.1"
+      "thesis": "Positive GEX pins spot below 7750 call wall with dealer dip-buying; net bullish flow PC 0.778. Mean-reversion up from put wall support.",
+      "risk": "Break below 7560 GEX flip flips dealers to amplifying selloff",
+      "instrument": "SPY $775 calls exp 2026-09-05",
+      "entry_zone": "$772-773",
+      "stop_invalidation": "$769",
+      "target": "$777",
+      "risk_reward": "1:1.8"
     }
   ],
-  "notable_divergences": [
-    {
-      "ticker": "SPXW",
-      "signal": "NEUTRAL",
-      "flow_direction": "bullish",
-      "detail": "$0.1M put buying (DTE:1) vs $0.4M call buying",
-      "description": "Short-term index put buying represents portfolio insurance/hedging by net-long funds, not directional bearish conviction. Weighted as neutral per SPX/SPXW flow rules.",
-      "inputs_conflicting": "flow vs regime",
-      "significance": "medium",
-      "expirations": [
-        "2026-09-04"
-      ]
-    }
-  ],
+  "notable_divergences": [],
   "earnings_warnings": {},
   "magnitude_flags": [
     {
-      "ticker": "MU",
+      "ticker": "NVDA",
       "flag": "OUTSIZED_MOVE_EXPECTED",
-      "basis": "$122.8M institutional flow today + $8.16M call wall at $700 strike indicates high conviction positioning."
+      "basis": "$31M+ in top-3 ASK-side Sept-18 call sweeps ($11.3M/$10.1M/$9.9M) plus $170M deep ITM call stack \u2014 concentrated bullish positioning"
     },
     {
-      "ticker": "SPX",
+      "ticker": "AMD",
       "flag": "OUTSIZED_MOVE_EXPECTED",
-      "basis": "$0.4M single trade call buying + $436M net GEX creates structural gamma support."
+      "basis": "$18.9M in two ASK-side Sept-18 call sweeps + $151M deep ITM call stack"
     }
   ],
   "signal_attribution": {
-    "primary_driver": "vol_regime",
+    "primary_driver": "options_flow",
     "weights": {
       "headlines": {
-        "weight": 0.05,
-        "values_cited": "Fed Governor Waller rate-stability stance; clean sweep/divided congress headlines",
-        "influence": "Reduces macro uncertainty, supports pinned regime stability"
+        "weight": 0.08,
+        "values_cited": "'Markets Waist Deep In Investor Complacency', bond market stress, China K-shaped recovery \u2014 cautionary but no acute catalyst",
+        "influence": "Mild caution cap on confidence; no directional flip"
       },
       "options_flow": {
-        "weight": 0.25,
-        "values_cited": "PC ratio 0.694, $2.3B call premium vs $1.6B put premium; SPX $0.4M call buying",
-        "influence": "Confirms institutional upside conviction and synthetic long positioning"
+        "weight": 0.3,
+        "values_cited": "PC 0.778, call $2.7B vs put $2.1B; NVDA $170M/AMD $151M deep ITM call stacks; NVDA top sweeps $11.3M/$10.1M ASK",
+        "influence": "Primary bullish anchor across all timeframes"
       },
       "gex": {
-        "weight": 0.2,
-        "values_cited": "Net GEX +$436M, call wall $7720, put wall $7700, spot $7711.45",
-        "influence": "Forces dealer mean-reversion hedging, compresses vol, supports upside"
+        "weight": 0.24,
+        "values_cited": "Net GEX +$704M, call wall 7750, put wall 7700, flip 7560, spot 7740",
+        "influence": "Pinning/mean-reversion structure, defines intraday range"
       },
       "vix_structure": {
-        "weight": 0.1,
-        "values_cited": "VIX 15.06, contango +10.8% VX2/VX1",
-        "influence": "Suppresses realized volatility, validates pinned regime strategy"
+        "weight": 0.08,
+        "values_cited": "VIX 14.61, contango +12.0% VX2/VX1",
+        "influence": "Confirms vol suppression, supports pinned regime"
       },
       "vol_regime": {
-        "weight": 0.25,
-        "values_cited": "PINNED regime (positive GEX + contango), 63% backtested accuracy, mean-reversion strategy",
-        "influence": "Primary driver: dictates bullish bias, tight intraday targets, and wider next-day upside"
+        "weight": 0.12,
+        "values_cited": "PINNED confidence 39%, backtested 63% acc, bullish-preferred",
+        "influence": "Sets mean-reversion strategy and bullish lean"
       },
       "prediction_feedback": {
-        "weight": 0.05,
-        "values_cited": "Next-day accuracy 69%, LOW tier 71% accuracy",
-        "influence": "Validates leaning into next-day predictions with slightly higher confidence"
+        "weight": 0.1,
+        "values_cited": "LOW tier 79% vs MEDIUM 64%; intraday 73%/next-day 70%; NVDA composites 0.888-0.933",
+        "influence": "Caps confidence at LOW-MEDIUM, leans into intraday/next-day, keeps NVDA bullish"
       },
       "event_trees": {
         "weight": 0.0,
-        "values_cited": "No major event trees provided in data",
-        "influence": "No event-driven catalysts to override regime signals"
+        "values_cited": "no event trees provided this cycle",
+        "influence": "Not available"
       },
       "price_data": {
-        "weight": 0.1,
-        "values_cited": "SPY $769.57, QQQ $712.57, DXY 99.066, 10Y yield 4.748",
-        "influence": "Confirms stable macro environment; DXY stability supports equity tailwind"
+        "weight": 0.08,
+        "values_cited": "SPY 773.17, QQQ 717.58, low_vol_uptrend regime, 10Y 4.75%",
+        "influence": "Confirms uptrend context; rate level as risk flag"
       }
     },
     "weights_sum": 1.0,
-    "reasoning_chain": "PINNED regime (positive GEX + contango) suppresses realized volatility and forces dealer mean-reversion hedging. This structural floor aligns with bullish options flow (PC ratio 0.694, $2.3B call premium) and CAG contrarian bullish signal. Combined with Fed rate stability headlines, the convergence dictates a bullish mean-reversion bias with tight intraday targets and wider next-day upside potential."
+    "reasoning_chain": "Net bullish options flow (PC 0.778, $170M+$151M deep ITM call stacks in NVDA/AMD) establishes institutional net-long \u2192 positive GEX $704M with spot pinned between put wall 7700 and call wall 7750 means dealers buy dips, mean-reversion up \u2192 VIX 14.6 contango confirms suppressed vol \u2192 PINNED regime backtested 63% favors bullish lean \u2192 prediction feedback caps confidence at LOW-MEDIUM and leans into intraday/next-day where accuracy is 70%+, keeping NVDA bullish given proven track record \u2192 modest-conviction BULLISH across timeframes with tight intraday ranges."
   },
-  "generated_at": "2026-09-03T14:00:01Z",
-  "next_update": "2026-09-03T16:00:01Z",
+  "generated_at": "2026-09-03T16:45:01Z",
+  "next_update": "2026-09-03T18:45:01Z",
   "prices_at_generation": {
-    "SPY": 769.57,
-    "QQQ": 712.57,
-    "IWM": 294.6,
-    "AAPL": 326.705,
-    "NVDA": 228.23,
-    "TSLA": 371.818,
-    "META": 613.12,
-    "MSFT": 511.465,
-    "AMD": 446.7,
-    "AMZN": 257.82,
+    "SPY": 773.175,
+    "QQQ": 717.58,
+    "IWM": 295.114,
+    "AAPL": 329.83,
+    "NVDA": 227.8,
+    "TSLA": 381.875,
+    "META": 613.56,
+    "MSFT": 512.045,
+    "AMD": 459.55,
+    "AMZN": 258.55,
     "NKY": 64214.48,
     "KOSPI": 6579.48,
     "TAIEX": 45857.66,
     "TOPIX": 427.2,
-    "GOLD": 4505.2,
-    "SILVER": 66.685,
-    "WTI": 92.25,
-    "BRENT": 96.55,
-    "VIX": 14.95,
+    "GOLD": 4538.5,
+    "SILVER": 67.69,
+    "WTI": 91.56,
+    "BRENT": 95.66,
+    "VIX": 14.6,
     "10Y_YIELD": 4.748,
-    "30Y_YIELD": 5.235,
+    "30Y_YIELD": 5.232,
     "3M_YIELD": 3.748,
-    "DXY": 99.066,
-    "captured_at": "2026-09-03T14:00:01Z",
-    "MU": 935.33
+    "DXY": 98.869,
+    "captured_at": "2026-09-03T16:45:01Z"
   },
-  "regime": "low_vol_choppy",
+  "regime": "low_vol_uptrend",
   "signal_snapshot": {
-    "pc_ratio": 0.694,
+    "pc_ratio": 0.778,
     "flow_sentiment": "BULLISH",
-    "top_flow_summary": "SPY $0.1M C, SPXW $0.1M P, NVDA $0.1M C",
-    "vix": 14.95,
+    "top_flow_summary": "NVDA $11.3M C, NVDA $10.1M C, NVDA $9.9M C",
+    "vix": 14.6,
     "news_headlines": [
-      "Clean sweep or divided Congress, these are the midterm-elections trades to make, says JPMorgan",
-      "Snowflake has a secret weapon that\u2019s powering its stock toward a huge gain",
-      "Fed Governor Waller indicates he will support holding rates steady at September meeting"
+      "China's Recovery Stalls As K-Shaped Divergence Widens",
+      "Bond Markets Are Losing Patience - And Putting Governments On Notice",
+      "Expeditors International of Washington, Inc. (EXPD) Discusses Impact of AI Investment Boom on Freight Markets and Global Supply Chains Transcript"
     ],
-    "regime": "low_vol_choppy"
+    "regime": "low_vol_uptrend"
   },
   "data_sources": {
     "headlines_count": 25,
@@ -281,10 +298,10 @@
       "Geopolitical Tensions and Oil Volatility",
       "Fed Stance and Macroeconomic Outlook"
     ],
-    "flow_trades": 11680,
-    "top_trades": 10,
+    "flow_trades": 11791,
+    "top_trades": 5,
     "sentiment": "BULLISH",
-    "pc_ratio": 0.694,
+    "pc_ratio": 0.778,
     "price_source": "Yahoo",
     "feedback_patterns": 0,
     "strike_clusters": true
