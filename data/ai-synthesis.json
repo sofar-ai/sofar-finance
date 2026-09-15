@@ -1,317 +1,316 @@
 {
   "calibration_notes": {
-    "pattern_acknowledgment": "Last 10 predictions show mixed directional results with intraday accuracy at 66.7% and next-day at 61.5%. No systematic bias detected, but target error for next-day reached 16.54% (overshoot bias). I am adjusting by widening ranges and capping confidence to avoid overcommitting on transitional volatility.",
-    "conviction_audit": "HIGH tier has zero data; threshold for HIGH confidence remains 4+ aligned signals (not met today). I am restricting confidence to LOW (30-35) per regime rules. MEDIUM reserved for convergence of deep ITM flow + CAG contrarian signal.",
-    "target_bias_correction": "Overshoot bias detected in next-day predictions (16.54% avg error). Applying 1.5\u00d7 range widening mandate for transitioning regime. Tightening point estimates to mid-range of widened bands to mitigate directional drift.",
-    "regime_adjustment": "Current regime is TRANSITIONING (Negative GEX + Contango). Backtested rules mandate CAUTIOUS strategy, NEUTRAL-to-slightly-bullish bias, MAX 35 confidence, and 1.5\u00d7 range widening. Negative GEX amplifies trends, but contango limits panic. I am leaning contrarian bullish per CAG 1.24 BULL-DELUDED signal while respecting regime caution.",
+    "pattern_acknowledgment": "feedback_loop shows BULLISH calls at 25.0% (n=8) vs BEARISH 64.3% \u2014 my bullish signals are badly miscalibrated. Also TARGET_OVERSHOOT at 84% (n=25). My last 4 intraday BULLISH calls all went DOWN. I am cutting bullish bias and applying 50% haircut to move sizes.",
+    "conviction_audit": "HIGH tier has no data \u2014 reserving it. LOW tier is my only validated bucket at 56%. Threshold for HIGH today: 78%+ with 4 signals aligned; I will NOT use HIGH. Max confidence today = 52%.",
+    "target_bias_correction": "84% overshoot bias confirmed. Applying 50% haircut: a computed 0.8% move is reported as 0.4%. Range widths capped at ~1.0x adjusted move, then x1.5 for negative-GEX amplification only on the outer band.",
+    "regime_adjustment": "low_vol_downtrend with TRANSITIONING vol regime (neg GEX -643M, VIX contango). Rules say CAUTIOUS, MAX confidence 35 for pure regime plays. However CAG is Wide (1.24 BULL-DELUDED = contrarian bullish), which conflicts with my bearish price-action tape. Net: I lean modestly bearish intraday on trend (negative GEX amplifies the downtrend, spot 7584 below call wall 7600, above put wall 7500) but keep confidence low.",
     "specific_changes": [
-      "Capping all confidence scores at 35% regardless of flow strength due to TRANSITIONING regime rules.",
-      "Widening all price target ranges by 1.5\u00d7 to account for dealer flow amplification in negative GEX/contango environment.",
-      "Prioritizing CAG contrarian bullish signal over headline negativity, as crowd fear is structurally mispriced (z=+1.57 attachment)."
+      "Flip default from BULLISH to slight-BEARISH intraday given 4 consecutive failed bullish calls and negative GEX trend amplification",
+      "Apply 50% haircut to all predicted move magnitudes and keep all confidence <=52%"
     ]
   },
-  "calibration_summary": "Transitioning regime dictates CAUTIOUS strategy with MAX 35 confidence. Ranges widened 1.5\u00d7 to account for negative GEX trend amplification. CAG indicates crowd fear is overstated (BULL-DELUDED), providing a contrarian bullish edge. Deep ITM synthetic longs across major tech confirm institutional accumulation despite headline negativity. Targeting slight upside with wide bounds.",
+  "calibration_summary": "Bullish calls are running 25% accurate vs 64% bearish, so I am cutting bullish lean and applying a 50% target haircut. Regime is TRANSITIONING/CAUTIOUS with negative GEX amplifying the low-vol downtrend, but CAG BULL-DELUDED gives a contrarian bullish counterweight \u2014 net result is low-confidence, tight-target calls.",
   "intraday": {
-    "signal": "BULLISH",
-    "confidence": 32,
-    "summary": "SPY and QQQ likely to drift higher intraday as negative GEX amplifies any upward momentum, while VIX contango (+9.4%) prevents panic selling. Deep ITM synthetic long activity ($19.95M SPY, $13.24M META, $55.22M AMD) confirms institutional accumulation. CAG 1.24 BULL-DELUDED suggests crowd fear is mispriced, creating a contrarian bid. Expect gradual upward drift toward call walls.",
-    "key_driver": "CAG contrarian edge + deep ITM synthetic long accumulation overriding negative GEX trend amplification.",
-    "primary_driver": "vol_regime",
+    "signal": "BEARISH",
+    "confidence": 46,
+    "summary": "Negative GEX (-$643M) means dealers sell into weakness, amplifying the low_vol_downtrend. Spot 7584 sits between call wall 7600 (resistance) and put wall 7500 (support). SPY at $757.61 near intraday lows with 10Y at 4.996% pressuring tech. Slight downside drift into close, but CAG BULL-DELUDED caps conviction.",
+    "key_driver": "Negative GEX amplifying downtrend below call wall 7600",
+    "primary_driver": "regime",
     "predicted_prices": {
-      "SPY": 762.5,
-      "QQQ": 713.0,
-      "IWM": 288.0,
-      "NVDA": 215.5,
-      "AAPL": 333.0
+      "SPY": 756.2,
+      "QQQ": 703.9,
+      "IWM": 284.3,
+      "NVDA": 211.1,
+      "AAPL": 329.3
     },
     "predicted_range": [
-      757.0,
-      768.0
+      754.5,
+      759.2
     ],
-    "price_target_basis": "Call wall at SPX $1000 strike ($4.63M OTM call premium) + CAG BULL-DELUDED contrarian edge (z=+1.57 attachment) indicating crowd fear is structurally mispriced.",
+    "price_target_basis": "SPX call wall 7600 resistance / put wall 7500 support; SPY 756.20 = midpoint drift toward put-wall side, ~0.2% down after 50% haircut",
     "regime_strategy": "CAUTIOUS"
   },
   "next_day": {
     "signal": "BULLISH",
-    "confidence": 33,
-    "summary": "Slight bullish continuation expected as contango limits downside volatility and deep ITM flow confirms institutional accumulation. Negative GEX will amplify any upward moves, but VIX at 16.9 prevents panic. Headline negativity (oil, rates) is priced in per CAG data. Expect steady drift toward $765-$770 on SPY.",
-    "key_driver": "Deep ITM synthetic long positioning across SPY, META, AMD, and AAPL confirming institutional accumulation.",
-    "primary_driver": "options_flow",
+    "confidence": 42,
+    "summary": "CAG Wide BULL-DELUDED (1.24) signals crowd is excessively fearful \u2014 contrarian bullish edge. Options flow sentiment BULLISH (PC 0.748, $2.11B call premium vs $1.58B put). VIX contango (+6.9%) shows no panic pricing. Deep-ITM call stock-replacement across AMD, AAPL, SPY supports a modest bounce next session.",
+    "key_driver": "CAG BULL-DELUDED contrarian edge + bullish aggregate flow",
+    "primary_driver": "flow",
     "predicted_prices": {
-      "SPY": 765.0,
-      "QQQ": 718.0,
-      "IWM": 289.5,
-      "NVDA": 217.0,
-      "AAPL": 334.5
+      "SPY": 759.8,
+      "QQQ": 707.2,
+      "IWM": 286.1,
+      "NVDA": 213.3,
+      "AAPL": 331.2
     },
     "predicted_range": [
-      754.0,
-      776.0
+      755.0,
+      763.0
     ],
-    "price_target_basis": "Put wall at SPX $7600 strike ($3.54M OTM put premium) acting as structural support + CAG 1.24 BULL-DELUDED indicating fear is overstated relative to structural reality.",
+    "price_target_basis": "SPX call wall 7600 as upside magnet; SPY 759.80 ~ +0.3% after haircut toward call-wall side",
     "regime_strategy": "CAUTIOUS"
   },
   "long_term": {
     "signal": "BULLISH",
-    "confidence": 34,
-    "summary": "30-day outlook favors gradual appreciation as VIX contango stabilizes and deep ITM accumulation builds institutional floors. Negative GEX will cause intraday volatility but not trend reversal. Macro backdrop (rising 10Y yield at 5.008%) pressures growth, but CAG shows crowd is overly fearful. Expect steady drift higher with wide intraday swings.",
-    "key_driver": "VIX contango term structure (+9.4%) signaling absence of near-term volatility event, allowing gradual accumulation.",
-    "primary_driver": "vix_structure",
+    "confidence": 50,
+    "summary": "30-day base rate is ~74% up. Aggregate flow bullish, heavy deep-ITM synthetic longs (AMD $159.7M, AAPL $131.4M, SPY $56M calls). Risks: 10Y at 4.996% and 30Y mortgage 7.17% tighten conditions, oil surge from Middle East. Net modestly bullish with rate-driven cap.",
+    "key_driver": "Deep-ITM institutional call stock-replacement + 30-day base rate",
+    "primary_driver": "flow",
     "predicted_prices": {
-      "SPY": 772.0,
-      "QQQ": 725.0,
-      "IWM": 293.0,
-      "NVDA": 221.0,
-      "AAPL": 338.0
+      "SPY": 770.0,
+      "QQQ": 718.0,
+      "IWM": 291.0,
+      "NVDA": 219.0,
+      "AAPL": 337.0
     },
     "predicted_range": [
-      748.0,
-      796.0
+      745.0,
+      785.0
     ],
-    "price_target_basis": "Historical regime analog: SPY +3.2% median move in 30-day transitioning regimes with contango (2020-2026 backtest) + MU $80 call wall ($3.01M premium) providing structural support for tech sector.",
+    "price_target_basis": "SPY prior-range extension toward ~+1.6% (haircut from base-rate norm); anchored to SPX 7600 call wall break scenario",
     "regime_strategy": "CAUTIOUS"
   },
-  "news_impact": "Headlines focus on oil surge (Saudi pipeline), Fed rate-hike expectations (10Y yield 5.008%), and AI sector correction. These create headline negativity, but CAG data (BULL-DELUDED, z=+1.57 attachment) confirms crowd fear is structurally mispriced. Rising yields pressure tech valuations but are already reflected in current pricing. Geopolitical risk is priced in, limiting further downside.",
-  "options_flow_impact": "Deep ITM synthetic long activity dominates: $19.95M SPY, $55.22M AMD, $13.24M META, $6.13M AMZN. This confirms institutional accumulation despite neutral overall P/C ratio (0.876). Negative GEX (-$550M) will amplify intraday trends rather than reverse them. Contango limits volatility expansion, supporting gradual upside.",
+  "news_impact": "Oil surge on Middle East attacks (WTI $105.38) and 30Y mortgage at 7.17% / 10Y at 4.996% are the concrete equity headwinds, favoring value over growth. AI slowdown/plateau chatter pressures QQQ constituents. Headlines are net negative but idiosyncratic (mostly earnings-transcript noise), so I weight them low and defer to structural CAG contrarian read.",
+  "options_flow_impact": "Aggregate flow is BULLISH (PC 0.748, call premium $2.11B > put $1.58B). Deep-ITM call stock-replacement dominates (AMD $159.7M, AAPL $131.4M) \u2014 a bullish institutional footprint. SPY $88.9M deep-ITM puts are portfolio hedging in negative-GEX regime, treated as neutral-to-mild-bearish, not conviction shorts. This supports next-day/30d bullish while the negative-GEX intraday tape stays weak.",
   "risks": [
-    "Negative GEX amplification could accelerate downward moves if SPY breaks below $755 support.",
-    "Rising 10Y yield (5.008%) may pressure tech valuations further if Fed hawkishness intensifies.",
-    "CAG BULL-DELUDED signal could fail if geopolitical escalation (Saudi pipeline) triggers risk-off rotation."
+    "10Y yield 4.996% breaking above 5% triggers tech de-rating and negates bounce",
+    "Middle East escalation + oil spike drives risk-off, VIX flips to backwardation",
+    "Negative GEX turns intraday drift into a downside cascade below put wall 7500"
   ],
   "benchmarks": {
     "SPY": {
-      "intraday_bias": "BULLISH",
+      "intraday_bias": "BEARISH",
       "next_day_bias": "BULLISH",
       "long_term_bias": "BULLISH",
-      "analysis": "SPY trading at $759.48 sits between put wall $7600 and call wall $7675. Negative GEX will amplify any upward drift, while VIX contango prevents panic. Deep ITM synthetic longs ($19.95M) confirm institutional accumulation. CAG indicates crowd fear is overstated. Expect gradual upside with wide intraday swings.",
-      "key_driver": "Deep ITM synthetic long accumulation ($19.95M) + CAG BULL-DELUDED contrarian edge.",
-      "primary_driver": "options_flow",
-      "conflicting_signals": "Negative GEX (-$550M) amplifies trends downward; rising 10Y yield (5.008%) pressures valuations.",
-      "predicted_price_2h": 762.5,
-      "predicted_price_nextday": 765.0,
-      "predicted_price_30d": 772.0,
+      "analysis": "Spot equivalent between SPX call wall 7600 and put wall 7500; negative GEX amplifies the current low_vol_downtrend intraday. Next-day contrarian bounce supported by CAG BULL-DELUDED and bullish aggregate flow. Deep-ITM call synthetics ($56M) underpin 30d bullish.",
+      "key_driver": "Negative GEX vs CAG contrarian split by timeframe",
+      "primary_driver": "regime",
+      "conflicting_signals": "CAG BULL-DELUDED (bullish) vs negative-GEX downtrend (bearish intraday); rising 10Y yield bearish for tech",
+      "predicted_price_2h": 756.2,
+      "predicted_price_nextday": 759.8,
+      "predicted_price_30d": 770.0,
       "predicted_range_2h": [
-        757.0,
-        768.0
+        754.5,
+        759.2
       ],
       "predicted_range_nextday": [
-        754.0,
-        776.0
+        755.0,
+        763.0
       ],
-      "price_target_basis": "Call wall at SPX $1000 strike ($4.63M OTM call premium) + Put wall at SPX $7600 strike ($3.54M OTM put premium) defining structural range."
+      "price_target_basis": "SPX call wall 7600 / put wall 7500; SPY drift to put-wall side intraday"
     },
     "QQQ": {
-      "intraday_bias": "BULLISH",
+      "intraday_bias": "BEARISH",
       "next_day_bias": "BULLISH",
       "long_term_bias": "BULLISH",
-      "analysis": "QQQ at $708.92 faces headwinds from rising yields but benefits from deep ITM synthetic longs ($77.7M flow today) and CAG contrarian edge. Negative GEX will amplify upward moves. Expect gradual drift higher with wide intraday volatility. Tech sector accumulation confirms institutional conviction.",
-      "key_driver": "Deep ITM synthetic long positioning across NVDA, AMD, META, and AAPL confirming tech accumulation.",
-      "primary_driver": "options_flow",
-      "conflicting_signals": "Rising 10Y yield (5.008%) pressures growth valuations; AI sector correction headlines.",
-      "predicted_price_2h": 713.0,
-      "predicted_price_nextday": 718.0,
-      "predicted_price_30d": 725.0,
+      "analysis": "QQQ most rate-sensitive; 10Y at 4.996% is a direct headwind, and AI-plateau headlines pressure mega-cap tech intraday. Next-day/30d supported by NVDA deep-ITM flow and contrarian CAG. NDX flow mostly floor/multileg = hedging, not directional conviction.",
+      "key_driver": "10Y yield 4.996% rate pressure vs contrarian bounce setup",
+      "primary_driver": "technicals",
+      "conflicting_signals": "Bullish aggregate call premium vs AI-slowdown narrative and rising yields",
+      "predicted_price_2h": 703.9,
+      "predicted_price_nextday": 707.2,
+      "predicted_price_30d": 718.0,
       "predicted_range_2h": [
-        706.0,
-        720.0
+        701.5,
+        707.0
       ],
       "predicted_range_nextday": [
         702.0,
-        734.0
+        711.0
       ],
-      "price_target_basis": "GOOGL $160 call wall ($5.47M OTM call premium) + AVGO $100 call wall ($4.66M OTM call premium) providing structural support for tech sector."
+      "price_target_basis": "QQQ ~0.2% haircut drift intraday; next-day toward SPX 7600 call-wall analog"
     }
   },
   "tickers_to_watch": [
     {
-      "ticker": "NVDA",
-      "intraday_bias": "BULLISH",
+      "ticker": "AMD",
+      "intraday_bias": "NEUTRAL",
       "next_day_bias": "BULLISH",
       "long_term_bias": "BULLISH",
-      "reasoning": "NVDA at $213.14 benefits from deep ITM synthetic long activity ($29.5M flow today) and CAG contrarian edge. Negative GEX will amplify upward moves. AI sector correction headlines are priced in. Expect gradual drift higher toward $217-$221.",
-      "key_driver": "Deep ITM synthetic long accumulation ($29.5M) + CAG BULL-DELUDED contrarian edge.",
-      "primary_driver": "options_flow",
-      "conflicting_signals": "AI sector correction headlines; rising 10Y yield pressure on growth stocks.",
-      "predicted_price_2h": 215.5,
-      "predicted_price_nextday": 217.0,
-      "predicted_price_30d": 221.0,
+      "reasoning": "$159.68M deep-ITM call stock-replacement is the single largest bullish institutional footprint in the dataset. Aggregate flow bullish. Stock at $503.11 with heavy synthetic long positioning implies accumulation.",
+      "key_driver": "$159.7M deep-ITM synthetic long calls",
+      "primary_driver": "flow",
+      "conflicting_signals": "AI-sector-correction headlines; negative-GEX intraday tape",
+      "predicted_price_2h": 502.0,
+      "predicted_price_nextday": 508.0,
+      "predicted_price_30d": 525.0,
       "predicted_range_2h": [
-        210.0,
-        221.0
+        498.0,
+        507.0
       ],
-      "price_target_basis": "MU $80 call wall ($3.01M OTM call premium) + AVGO $100 call wall ($4.66M OTM call premium) providing structural support for semiconductor sector."
+      "price_target_basis": "Deep-ITM call flow directional signal; ~+1% next-day after haircut"
     },
     {
-      "ticker": "AAPL",
-      "intraday_bias": "BULLISH",
-      "next_day_bias": "BULLISH",
-      "long_term_bias": "BULLISH",
-      "reasoning": "AAPL at $330.63 shows heavy deep ITM call activity ($155.64M synthetic long), confirming institutional accumulation. CAG indicates crowd fear is overstated. Expect gradual upside with wide intraday swings. Headline negativity (iPhone cycle valuation) is priced in.",
-      "key_driver": "Deep ITM synthetic long positioning ($155.64M) confirming institutional accumulation.",
-      "primary_driver": "options_flow",
-      "conflicting_signals": "Headline negativity on iPhone cycle valuation; rising 10Y yield pressure.",
-      "predicted_price_2h": 333.0,
-      "predicted_price_nextday": 334.5,
-      "predicted_price_30d": 338.0,
+      "ticker": "IWM",
+      "intraday_bias": "BEARISH",
+      "next_day_bias": "NEUTRAL",
+      "long_term_bias": "NEUTRAL",
+      "reasoning": "Notable $0.9M ITM 270 put BUY (185 DTE, size 1000) is a real bearish/hedge positioning on small caps. Rising 10Y at 4.996% and 30Y mortgage 7.17% pressure rate-sensitive small caps. Prior session IWM $1.68B premium 90% floor = institutional block activity.",
+      "key_driver": "$0.9M ITM 270 put buy + rate pressure on small caps",
+      "primary_driver": "flow",
+      "conflicting_signals": "CAG contrarian bullish; 74% 30d base rate",
+      "predicted_price_2h": 284.3,
+      "predicted_price_nextday": 285.0,
+      "predicted_price_30d": 287.0,
       "predicted_range_2h": [
-        328.0,
-        338.0
+        283.0,
+        286.5
       ],
-      "price_target_basis": "GOOGL $160 call wall ($5.47M OTM call premium) + AVGO $100 call wall ($4.66M OTM call premium) providing structural support for mega-cap tech."
+      "price_target_basis": "IWM 270 put strike as downside reference; ~0.3% intraday drift"
     }
   ],
   "trade_ideas": [
     {
-      "idea": "QQQ Bull Call Spread to capture contrarian upside while limiting downside in transitioning regime",
-      "ticker": "QQQ",
+      "idea": "Contrarian next-day bounce via SPY calls on CAG BULL-DELUDED + bullish flow",
+      "ticker": "SPY",
       "type": "calls",
       "timeframe": "next-day",
-      "thesis": "CAG BULL-DELUDED indicates crowd fear is overstated. Deep ITM synthetic longs confirm institutional accumulation. Negative GEX will amplify upward moves. Contango limits downside volatility.",
-      "risk": "Negative GEX amplification could accelerate downward moves if SPY breaks below $755. Rising 10Y yield may pressure tech valuations.",
-      "instrument": "QQQ $715/$725 Bull Call Spread exp 2026-10-02",
-      "entry_zone": "$708.00 - $710.00",
-      "stop_invalidation": "$702.00 (break below put wall support)",
-      "target": "$725.00",
-      "risk_reward": "1:2.1"
+      "thesis": "CAG Wide (1.24) contrarian bullish, aggregate call premium $2.11B > put, VIX contango shows no panic \u2014 setup for modest bounce toward SPX 7600 call wall analog.",
+      "risk": "Negative GEX turns tape into downside cascade; 10Y breaks 5%.",
+      "instrument": "SPY $760 calls exp Sep 18 2026",
+      "entry_zone": "$755.50-$757.50 spot",
+      "stop_invalidation": "SPY closes below $754 (put-wall side)",
+      "target": "$762.50",
+      "risk_reward": "1:2"
     },
     {
-      "idea": "SPY Bull Put Spread to capitalize on structural support in transitioning regime",
-      "ticker": "SPY",
-      "type": "puts",
-      "timeframe": "next-day",
-      "thesis": "Put wall at $7600 ($3.54M premium) provides structural support. VIX contango (+9.4%) limits downside volatility. CAG indicates fear is mispriced. Expect gradual drift higher.",
-      "risk": "Negative GEX amplification could accelerate downward moves. Geopolitical escalation could trigger risk-off rotation.",
-      "instrument": "SPY $755/$750 Bull Put Spread exp 2026-10-02",
-      "entry_zone": "$758.00 - $760.00",
-      "stop_invalidation": "$754.00 (break below put wall support)",
-      "target": "$750.00",
-      "risk_reward": "1:1.8"
+      "idea": "AMD 30-day upside following $159.7M deep-ITM synthetic long",
+      "ticker": "AMD",
+      "type": "calls",
+      "timeframe": "30-day",
+      "thesis": "Largest bullish institutional deep-ITM call footprint in dataset signals accumulation at $503.",
+      "risk": "AI-sector correction headlines intensify; broad tech de-rate on yields.",
+      "instrument": "AMD $520 calls exp Oct 16 2026",
+      "entry_zone": "$500-$505",
+      "stop_invalidation": "Close below $488",
+      "target": "$525",
+      "risk_reward": "1:2.5"
     }
   ],
   "notable_divergences": [
     {
       "ticker": "SPY",
-      "signal": "BULLISH",
-      "flow_direction": "bearish",
-      "detail": "$20.30M deep ITM put premium vs $19.95M deep ITM call premium",
-      "description": "Heavy deep ITM put buying suggests hedging rather than directional bearish conviction. Institutions are protecting profits while maintaining upside exposure via synthetic longs. Negative GEX amplifies trends but does not reverse them.",
+      "signal": "BEARISH",
+      "flow_direction": "bullish",
+      "detail": "$56M deep-ITM calls + $2.11B aggregate call premium vs my intraday bearish",
+      "description": "Intraday tape/negative-GEX is bearish while institutional flow and CAG contrarian read are bullish \u2014 the split resolves as bearish intraday, bullish next-day.",
       "inputs_conflicting": "flow vs regime",
-      "significance": "high",
+      "significance": "medium",
       "expirations": [
-        "2026-10-02"
+        "2026-09-18"
       ]
     },
     {
-      "ticker": "NVDA",
-      "signal": "BULLISH",
-      "flow_direction": "neutral",
-      "detail": "$29.5M total flow with neutral P/C ratio (0.876)",
-      "description": "Neutral overall flow masks deep ITM synthetic long accumulation ($55.22M across tech). CAG BULL-DELUDED confirms crowd fear is overstated. Expect gradual upside despite headline negativity.",
-      "inputs_conflicting": "flow vs headlines",
-      "significance": "medium",
+      "ticker": "IWM",
+      "signal": "BEARISH",
+      "flow_direction": "bearish",
+      "detail": "$0.9M ITM 270 put buy 185 DTE confirms bearish",
+      "description": "Rare single-name conviction put aligns with rate-pressure bearish small-cap thesis.",
+      "inputs_conflicting": "none \u2014 aligned",
+      "significance": "low",
       "expirations": [
-        "2026-10-02"
+        "2027-03-19"
       ]
     }
   ],
   "earnings_warnings": {},
   "magnitude_flags": [
     {
-      "ticker": "MU",
+      "ticker": "IWM",
       "flag": "OUTSIZED_MOVE_EXPECTED",
-      "basis": "Call wall at $80 strike ($3.01M OTM call premium) + Put wall at $1020 strike ($3.54M OTM put premium) indicating structural support/resistance for semiconductor sector."
+      "basis": "$0.9M ITM 270 put buy, size 1000, 185 DTE \u2014 large single directional block"
     },
     {
-      "ticker": "GOOGL",
+      "ticker": "AMD",
       "flag": "OUTSIZED_MOVE_EXPECTED",
-      "basis": "Call wall at $160 strike ($5.47M OTM call premium) + Put wall at $790 strike ($2.54M OTM put premium) indicating structural support/resistance for mega-cap tech."
+      "basis": "$159.68M deep-ITM call stock-replacement \u2014 largest synthetic-long footprint in dataset"
     }
   ],
   "signal_attribution": {
     "primary_driver": "vol_regime",
     "weights": {
       "headlines": {
-        "weight": 0.05,
-        "values_cited": "51Talk, Snap-On, Apple valuation, Fed rate-hike, AI bubble concerns",
-        "influence": "Headline negativity is priced in per CAG data. Weight low as crowd fear is structurally mispriced (z=+1.57 attachment)."
+        "weight": 0.08,
+        "values_cited": "10Y 4.996%, 30Y mortgage 7.17% 2yr-high, oil $105.38 Middle East",
+        "influence": "Rate/oil headwinds cap upside, weighted low as mostly transcript noise"
       },
       "options_flow": {
-        "weight": 0.15,
-        "values_cited": "$19.95M SPY deep ITM calls, $55.22M AMD deep ITM calls, $13.24M META deep ITM calls",
-        "influence": "Deep ITM synthetic long accumulation confirms institutional conviction. Supports bullish bias despite neutral P/C ratio."
+        "weight": 0.22,
+        "values_cited": "PC 0.748, call $2.11B vs put $1.58B; AMD $159.7M / AAPL $131.4M deep-ITM calls",
+        "influence": "Bullish institutional footprint drives next-day/30d bullish"
       },
       "gex": {
         "weight": 0.2,
-        "values_cited": "Net GEX -$550M, GEX flip $7280, Put wall $7600, Call wall $7675",
-        "influence": "Negative GEX amplifies trends rather than reverses them. Supports CAUTIOUS strategy with wide ranges."
+        "values_cited": "Net GEX -$643M, call wall 7600, put wall 7500, flip 7235, spot 7584",
+        "influence": "Negative GEX amplifies intraday downtrend below call wall"
       },
       "vix_structure": {
-        "weight": 0.05,
-        "values_cited": "VIX 16.9, Contango +9.4% VX2/VX1",
-        "influence": "Contango limits downside volatility and prevents panic. Supports gradual upside drift."
+        "weight": 0.1,
+        "values_cited": "VIX 17.68, contango +6.9% VX2/VX1",
+        "influence": "No panic pricing \u2014 supports contrarian bounce, caps bearish conviction (per attribution_calibration, raised weight)"
       },
       "vol_regime": {
-        "weight": 0.25,
-        "values_cited": "TRANSITIONING regime, MAX 35 confidence, 1.5x range widening mandate",
-        "influence": "Regime rules dictate CAUTIOUS strategy, wide ranges, and low confidence. Primary driver of structural approach."
+        "weight": 0.2,
+        "values_cited": "TRANSITIONING neg-GEX contango, conf 30%, CAUTIOUS max-35 rule",
+        "influence": "Forces low confidence and CAUTIOUS strategy across timeframes"
       },
       "prediction_feedback": {
-        "weight": 0.15,
-        "values_cited": "Intraday 66.7% acc, Next-day 61.5% acc, Overshoot bias 16.54%",
-        "influence": "Feedback confirms need for widened ranges and capped confidence to avoid overshoot bias."
+        "weight": 0.12,
+        "values_cited": "BULLISH 25% vs BEARISH 64.3%, 84% overshoot, 4 failed bull calls",
+        "influence": "Cut bullish bias intraday, applied 50% target haircut"
       },
       "event_trees": {
-        "weight": 0.05,
-        "values_cited": "Saudi pipeline shutdown, Fed rate-hike expectations, AI regulation prospects",
-        "influence": "Geopolitical and macro events are priced in per CAG data. Limited incremental impact."
+        "weight": 0.0,
+        "values_cited": "no event tree data provided this cycle",
+        "influence": "No data \u2014 weight zero"
       },
       "price_data": {
-        "weight": 0.1,
-        "values_cited": "SPY $759.48, QQQ $708.92, CAG 1.24 BULL-DELUDED",
-        "influence": "Price levels near structural walls. CAG indicates contrarian bullish edge."
+        "weight": 0.08,
+        "values_cited": "SPY 757.61 near lows, low_vol_downtrend regime, CAG 1.24 BULL-DELUDED",
+        "influence": "Confirms downtrend intraday; CAG counterweights toward next-day bullish (reduced weight per attribution_calibration)"
       }
     },
     "weights_sum": 1.0,
-    "reasoning_chain": "TRANSITIONING regime mandates CAUTIOUS strategy with MAX 35 confidence and 1.5x range widening. Negative GEX (-$550M) amplifies trends but does not reverse them. VIX contango (+9.4%) limits downside volatility. Deep ITM synthetic long accumulation ($19.95M SPY, $55.22M AMD, $13.24M META) confirms institutional conviction. CAG 1.24 BULL-DELUDED indicates crowd fear is structurally mispriced. Headline negativity is priced in. Expect gradual upside with wide intraday swings. Primary driver is vol_regime dictating structural approach."
+    "reasoning_chain": "Negative GEX (-$643M) + low_vol_downtrend \u2192 dealers sell weakness \u2192 bearish intraday drift below 7600 call wall. But CAG BULL-DELUDED (1.24) + bullish aggregate flow ($2.11B calls) + VIX contango (no panic) \u2192 contrarian bounce next-day/30d. Prediction feedback (bull calls 25%, 84% overshoot) forces low confidence and 50% target haircut. TRANSITIONING regime mandates CAUTIOUS \u2014 all confidence <=52%."
   },
-  "generated_at": "2026-09-15T14:00:01Z",
-  "next_update": "2026-09-15T16:00:01Z",
+  "generated_at": "2026-09-15T16:45:01Z",
+  "next_update": "2026-09-15T18:45:01Z",
   "prices_at_generation": {
-    "SPY": 759.48,
-    "QQQ": 708.92,
-    "IWM": 285.8,
-    "AAPL": 330.629,
-    "NVDA": 213.14,
-    "TSLA": 359.01,
-    "META": 673.19,
-    "MSFT": 501.13,
-    "AMD": 510.985,
-    "AMZN": 252.005,
+    "SPY": 757.61,
+    "QQQ": 705.39,
+    "IWM": 285.07,
+    "AAPL": 329.94,
+    "NVDA": 212.08,
+    "TSLA": 360.05,
+    "META": 666.02,
+    "MSFT": 500.49,
+    "AMD": 503.11,
+    "AMZN": 249.105,
     "NKY": 63484.1,
     "KOSPI": 6627.26,
     "TAIEX": 45511.49,
     "TOPIX": 421.3,
-    "GOLD": 4334.3,
-    "SILVER": 64.405,
-    "WTI": 103.23,
-    "BRENT": 102.29,
-    "VIX": 16.9,
-    "10Y_YIELD": 5.008,
-    "30Y_YIELD": 5.378,
-    "3M_YIELD": 3.955,
-    "DXY": 99.566,
-    "captured_at": "2026-09-15T14:00:01Z"
+    "GOLD": 4332.8,
+    "SILVER": 63.875,
+    "WTI": 105.38,
+    "BRENT": 108.38,
+    "VIX": 17.54,
+    "10Y_YIELD": 4.996,
+    "30Y_YIELD": 5.365,
+    "3M_YIELD": 3.96,
+    "DXY": 99.63,
+    "captured_at": "2026-09-15T16:45:01Z"
   },
   "regime": "low_vol_downtrend",
   "signal_snapshot": {
-    "pc_ratio": 0.876,
-    "flow_sentiment": "NEUTRAL",
-    "top_flow_summary": "META $0.2M C, META $0.2M C, SPX $0.1M P",
-    "vix": 16.9,
+    "pc_ratio": 0.748,
+    "flow_sentiment": "BULLISH",
+    "top_flow_summary": "IWM $0.9M P, DELL $0.1M C, DELL $0.1M C",
+    "vix": 17.54,
     "news_headlines": [
-      "Trump calls Supreme Court mail ballot ruling 'big loss for Republicans'",
-      "Snap-On: The Growth Engine Is Shifting, But 19x Earnings Still Prices In A Lot",
-      "Apple: The New iPhone Cycle Cannot Justify This Valuation"
+      "Treasury Secretary Bessent defends Trump economic record in contentious hearing",
+      "FNDB: Still A Great Option For Multi-Cap Value",
+      "Vera Bradley, Inc. (VRA) Q2 2027 Earnings Call Transcript"
     ],
     "regime": "low_vol_downtrend"
   },
@@ -323,12 +322,12 @@
       "AI Sector Correcting Amid Slowdown Calls",
       "Intensifying Middle East Geopolitics"
     ],
-    "flow_trades": 13335,
+    "flow_trades": 13554,
     "top_trades": 10,
-    "sentiment": "NEUTRAL",
-    "pc_ratio": 0.876,
+    "sentiment": "BULLISH",
+    "pc_ratio": 0.748,
     "price_source": "Yahoo",
-    "feedback_patterns": 0,
+    "feedback_patterns": 2,
     "strike_clusters": true
   }
 }
