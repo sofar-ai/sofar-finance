@@ -288,14 +288,22 @@
     // Flow Structure Analysis
     async function loadFlowAnalysis() {
       try {
-        const res = await fetch('/api/flow-analysis?action=latest');
+        const res = await (typeof OptionsFlowPage !== 'undefined' && OptionsFlowPage.apiFetch ? OptionsFlowPage.apiFetch : fetch)('/api/flow-analysis?action=latest');   // FRONTEND_STATUS_V1
         const data = await res.json();
         const bar = document.getElementById('flow-analysis-bar');
         const faContent = document.getElementById('fa-content');
         const faTimestamp = document.getElementById('fa-timestamp');
         const faCrossAsset = document.getElementById('fa-cross-asset');
 
-        if (!data.analyses || data.analyses.length === 0) return;
+        if (!data.analyses || data.analyses.length === 0) {
+          // FRONTEND_STATUS_V1 (SOF-80): say "no analysis yet" — never a blank panel, never an outage message
+          bar.style.display = 'block';
+          const faSummary = document.getElementById('fa-summary');
+          if (faSummary) faSummary.textContent = 'No flow analysis yet for this session';
+          faContent.textContent = 'No flow analysis yet for this session — the analyzer posts its first cycle once enough tape has accumulated.';
+          if (faTimestamp) faTimestamp.textContent = data.session_date ? 'session ' + data.session_date : '';
+          return;
+        }
 
         bar.style.display = 'block';
 

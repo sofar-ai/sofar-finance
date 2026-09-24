@@ -55,7 +55,11 @@ export default async function handler(req, res) {
     // identifiers. We use parameterized via template literals by routing to sql.query.
 
     // Fall back to sql.query(textSql, paramsArr) for dynamic WHERE.
-    const whereParts = ['session_date = $1'];
+    // FRONTEND_STATUS_V1 (SOF-80, FLOW_TRADES_SPARSE_SESSION_SCAN_V1): bound ts to the session's window so the
+    // planner's backward ts-index scan stops at the session edge instead of walking the whole table when the
+    // session has fewer than LIMIT matching rows. Measured over all 9.47M rows on 2026-09-21: ts - session_date
+    // ranges from -3 days 00:15 to +22:04 (weekend-labelled rows), so [-4 days, +2 days) excludes nothing.
+    const whereParts = ['session_date = $1', "ts >= ($1::date - INTERVAL '4 days')", "ts < ($1::date + INTERVAL '2 days')"];
     const params = [sessionDate];
     let p = 2;
 

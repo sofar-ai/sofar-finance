@@ -7,12 +7,22 @@
 const OptionsFlowPage = (() => {
   const STALE_MIN  = 5;
   const PANEL_TICK = 15 * 1000;  // refresh every 15s
+  // FRONTEND_STATUS_V1 — header status: stream health + refresh state + hover pause, never silent
+  const HEALTH_TICK        = 60 * 1000;  // /api/stream-health poll (edge-cached 15 s)
+  const HOVER_PAUSE_MAX_MS = 10 * 1000;  // desktop hover pauses the tape for at most 10 s
+  const COARSE_POINTER     = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+  const BACKOFF_BASE_MS    = 15 * 1000, BACKOFF_MAX_MS = 5 * 60 * 1000;
   let allTrades     = [];
   let symbolMetrics = {};
   let sweepData     = [];
   let sectorFlow    = {};
   let concentration = null;
   let isPaused      = false;
+  let pausedSince   = 0;              // FRONTEND_STATUS_V1
+  let lastFetchedAt = null;           // FRONTEND_STATUS_V1
+  let streamHealth  = null;           // FRONTEND_STATUS_V1: last /api/stream-health payload
+  let healthTimer   = null;           // FRONTEND_STATUS_V1
+  const refresh = { lastOk: 0, error: null, streak: 0, nextAllowedAt: 0, authLost: false }; // FRONTEND_STATUS_V1
   let panelTimer    = null;
   let contractHits  = {};
   let filters = {
@@ -106,6 +116,87 @@ const OptionsFlowPage = (() => {
     return el;
   }
 
+  // ── FRONTEND_STATUS_V1: apiFetch + header status ──────────────────────────
+  function fmtClock(ms) { const d = new Date(ms); return d.toTimeString().slice(0, 8); }
+
+  function noteRefreshError(msg) {
+    refresh.error = msg;
+    refresh.streak = Math.min(refresh.streak + 1, 6);
+    refresh.nextAllowedAt = Date.now() + Math.min(BACKOFF_BASE_MS * Math.pow(2, refresh.streak - 1), BACKOFF_MAX_MS);
+    renderStatus();
+  }
+
+  function showAuthBanner() {
+    if (document.getElementById('of-auth-banner')) return;
+    const b = document.createElement('div');
+    b.id = 'of-auth-banner';
+    b.setAttribute('role', 'alert');
+    b.style.cssText = 'position:sticky;top:0;z-index:9999;background:#7f1d1d;color:#fff;padding:8px 14px;font-size:13px;text-align:center';
+    const next = encodeURIComponent(location.pathname + location.search);
+    b.innerHTML = 'Session expired — live refresh paused. <a href="/login.html?next=' + next + '" style="color:#fde68a;text-decoration:underline">Sign in again</a>';
+    document.body.prepend(b);
+  }
+
+  function pauseTimers() {
+    if (panelTimer)  { clearInterval(panelTimer);  panelTimer = null; }
+    if (healthTimer) { clearInterval(healthTimer); healthTimer = null; }
+    if (window.__ofUnusualTimer) { clearInterval(window.__ofUnusualTimer); window.__ofUnusualTimer = null; }
+  }
+
+  async function apiFetch(url, opts) {
+    let res;
+    try { res = await fetch(url, opts); }
+    catch (e) { noteRefreshError('network error'); throw e; }
+    if (res.status === 401) { refresh.authLost = true; showAuthBanner(); pauseTimers(); renderStatus(); throw new Error('HTTP 401'); }
+    if (!res.ok) { noteRefreshError('HTTP ' + res.status); throw new Error('HTTP ' + res.status); }
+    refresh.error = null; refresh.streak = 0; refresh.nextAllowedAt = 0; refresh.lastOk = Date.now();
+    renderStatus();
+    return res;
+  }
+
+  function renderStatus() {
+    const el = document.getElementById('of-ws-status');
+    if (!el) return;
+    const GREEN = '#22c55e', AMBER = '#f59e0b', RED = '#ef4444', GREY = '#9ca3af';
+    let text, color, title = '';
+    if (refresh.authLost) { text = 'Session expired · sign in'; color = RED; }
+    else if (FlowData.selectedDate) { text = 'Historical view · live refresh off'; color = GREY; }
+    else {
+      // stream part (source of truth: flow_trades freshness via /api/stream-health)
+      let sPart, sColor;
+      if (streamHealth && streamHealth.state) {
+        const lag = streamHealth.lag_min == null ? null : Math.round(streamHealth.lag_min);
+        if (streamHealth.state === 'LIVE')         { sPart = 'LIVE'; sColor = GREEN; }
+        else if (streamHealth.state === 'LAGGING') { sPart = 'LAGGING ' + lag + 'm'; sColor = AMBER; }
+        else if (streamHealth.state === 'DEAD')    { sPart = 'DEAD ' + (lag == null ? '(no rows)' : lag + 'm'); sColor = RED; }
+        else { sPart = 'OFF-HOURS · captured through ' + (streamHealth.captured_through_et || '—'); sColor = GREY; }
+        const bf = (streamHealth.hours || []).filter(h => h.backfilled).map(h => h.hour);
+        const pf = (streamHealth.hours || []).filter(h => h.partial).map(h => h.hour);
+        title = 'rows today ' + streamHealth.rows_today + ' · lag ' + streamHealth.lag_min + ' min · checked ' + (streamHealth.checked_at || '').slice(11, 19) + 'Z';
+        if (bf.length) { sPart += ' · backfilled ' + bf[0] + (bf.length > 1 ? '–' + bf[bf.length - 1] : ''); title += ' · REST-backfilled hours: ' + bf.join(', '); }
+        if (pf.length) { title += ' · partly backfilled: ' + pf.join(', '); }
+      } else if (!lastFetchedAt) { sPart = 'No data'; sColor = GREY; }
+      else if (isStale(lastFetchedAt)) { sPart = 'Stale'; sColor = AMBER; }
+      else { sPart = 'Live'; sColor = GREEN; }
+      // refresh part
+      let rPart, rColor = null;
+      if (isPaused) { rPart = 'paused · hover'; rColor = AMBER; }
+      else if (refresh.error) { const wait = Math.max(0, Math.ceil((refresh.nextAllowedAt - Date.now()) / 1000)); rPart = 'refresh failed ' + refresh.error + ' · retry in ' + wait + 's'; rColor = AMBER; }
+      else if (refresh.lastOk) { rPart = 'updated ' + fmtClock(refresh.lastOk); }
+      text = rPart ? sPart + ' · ' + rPart : sPart;
+      color = (sColor === RED) ? RED : (rColor || sColor);
+    }
+    el.textContent = text; el.style.color = color; el.title = title;
+  }
+
+  async function loadStreamHealth() {
+    try {
+      const res = await apiFetch('/api/stream-health');
+      streamHealth = await res.json();
+    } catch (e) { /* surfaced by apiFetch */ }
+    renderStatus();
+  }
+
   function rebuildTape(data) {
     const tape = document.getElementById('of-tape');
     if (!tape) return;
@@ -127,16 +218,8 @@ const OptionsFlowPage = (() => {
     const premEl = document.getElementById('of-total-premium');
     if (premEl) premEl.textContent = fmtPrem(data.total_premium || 0);
 
-    const wsEl = document.getElementById('of-ws-status');
-    if (wsEl) {
-      if (!data.fetched_at) {
-        wsEl.textContent = 'No data'; wsEl.style.color = '#9ca3af';
-      } else if (stale) {
-        wsEl.textContent = 'Stale'; wsEl.style.color = '#f59e0b';
-      } else {
-        wsEl.textContent = 'Live'; wsEl.style.color = '#22c55e';
-      }
-    }
+    lastFetchedAt = data.fetched_at;   // FRONTEND_STATUS_V1
+    renderStatus();
 
     if (!data.fetched_at) {
       tape.innerHTML = '<div class="tape-empty">Awaiting flow tape — daemon starts at market open</div>';
@@ -508,7 +591,7 @@ const OptionsFlowPage = (() => {
       try {
         const qs = this.getFiltersForApi();
         qs.set('limit', '500');
-        const res = await fetch('/api/flow-trades?' + qs.toString());
+        const res = await apiFetch('/api/flow-trades?' + qs.toString());   // FRONTEND_STATUS_V1
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();
         if (reqId !== this._activeRequestId) return;
@@ -520,6 +603,8 @@ const OptionsFlowPage = (() => {
         FlowData._updateCountBadge();
       } catch (e) {
         console.log('FlowData.initialLoad error:', e);
+        const tapeEl = document.getElementById('of-tape');   // FRONTEND_STATUS_V1: never a silent empty table
+        if (tapeEl) tapeEl.innerHTML = '<div class="tape-empty" style="color:#ef4444">Trades failed to load (' + (e && e.message ? e.message : e) + ') — see status badge</div>';
       } finally {
         this.loading = false;
       }
@@ -533,7 +618,7 @@ const OptionsFlowPage = (() => {
         qs.set('limit', '500');
         qs.set('before_ts', this.cursor);
         qs.set('count', 'false');
-        const res = await fetch('/api/flow-trades?' + qs.toString());
+        const res = await apiFetch('/api/flow-trades?' + qs.toString());   // FRONTEND_STATUS_V1
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();
         if (reqId !== this._activeRequestId) return;
@@ -556,7 +641,7 @@ const OptionsFlowPage = (() => {
         qs.set('limit', '500');
         qs.set('after_ts', this.newestTs);
         qs.set('count', 'false');
-        const res = await fetch('/api/flow-trades?' + qs.toString());
+        const res = await apiFetch('/api/flow-trades?' + qs.toString());   // FRONTEND_STATUS_V1
         if (!res.ok) return;
         const data = await res.json();
         const newer = this.normalizeExpirations(data.trades || []);
@@ -568,7 +653,7 @@ const OptionsFlowPage = (() => {
           this.totalMatching.premium += newer.reduce((a,t) => a + (t.premium||0), 0);
           FlowData._updateCountBadge();
         }
-      } catch (e) { /* silent */ }
+      } catch (e) { /* surfaced by apiFetch → status badge (FRONTEND_STATUS_V1) */ }
     },
     _updateCountBadge() {
       const el = document.getElementById('of-trade-count');
@@ -589,7 +674,7 @@ const OptionsFlowPage = (() => {
     const qs = new URLSearchParams();
     if (FlowData.selectedDate) qs.set('date', FlowData.selectedDate);
     try {
-      const res = await fetch('/api/flow-aggregates' + (qs.toString() ? '?' + qs : ''));
+      const res = await apiFetch('/api/flow-aggregates' + (qs.toString() ? '?' + qs : ''));   // FRONTEND_STATUS_V1
       if (!res.ok) return;
       const data = await res.json();
       symbolMetrics = {};
@@ -637,8 +722,12 @@ const OptionsFlowPage = (() => {
   }
 
   async function loadFlowData() {
-    await Promise.all([FlowData.initialLoad(), loadPanelData()]);
+    // FRONTEND_STATUS_V1 (SOF-80): the tape renders as soon as /api/flow-trades resolves;
+    // the panels (/api/flow-aggregates) fill async — never gate the tape on a second endpoint.
+    const panels = loadPanelData().catch(e => console.log('loadPanelData error:', e));
+    await FlowData.initialLoad();
     rebuildTape({ trades: allTrades, market_open: !FlowData.selectedDate, fetched_at: new Date().toISOString(), total_trades: (FlowData.totalMatching && FlowData.totalMatching.trades) || allTrades.length, total_premium: (FlowData.totalMatching && FlowData.totalMatching.premium) || 0 });
+    await panels;
   }
 
   let _setFilterDebounce = null;
@@ -677,11 +766,12 @@ const OptionsFlowPage = (() => {
     document.getElementById('of-dte')?.addEventListener('change', e => setFilter('dte', e.target.value));
     document.getElementById('of-sweeps-only')?.addEventListener('change', e => setFilter('sweepsOnly', e.target.checked));
 
-    // Tape pause on hover
+    // Tape pause on hover — FRONTEND_STATUS_V1: desktop pointers only, capped at HOVER_PAUSE_MAX_MS
+    // by the tick, always visible in the header status.
     const tape = document.getElementById('of-tape');
-    if (tape) {
-      tape.addEventListener('mouseenter', () => isPaused = true);
-      tape.addEventListener('mouseleave', () => isPaused = false);
+    if (tape && !COARSE_POINTER) {
+      tape.addEventListener('mouseenter', () => { isPaused = true; pausedSince = Date.now(); renderStatus(); });
+      tape.addEventListener('mouseleave', () => { isPaused = false; pausedSince = 0; renderStatus(); });
     }
 
     // Top tickers click → load detail
@@ -754,11 +844,19 @@ const OptionsFlowPage = (() => {
       }
     }
 
+    // FRONTEND_STATUS_V1: stream-health badge — async, off the initial render chain, then every 60 s
+    setTimeout(loadStreamHealth, 0);
+    healthTimer = setInterval(loadStreamHealth, HEALTH_TICK);
     panelTimer = setInterval(() => {
       // PANEL_REFRESH_V1 — also refresh right-side panels (flow signals, sweeps,
       // top tickers, sector flow, sentiment, concentration). Previously only the
       // tape refreshed on tick; right-side panels required page reload to update.
-      if (isPaused) return;
+      if (refresh.authLost) return;                                   // FRONTEND_STATUS_V1
+      if (Date.now() < refresh.nextAllowedAt) { renderStatus(); return; }   // backoff after errors
+      if (isPaused) {                                                 // 10 s cap, then resume even while hovering
+        if (Date.now() - pausedSince < HOVER_PAUSE_MAX_MS) { renderStatus(); return; }
+        isPaused = false; pausedSince = 0; renderStatus();
+      }
       if (document.hidden) return;                 // skip work when tab backgrounded
       if (FlowData.selectedDate) return;           // historical mode — no live refresh
       FlowData.refreshNewer().then(() => rebuildTape({trades: allTrades, market_open: true, fetched_at: new Date().toISOString(), total_trades: (FlowData.totalMatching && FlowData.totalMatching.trades) || allTrades.length, total_premium: (FlowData.totalMatching && FlowData.totalMatching.premium) || 0}));
@@ -766,7 +864,7 @@ const OptionsFlowPage = (() => {
     }, PANEL_TICK);
   }
 
-  return { init, setFilter, loadDetail };
+  return { init, setFilter, loadDetail, apiFetch, renderStatus };   // FRONTEND_STATUS_V1
 })();
 
 
@@ -1004,7 +1102,7 @@ const OptionsFlowPage = (() => {
       } else {
         params.set('session', __ufSession);
       }
-      const r = await fetch('/api/unusual-flow?' + params.toString());
+      const r = await OptionsFlowPage.apiFetch('/api/unusual-flow?' + params.toString());   // FRONTEND_STATUS_V1
       if (!r.ok) {
         content.innerHTML = `<div class="of-empty">Error ${r.status} loading unusual flow</div>`;
         return;
@@ -1101,7 +1199,7 @@ const OptionsFlowPage = (() => {
     loadUnusualFlow();
 
     // Refresh every 60s
-    setInterval(loadUnusualFlow, 60_000);
+    window.__ofUnusualTimer = setInterval(loadUnusualFlow, 60_000);   // FRONTEND_STATUS_V1: pausable on 401
   }
 
   if (document.readyState === 'loading') {
