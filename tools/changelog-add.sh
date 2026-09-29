@@ -54,8 +54,10 @@ fi
 
 if [ "$COMMIT" = "--commit" ]; then
     cd ~/sofar-finance
-    git add SYSTEM-CHANGELOG.md
-    git commit -m "system-changelog: $ENTRY" --quiet
-    git push origin main --quiet 2>&1 | tail -3
+    # GIT_PUSH_QUEUE_V4 (SOF-71): every git writer takes the same lock as the queue
+    W=/home/bot1/scripts/with-git-lock.sh; R=/home/bot1/sofar-finance
+    $W $R 30 git add SYSTEM-CHANGELOG.md
+    $W $R 30 git commit -m "system-changelog: $ENTRY" --quiet
+    $W $R 60 git push origin main --quiet 2>&1 | tail -3
     echo "Committed and pushed."
 fi
