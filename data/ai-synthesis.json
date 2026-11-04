@@ -1,210 +1,210 @@
 {
   "calibration_notes": {
-    "pattern_acknowledgment": "BASE RATE is 36.0% directional accuracy over the last 25 scored predictions. Bullish accuracy in that window is 7.7%, and next_day accuracy is 0.0% (n=8) with a 25.57% undershoot bias, so I am addressing the WEAK_TIMEFRAME flag directly. Recent history is not a one-direction streak: the last 10 were 3 DOWN, 3 UP and 4 NEUTRAL, mostly at 30-34% confidence. Low-confidence calls scored well on composite (~0.60) because the targets were tight. I am keeping that tight-target discipline and committing to a direction, because NEUTRAL is capped at 20%.",
-    "conviction_audit": "No HIGH-tier data exists. LOW (30-50) is 56.2% (n=16) and MEDIUM (51-70) is 0.0% (n=9). The threshold for HIGH today is 4+ aligned signals, which I do not have: the flow is bearish in aggregate (P/C 1.291), GEX is bullish-pinned, and regime confidence is only 15%. So intraday and next-day stay in LOW (35 and 32). Only the 30-day call sits at 55, because 30-day accuracy is 69.1% (n=123).",
-    "target_bias_correction": "Next-day shows an undershoot bias (target error 25.57%) and intraday is balanced (12.11% error). For next-day I move the target to a +0.3% drift from SPX-derived spot instead of anchoring on spot, and I widen the range to about \u00b10.65%. Intraday targets stay anchored to the $7,715 call wall, with the range held to ~0.35% either side.",
-    "regime_adjustment": "The current label is low_vol_choppy, and the vol regime is PINNED (+$397M GEX, contango +1.7%) but with only 15% confidence. PINNED backtests at 63.0% accuracy with a bullish preference (63.4% bull vs 61.5% bear). Spot of 7,705 sits between the put wall at 7,700 and the call wall at 7,715, so I use MEAN_REVERSION, tight targets, and a mild bullish lean. Confidence is capped low because regime confidence is 15%.",
+    "pattern_acknowledgment": "The auto-detected WEAK_TIMEFRAME flag shows next_day accuracy of 0.0% (n=8), with a composite of 0.14 and a 25.57% target error (undershoot bias). BULLISH accuracy over the last 25 scored predictions is 7.7%, so my recent bullish next-day calls were wrong. The last 10 intraday calls were mostly NEUTRAL, so there is no directional streak, but there is an abstention streak. Bull case today: pinned positive GEX of $432M, CAG of 1.79 (contrarian bullish), and bullish deep-ITM call flow in AAPL, AMZN, NVDA and TSLA. Bear case today: $27.49M in SPY deep-ITM put hedges, $7.48M of META protective puts, the SPX call wall and put wall pinning price at $7,710/$7,700, and a 10Y yield of 4.894%.",
+    "conviction_audit": "No HIGH tier data exists, and MEDIUM is 0% (n=9) against LOW at 56.2% (n=16). The BASE RATE is 36.0% directional accuracy over the last 25 predictions. I am staying in the LOW tier (30-40) for intraday and next-day. Only the 30-day call gets 52, and that is justified by the 69.1% trailing 30-day accuracy. The threshold for HIGH today is 4+ aligned signals, and only 2 align, so none.",
+    "target_bias_correction": "Next-day shows undershoot bias (25.57% target error) and intraday shows balanced bias (12.11% error). Some of that error likely comes from stale quotes. SPY quotes at $767.20, but SPX $7,704.35 / 10 = $770.4, a 0.42% gap, which exceeds the 0.3% tolerance. I anchor SPY targets to the SPX-derived level, and QQQ to the live quote. I cap the pinned-regime next-day range at about 1.4% total, and the intraday target sits within 0.3% of the pinned wall.",
+    "regime_adjustment": "The current regime is low_vol_choppy, and vol_regime is PINNED (positive GEX + contango, confidence only 16%). The backtest for PINNED is 63.0% accuracy with a bullish lean (63.4% bullish). I apply MEAN_REVERSION with tight targets. Recent live results in this regime were 4 of 4 intraday calls with errors under 0.4%, but those were mostly NEUTRAL abstentions that scored poorly on direction. Today I pick a direction at low confidence instead of abstaining.",
     "specific_changes": [
-      "Next-day confidence is cut by 10 points per the dynamic correction (from ~42 to 32) and the target is widened to correct the undershoot.",
-      "The SPY quote ($768.00) is 0.32% below SPX/10 ($770.49), just past the 0.3% tolerance. I trust SPX spot and anchor SPY targets to the derived ~$770.5.",
-      "Aggregate put-heavy flow (P/C 1.291) is dominated by SPX/SPXW multileg hedging (85-92% multileg) and is not counted as bearish conviction. No GEX-negative or VIX-backwardation confirmation is present."
+      "Next-day confidence is reduced by 10 points per the dynamic correction (35 instead of 45). Bullish next-day calls are limited to LOW tier because recent bullish accuracy is 7.7%.",
+      "SPY targets are derived from SPX spot \u00f7 10 ($770.4) instead of the lagging $767.20 quote. This removes a roughly 0.4% systematic target error.",
+      "NEUTRAL is used only where flow conflicts (META intraday). All other calls commit to a direction with confidence capped at 35 for the two shorter timeframes."
     ]
   },
-  "calibration_summary": "Base rate is 36.0% with next_day at 0.0% (n=8), so next-day confidence is cut 10 points to 32 and the target is widened against the undershoot bias. Today's call is a low-confidence mild bullish lean in a PINNED regime (+$397M GEX, SPX between the 7700 put wall and 7715 call wall). SPX multileg put hedging is discounted and no HIGH conviction is claimed.",
+  "calibration_summary": "Base rate over the last 25 predictions is 36.0%, with next-day at 0% (n=8) and MEDIUM at 0% (n=9), so I keep confidence in the LOW tier and cut next-day confidence by 10 points. In a pinned positive-GEX regime ($432M, call wall 7710 / put wall 7700), I lean mildly bullish with tight targets anchored to SPX-derived SPY of about $770.",
   "intraday": {
     "signal": "BULLISH",
-    "confidence": 35,
-    "summary": "Spot SPX 7,705 is pinned between the 7,700 put wall and 7,715 call wall with +$397M GEX, so dealers buy dips and sell rips. Expect a narrow range with a slight upward drift toward the 7,715 wall, about SPY $771.5. The CAG of 1.79 (BULL-DELUDED) adds a mild contrarian bullish tilt. Aggregate put premium is mostly SPX hedging.",
-    "key_driver": "Positive GEX pin between put wall 7700 and call wall 7715",
+    "confidence": 32,
+    "summary": "SPX at 7704.35 sits between the put wall 7700 and call wall 7710 with net GEX of +$432M and contango VIX (16.75). Dealers buy dips and sell rips, so the range should be tight. With about 15 minutes left in the cash session, expect a slight drift toward the SPX-implied SPY level of about $770. Upside is capped by the 7710 call wall.",
+    "key_driver": "Positive GEX pin between put wall 7700 and call wall 7710, with SPY lagging the SPX-implied level",
     "primary_driver": "regime",
     "predicted_prices": {
-      "SPY": 771.0,
-      "QQQ": 694.0,
+      "SPY": 769.5,
+      "QQQ": 692.5,
       "IWM": 284.0,
-      "NVDA": 204.0,
-      "AAPL": 353.2
+      "NVDA": 201.3,
+      "AAPL": 352.3
     },
     "predicted_range": [
-      769.3,
-      772.2
+      766.8,
+      771.0
     ],
-    "price_target_basis": "PUT/CALL WALL: SPX call wall 7,715 (SPY-equivalent ~$771.5) and put wall 7,700 (~$770.0). SPY is derived from SPX spot 7,704.88/10 = $770.49 because the $768.00 quote disagrees by 0.32%.",
+    "price_target_basis": "SPX spot 7704.35 / 10 = 770.4 (SPY quote $767.20 is 0.42% below, so SPX spot is trusted); call wall 7710 caps the upside, put wall 7700 floors the downside",
     "regime_strategy": "MEAN_REVERSION"
   },
   "next_day": {
     "signal": "BULLISH",
-    "confidence": 32,
-    "summary": "A mild bullish drift is expected in the PINNED regime (63.4% bullish accuracy in backtest), with a post-midterm relief tone ('Congress Flips And Stocks Rise'). The 10Y at 4.888% and the 5.28% 30Y cap the upside, and next_day is my weakest timeframe at 0.0%, so confidence is at the floor. The target is slightly widened to correct the undershoot.",
-    "key_driver": "Positive GEX plus contango favoring dip-buying; CAG contrarian bullish",
-    "primary_driver": "regime",
+    "confidence": 35,
+    "summary": "Pinned regime (63.4% backtested bullish accuracy) with CAG at 1.79 (contrarian bullish) favors a modest upside drift. The 7400 GEX flip is far below spot, so dealer flow stays stabilizing. Deep-ITM call buying in AAPL, AMZN, NVDA and TSLA supports the single-name bid. Confidence is held low because next-day accuracy is 0% (n=8) and the SPY $27.49M ITM put hedge offsets the bullish flow.",
+    "key_driver": "Positive GEX of $432M with the GEX flip far below spot, supporting a mean-reverting bullish lean",
+    "primary_driver": "gex",
     "predicted_prices": {
-      "SPY": 772.5,
-      "QQQ": 696.0,
+      "SPY": 771.0,
+      "QQQ": 694.0,
       "IWM": 285.0,
-      "NVDA": 205.0,
-      "AAPL": 354.5
+      "NVDA": 202.5,
+      "AAPL": 353.5
     },
     "predicted_range": [
-      766.0,
-      776.0
+      765.5,
+      775.5
     ],
-    "price_target_basis": "KEY LEVEL: SPX call wall 7,715 (~SPY $771.5) plus ~0.3% PINNED-regime drift, with the range bounded at \u00b10.65% (GEX flip at 7,400 is far below at ~-4%).",
+    "price_target_basis": "SPX call wall 7710 (SPY about $771) as the magnet, with range of \u00b10.7% matching the pinned-regime next-day cap of 1.0%",
     "regime_strategy": "MEAN_REVERSION"
   },
   "long_term": {
     "signal": "BULLISH",
-    "confidence": 55,
-    "summary": "Over 30 days equities rise about 62-74% of the time. 30-day accuracy of 69.1% (n=123) is my strongest timeframe, and the CAG of 1.79 is a contrarian bullish setup. Institutional calls (QQQ Jan-2027 720 calls, $2.4M, paired with a sold 590 put) show a bullish risk-reversal structure. Headwinds are long yields (10Y 4.888%, 30Y 5.28%), WTI at $88, and Big Tech concentration.",
-    "key_driver": "Positive base-rate drift plus contrarian CAG and PINNED regime support",
+    "confidence": 52,
+    "summary": "Markets rise about 74% of the time over monthly periods, and the 30-day trailing accuracy is 69.1%. Positive GEX with the flip at 7400 (about 4% below spot) gives a cushion, and CAG is wide at 1.79 (contrarian bullish). Headwinds are the 10Y at 4.894%, the 30Y at 5.282%, WTI at $88.57, and the 3M-10Y spread of about +0.87%, which is normal. I expect a modest grind higher of about 2%.",
+    "key_driver": "Base-rate drift plus a pinned positive-GEX regime with a downside cushion to the 7400 flip",
     "primary_driver": "regime",
     "predicted_prices": {
-      "SPY": 780.0,
+      "SPY": 785.0,
       "QQQ": 708.0,
       "IWM": 290.0,
       "NVDA": 212.0,
       "AAPL": 362.0
     },
     "predicted_range": [
-      752.0,
-      797.0
+      745.0,
+      810.0
     ],
-    "price_target_basis": "HISTORICAL REGIME ANALOG: 30-day directional accuracy of 69.1% (n=123) and PINNED bullish accuracy of 63.4%. Targets are +1.2% on SPY, about half of an 8% cap, anchored above the 7,715 call wall (~SPY $771.5). QQQ's 720 Jan-15-2027 call strike ($2.4M buy) sets the upside reference.",
+    "price_target_basis": "GEX flip 7400 (SPY about $740) as the downside floor; PINNED backtest bullish accuracy of 63.4% (800 days) and a median expected drift of about +2%, giving SPX about 7860 / SPY about $785",
     "regime_strategy": "MEAN_REVERSION"
   },
-  "news_impact": "The post-midterm repricing (Congress flipped, 'stocks rise') is mildly supportive. Policy uncertainty around data centers and affordability, plus the MSFT FCF downgrade, adds tech-specific caution. Q3 earnings-call transcripts are low-signal for index direction. Rates and cost-of-capital themes are a headwind for QQQ given the 10Y at 4.888%.",
-  "options_flow_impact": "Aggregate flow is BEARISH (P/C 1.291, puts $1,913.6M vs calls $1,482.8M), but SPX is $8.99B of premium at 92% multileg and 73% floor, which reads as institutional hedging rather than directional conviction. Directional signals lean bullish: deep ITM calls on TSLA ($19.5M), AAPL ($11.4M), AMZN ($10.0M), NVDA ($7.8M) and MSFT ($3.5M), and the QQQ Jan-2027 720 call buy ($2.4M). AMD's $35.5M deep ITM puts and META's $1.5M ITM puts are read as hedges. MU is notable at $1.14B, double yesterday's $574M, with a heavy $910+ put cluster ($8.65M).",
+  "news_impact": "Headlines are mostly Q3 earnings-call transcripts, so they carry little macro signal. The notable items are the Democrat sweep of Congress, Vistra and energy stock weakness (an energy sell-off), the CVS breakup, and Microsoft and Amazon adding $400B in market cap, which supports mega-cap tech. The policy shift is unpriced risk but offers no clear direction. Headline weight is minimal.",
+  "options_flow_impact": "The aggregate flow is NEUTRAL (P/C 0.932, calls $1,454M vs puts $1,356M). SPX/SPXW premium is $10.1B and $2.1B, mostly multileg (92%/85%) and so hedging or spread activity, not directional. Single-name deep-ITM calls in AAPL ($41M), AMZN ($20.9M), NVDA ($19.9M) and TSLA ($16.7M) lean bullish. SPY has $27.5M of deep-ITM put hedges against $3.5M of deep-ITM calls, which is a hedge that offsets the bullish read. The ISO % is low across names (under 2%), so there are no clear informed sweeps. MU premium of $1.35B is 2.3x the prior session, with a call wall at $700.",
   "risks": [
-    "A break below the 7,700 put wall in SPX could accelerate toward the 7,400 GEX flip, where dealer flow turns from stabilizing to amplifying.",
-    "Rising long yields (10Y 4.888%, 30Y 5.28%) and WTI at $88 could pressure growth and tech, especially QQQ.",
-    "Quote inconsistency: the SPY quote is 0.32% below SPX/10, and QQQ's Jan-2027 720-strike calls are flagged ITM while the live QQQ quote is $693.34, so the QQQ quote may be stale. Regime confidence is only 15%.",
-    "Aggregate P/C of 1.291 may reflect real downside demand rather than hedging if cash indices roll over."
+    "Break below the 7700 put wall or a loss of positive GEX would turn dealer hedging into an amplifier (flip at 7400).",
+    "Rates: the 10Y at 4.894% and 30Y at 5.282% could push yields higher and hit QQQ/growth.",
+    "Post-midterm Democratic Congress policy repricing, plus energy volatility (WTI $88.57, Brent $95.23), could shift sector rotation.",
+    "Data quality: the QQQ quote ($691.62) is far from levels in the recent history (about $737), and SPY lags SPX by 0.42%."
   ],
   "benchmarks": {
     "SPY": {
       "intraday_bias": "BULLISH",
       "next_day_bias": "BULLISH",
       "long_term_bias": "BULLISH",
-      "analysis": "SPY is derived from SPX spot 7,704.88 at about $770.5. The market is pinned between the 7,700 put wall and 7,715 call wall with +$397M GEX and contango, so ranges should compress with a slight upward drift. SPX multileg put flow ($8.99B total) is hedging, not directional.",
-      "key_driver": "Positive GEX pin (+$397M) between walls 7700/7715",
-      "primary_driver": "regime",
-      "conflicting_signals": "Aggregate P/C of 1.291; the call wall at 7,715 caps upside; high long-end yields; regime confidence only 15%.",
-      "predicted_price_2h": 771.0,
-      "predicted_price_nextday": 772.5,
-      "predicted_price_30d": 780.0,
+      "analysis": "SPX 7704.35 implies SPY about $770.4 against the $767.20 quote. It is pinned between the 7700 put wall and the 7710 call wall with +$432M GEX. The dealer-hedging dynamic favors dip-buying and small upward drift toward the call wall. The $27.49M deep-ITM put hedge is likely portfolio insurance, not direction.",
+      "key_driver": "Positive GEX pin and SPY/SPX basis gap",
+      "primary_driver": "gex",
+      "conflicting_signals": "$27.49M SPY deep-ITM puts, SPX call wall at 7710 capping upside, rising long yields",
+      "predicted_price_2h": 769.5,
+      "predicted_price_nextday": 771.0,
+      "predicted_price_30d": 785.0,
       "predicted_range_2h": [
-        769.3,
-        772.2
+        766.8,
+        771.0
       ],
       "predicted_range_nextday": [
-        766.0,
-        776.0
+        765.5,
+        775.5
       ],
-      "price_target_basis": "PUT/CALL WALL: SPX call wall 7,715 (~SPY $771.5), put wall 7,700 (~$770.0). SPY derived from SPX 7,704.88/10 = $770.49."
+      "price_target_basis": "SPX spot 7704.35 / 10 = 770.4; call wall 7710 and put wall 7700; GEX flip 7400"
     },
     "QQQ": {
       "intraday_bias": "BULLISH",
       "next_day_bias": "BULLISH",
       "long_term_bias": "BULLISH",
-      "analysis": "QQQ trades at $693.34 against a yield backdrop (10Y 4.888%) that is a headwind for growth. Institutional call buying (Jan-2027 720 calls, $2.4M, with a sold 590 put) is a bullish risk-reversal. MU, AMD and NVDA flow is heavy, but much of it is hedged. The live QQQ quote looks inconsistent with ITM flags in the flow, so confidence is kept low.",
-      "key_driver": "QQQ Jan-2027 720 call buy ($2.4M) with sold 590 put; positive GEX",
-      "primary_driver": "flow",
-      "conflicting_signals": "10Y at 4.888%; MSFT downgrade; possible stale QQQ quote; NDX/NDXP hedging flow ($300M+ each).",
-      "predicted_price_2h": 694.0,
-      "predicted_price_nextday": 696.0,
+      "analysis": "QQQ quote of $691.62 is stale relative to history, so I keep moves small. QQQ options premium is $1.12B with 28% cross and 42% multileg, which is institutional and mostly spread-based. The QQQ Dec 18 $705 call buy ($96k) is minor bullish. Rate sensitivity (10Y at 4.894%) is the main headwind.",
+      "key_driver": "Pinned positive GEX regime carries over to QQQ; QQQ 705 call buying",
+      "primary_driver": "regime",
+      "conflicting_signals": "10Y yield at 4.894% is a growth-stock headwind; QQQ quote reliability",
+      "predicted_price_2h": 692.5,
+      "predicted_price_nextday": 694.0,
       "predicted_price_30d": 708.0,
       "predicted_range_2h": [
-        692.2,
-        695.8
+        690.5,
+        694.0
       ],
       "predicted_range_nextday": [
-        689.0,
-        702.0
+        688.0,
+        699.0
       ],
-      "price_target_basis": "OPTIONS FLOW STRIKE CLUSTER: QQQ Jan-15-2027 $720 call, $2.4M buy (1,500 contracts), is the upside reference. Near-term targets are a ~0.1-0.4% drift from the $693.34 quote."
+      "price_target_basis": "QQQ $705 Dec-18 call buy (59 contracts, $96k) as a 30-day anchor; \u00b10.7% range per the pinned-regime next-day cap"
     }
   },
   "tickers_to_watch": [
     {
-      "ticker": "TSLA",
+      "ticker": "NVDA",
       "intraday_bias": "BULLISH",
       "next_day_bias": "BULLISH",
       "long_term_bias": "BULLISH",
-      "reasoning": "$19.47M of deep ITM calls (avg 43.7% ITM) signals stock-replacement long positioning, versus only $4.43M of deep ITM puts (a 4.4:1 call tilt). TSLA also has $367M of premium today with low ISO (0.1%), so informed aggression is limited.",
-      "key_driver": "$19.47M deep ITM call premium",
+      "reasoning": "$19.85M deep-ITM calls ($120-$170 strikes, avg 28.5% ITM) show stock-replacement long positioning. The 33% auction share is retail-facing and carries less informed signal. Intraday is a 15-minute window, so the move should be small.",
+      "key_driver": "Deep-ITM call stock replacement at $19.85M",
       "primary_driver": "flow",
-      "conflicting_signals": "Low ISO% suggests the flow is not aggressively informed; $4.43M of deep ITM puts is a hedge.",
-      "predicted_price_2h": 391.0,
-      "predicted_price_nextday": 393.0,
-      "predicted_price_30d": 405.0,
+      "conflicting_signals": "Last NVDA intraday call: -0.52% against a NEUTRAL call; ISO share is low (0.3%)",
+      "predicted_price_2h": 201.3,
+      "predicted_price_nextday": 202.5,
+      "predicted_price_30d": 212.0,
       "predicted_range_2h": [
-        386.5,
-        394.5
+        199.8,
+        202.6
       ],
-      "price_target_basis": "KEY LEVEL: $390 is round-number support near spot $389.78. Flow anchors are the deep ITM call premium ($19.47M vs $4.43M puts); targets are +0.3% intraday and +0.8% next-day."
-    },
-    {
-      "ticker": "AMZN",
-      "intraday_bias": "BULLISH",
-      "next_day_bias": "BULLISH",
-      "long_term_bias": "BULLISH",
-      "reasoning": "$10.02M deep ITM calls ($170-$220 strikes, avg 26.5% ITM) show institutional stock-replacement positioning with no offsetting put flow. This is a clean one-sided bullish signal.",
-      "key_driver": "$10.02M deep ITM calls, no matching put hedge",
-      "primary_driver": "flow",
-      "conflicting_signals": "Deep ITM calls are directional weight only, not a price target; the broader P/C ratio is bearish.",
-      "predicted_price_2h": 268.8,
-      "predicted_price_nextday": 270.0,
-      "predicted_price_30d": 277.0,
-      "predicted_range_2h": [
-        267.2,
-        270.0
-      ],
-      "price_target_basis": "KEY LEVEL: spot $268.30 with a ~0.2% intraday and ~0.6% next-day drift. The deep ITM call premium ($10.02M) is directional weight only."
+      "price_target_basis": "NVDA quote $200.83 plus the deep-ITM call bias; $19.85M deep-ITM calls ($120-$170) as direction anchor, +0.8% next-day target"
     },
     {
       "ticker": "AMD",
       "intraday_bias": "BULLISH",
       "next_day_bias": "BULLISH",
       "long_term_bias": "BULLISH",
-      "reasoning": "AMD ($481.49) has a conflicted flow profile: $2.77M deep ITM calls against $35.45M deep ITM puts (avg 36.2% ITM). That put premium is probably hedging on a large long position, since there is no confirmation from GEX or VIX. AMD's mean-reversion bounce has support in the pinned regime. Confidence is low because of the flow conflict.",
-      "key_driver": "PINNED-regime mean reversion; deep ITM put premium read as hedging",
-      "primary_driver": "regime",
-      "conflicting_signals": "$35.45M deep ITM puts vs $2.77M deep ITM calls; AMD is far below its $605 level from late September.",
-      "predicted_price_2h": 483.0,
-      "predicted_price_nextday": 486.0,
+      "reasoning": "OTM call walls at $485 ($1.19M) and $475 ($1.16M) sit around the $481 spot, and there is $11.0M in deep-ITM calls. AMD premium was $409.5M today. One 17-contract $500 Dec call was sold ($54k), which is a minor cap on the upside. $500 is a 30-day overhead level.",
+      "key_driver": "ATM call walls at $485 and $475, plus $11.01M deep-ITM calls",
+      "primary_driver": "flow",
+      "conflicting_signals": "$1.30M deep-ITM puts, $500 Dec call sold, last AMD intraday call was correct (+0.45%) so mean reversion is possible",
+      "predicted_price_2h": 482.0,
+      "predicted_price_nextday": 485.0,
       "predicted_price_30d": 500.0,
       "predicted_range_2h": [
-        477.0,
-        488.0
+        478.5,
+        485.0
       ],
-      "price_target_basis": "KEY LEVEL: spot $481.49 with a ~0.3% intraday drift. Deep ITM put premium ($35.45M, strikes $560-$720) marks the area where institutions hold hedges, well above spot."
+      "price_target_basis": "Call wall $485 ($1.19M, 1 trade); $500 strike for the 30-day level (Dec-18 call sold)"
+    },
+    {
+      "ticker": "META",
+      "intraday_bias": "NEUTRAL",
+      "next_day_bias": "BEARISH",
+      "long_term_bias": "BULLISH",
+      "reasoning": "$7.48M of deep-ITM puts ($690-$1250 strikes, avg 51.8% ITM) are a large hedge or synthetic short, the only large bearish single-name flow in the data. Without bearish GEX or backwardation, it is likely hedging, so next-day confidence is low and the 30-day call is bullish on the base rate.",
+      "key_driver": "$7.48M deep-ITM put hedge versus a pinned positive-GEX backdrop",
+      "primary_driver": "flow",
+      "conflicting_signals": "Positive GEX regime, Microsoft/Amazon mega-cap strength in headlines",
+      "predicted_price_2h": 630.8,
+      "predicted_price_nextday": 628.0,
+      "predicted_price_30d": 645.0,
+      "predicted_range_2h": [
+        628.5,
+        633.0
+      ],
+      "price_target_basis": "Deep-ITM put cluster ($690 strike, $7.48M total) as the nearest overhead level; META quote $630.64"
     }
   ],
   "trade_ideas": [
     {
-      "idea": "Buy SPY calls into the pinned drift toward the 7,715 SPX call wall",
+      "idea": "Buy SPY calls for a mean-reversion drift toward the SPX call wall in a pinned regime",
       "ticker": "SPY",
       "type": "calls",
       "timeframe": "next-day",
-      "thesis": "PINNED regime (+$397M GEX, contango) with bullish preference (63.4% backtest accuracy); CAG 1.79 contrarian bullish; dips toward the 7,700 put wall (~SPY $770) should be bought by dealers.",
-      "risk": "Pinned regimes cap upside near the call wall, so a 0.3% drift may not cover time decay; a break below 7,700 shifts risk toward the 7,400 flip.",
-      "instrument": "SPY $772 calls exp Nov 13, 2026",
-      "entry_zone": "SPY $768.5-$770.5",
-      "stop_invalidation": "SPY below $766.5, or SPX below the 7,700 put wall by more than 0.3%",
-      "target": "SPY $774-$775",
+      "thesis": "Pinned +$432M GEX, contango VIX, CAG of 1.79 (contrarian bullish), and SPY lagging SPX-implied $770.4.",
+      "risk": "$27.5M of ITM put hedging, next-day accuracy at 0% (n=8), and a break below the 7700 put wall.",
+      "instrument": "SPY $770 calls exp Nov 20 2026",
+      "entry_zone": "$766.50-$769.50",
+      "stop_invalidation": "SPY below $762 (SPX below about 7620, losing the 7700 put wall)",
+      "target": "$776",
       "risk_reward": "1:1.8"
     },
     {
-      "idea": "Follow the TSLA deep ITM call positioning",
-      "ticker": "TSLA",
+      "idea": "NVDA call spread to follow deep-ITM stock-replacement flow",
+      "ticker": "NVDA",
       "type": "calls",
-      "timeframe": "next-day",
-      "thesis": "$19.47M deep ITM calls versus $4.43M deep ITM puts is a 4.4:1 institutional call tilt, supported by PINNED-regime dip buying.",
-      "risk": "Low ISO% (0.1%) means little informed aggression; single-stock vol can overwhelm the pin.",
-      "instrument": "TSLA $395 calls exp Nov 20, 2026",
-      "entry_zone": "TSLA $387-$391",
-      "stop_invalidation": "TSLA below $382",
-      "target": "TSLA $398-$402",
-      "risk_reward": "1:2"
+      "timeframe": "30-day",
+      "thesis": "$19.85M deep-ITM call premium shows stock-replacement positioning, and the 30-day base rate of about 74% favors upside.",
+      "risk": "Yield shock (10Y at 4.894%) or an AI-sector sell-off, and a low ISO share.",
+      "instrument": "NVDA $205 / $220 call spread exp Dec 18 2026",
+      "entry_zone": "$199-$202",
+      "stop_invalidation": "NVDA below $193",
+      "target": "$214",
+      "risk_reward": "1:2.2"
     }
   ],
   "notable_divergences": [
@@ -212,20 +212,32 @@
       "ticker": "SPY",
       "signal": "BULLISH",
       "flow_direction": "bearish",
-      "detail": "Aggregate puts $1,913.6M vs calls $1,482.8M (P/C 1.291), with SPX at $8.99B and SPXW at $1.94B, mostly multileg",
-      "description": "The aggregate flow signal is BEARISH, but SPX/SPXW premium is 85-92% multileg and heavily floor-based, which looks like portfolio hedging by net-long funds. GEX is positive and VIX is in contango, so I do not treat it as bearish conviction.",
-      "inputs_conflicting": "options_flow (bearish aggregate) vs gex/vix_structure (pinned, contango)",
+      "detail": "$27.49M deep-ITM puts ($880-$945 strikes) vs $3.49M deep-ITM calls",
+      "description": "Large protective put positioning conflicts with the bullish lean. With positive GEX and contango VIX it reads as portfolio hedging by net-long funds, not directional bearishness.",
+      "inputs_conflicting": "options_flow vs gex/vix_structure",
       "significance": "high",
       "expirations": []
     },
     {
-      "ticker": "AMD",
+      "ticker": "AMZN",
       "signal": "BULLISH",
       "flow_direction": "bearish",
-      "detail": "$35.45M deep ITM puts vs $2.77M deep ITM calls",
-      "description": "Large deep ITM put premium contradicts the bullish lean. I read it as hedging by net-long holders, since there is no GEX-negative or VIX-backwardation confirmation, but I keep AMD confidence low.",
-      "inputs_conflicting": "options_flow vs regime",
+      "detail": "$280k bought AMZN $265 puts (500 contracts, exp 2026-11-20) vs $20.89M deep-ITM calls",
+      "description": "A short-dated put buy appeared against much larger deep-ITM call buying. It looks like a tactical hedge. At about $268 spot the $265 put is near the money, not deep ITM.",
+      "inputs_conflicting": "single trade vs deep-ITM institutional flow",
       "significance": "medium",
+      "expirations": [
+        "2026-11-20"
+      ]
+    },
+    {
+      "ticker": "META",
+      "signal": "NEUTRAL",
+      "flow_direction": "bearish",
+      "detail": "$7.48M deep-ITM puts ($690-$1250)",
+      "description": "Large bearish hedge or synthetic short against a neutral intraday signal.",
+      "inputs_conflicting": "flow vs regime",
+      "significance": "high",
       "expirations": []
     }
   ],
@@ -234,22 +246,17 @@
     {
       "ticker": "SPX",
       "flag": "OUTSIZED_MOVE_EXPECTED",
-      "basis": "SPX $8.99B premium so far today (92% multileg, 73% floor); $13.9B on the prior session, so heavy hedging positioning."
+      "basis": "$10.1B SPX premium today (92% multileg) plus a $5.11M single-trade call cluster at the $400 strike, likely hedge/structure rather than directional"
     },
     {
       "ticker": "MU",
-      "flag": "OUTSIZED_MOVE_EXPECTED",
-      "basis": "MU $1.14B premium today vs $574M prior session (2x), with a $910 put cluster of $8.65M across 3 trades and a call wall at $750 ($6.42M)."
+      "flag": "UNUSUAL_VOLUME",
+      "basis": "$1,348M premium today vs $574M prior session; call wall $700 ($5.28M) and $750 ($5.12M)"
     },
     {
-      "ticker": "QQQ",
-      "flag": "OUTSIZED_MOVE_EXPECTED",
-      "basis": "$2.43M QQQ Jan-15-2027 $720 call buy (1,500 contracts) paired with a $0.66M sold $590 put, a bullish risk-reversal."
-    },
-    {
-      "ticker": "BP",
-      "flag": "OUTSIZED_MOVE_EXPECTED",
-      "basis": "$2.43M BP Jan-2027 $45 put buy (10,000 contracts) against a $1.33M Nov-20 $45 put sale, a calendar-style roll."
+      "ticker": "SPY",
+      "flag": "HEDGING_SIZE",
+      "basis": "$27.49M deep-ITM puts ($880-$945) against $3.49M deep-ITM calls"
     }
   ],
   "signal_attribution": {
@@ -257,102 +264,102 @@
     "weights": {
       "headlines": {
         "weight": 0.05,
-        "values_cited": "24 headlines, mostly earnings-call transcripts; 'Congress Flips And Stocks Rise', MSFT downgrade, midterm policy topics",
-        "influence": "Minor mild supportive tone; most headlines are low-signal for index direction."
+        "values_cited": "24 headlines, mostly Q3 earnings transcripts; Democrats take Congress, CVS breakup, Microsoft/Amazon +$400B market cap",
+        "influence": "Low signal; confirms mega-cap strength and an unpriced policy shift but does not set direction."
       },
       "options_flow": {
-        "weight": 0.15,
-        "values_cited": "P/C 1.291, puts $1,913.6M vs calls $1,482.8M; SPX $8.99B at 92% multileg; TSLA deep ITM calls $19.47M; QQQ Jan-2027 720 calls $2.4M",
-        "influence": "Aggregate bearish tone discounted as hedging; single-name deep ITM call tilt and QQQ risk-reversal support the bullish lean."
+        "weight": 0.2,
+        "values_cited": "P/C 0.932, calls $1,454M vs puts $1,356M; SPY deep-ITM puts $27.49M; AAPL deep-ITM calls $41M; NVDA $19.85M; ISO under 2%",
+        "influence": "Neutral aggregate flow and single-name deep-ITM calls give a small bullish lean, offset by SPY hedging."
       },
       "gex": {
         "weight": 0.25,
-        "values_cited": "Net GEX +$397M, put wall 7700, call wall 7715, flip 7400, spot 7704.88",
-        "influence": "Dealer buy-dip/sell-rip behavior pins price between 7700/7715 and drives the tight, slightly bullish target."
+        "values_cited": "Net GEX +$432M, flip 7400, call wall 7710, put wall 7700, spot 7704.35",
+        "influence": "Pins price and supports a tight, mean-reverting bullish drift toward the call wall."
       },
       "vix_structure": {
-        "weight": 0.12,
-        "values_cited": "VIX 16.73-16.79, VX2/VX1 +1.7% contango",
-        "influence": "Contango shows no panic, which supports mean reversion and rules out a bearish call."
+        "weight": 0.1,
+        "values_cited": "VIX 16.75, VX2/VX1 +1.5% contango",
+        "influence": "No stress; confirms the stabilizing regime and prior attribution feedback to raise vix_structure weight."
       },
       "vol_regime": {
         "weight": 0.15,
-        "values_cited": "PINNED, confidence 15%, backtest 63.0% accuracy, bullish 63.4% vs bearish 61.5%; CAG 1.79 BULL-DELUDED",
-        "influence": "Sets the MEAN_REVERSION strategy and bullish preference; the low 15% regime confidence caps conviction at LOW."
+        "values_cited": "PINNED, confidence 16%, backtest 63.0% accuracy (63.4% bullish, 800 days); CAG 1.79 BULL-DELUDED",
+        "influence": "Sets the bullish lean and tight targets, but 16% confidence caps conviction."
       },
       "prediction_feedback": {
         "weight": 0.1,
-        "values_cited": "Base rate 36.0% (n=25); next_day 0.0% (n=8); LOW tier 56.2%, MEDIUM tier 0.0%",
-        "influence": "Next-day confidence cut by 10 points, MEDIUM tier avoided on short horizons, next-day target widened for the undershoot."
+        "values_cited": "Base rate 36.0% (last 25); next_day 0.0% (n=8); MEDIUM 0% (n=9), LOW 56.2% (n=16); bullish 7.7%",
+        "influence": "Caps confidence at the LOW tier and reduces next-day confidence by 10 points."
       },
       "event_trees": {
         "weight": 0.0,
-        "values_cited": "No event tree data in this cycle's inputs",
-        "influence": "No event-tree input available, so zero weight."
+        "values_cited": "No event tree data provided this cycle",
+        "influence": "Zero weight because there are no inputs."
       },
       "price_data": {
-        "weight": 0.18,
-        "values_cited": "SPX 7,704.88 vs SPY quote $768.00 (0.32% gap), QQQ $693.34, 10Y 4.888%, DXY 101.597, WTI $88.25",
-        "influence": "Used to reconcile SPY to SPX/10 and anchor targets near spot; elevated long yields limit the upside."
+        "weight": 0.15,
+        "values_cited": "SPY quote $767.20 vs SPX-derived $770.4 (0.42% gap); QQQ $691.62; 10Y 4.894%; DXY 101.512",
+        "influence": "The SPX/SPY basis gap sets the small upside target, while high yields and QQQ quote uncertainty limit conviction."
       }
     },
     "weights_sum": 1.0,
-    "reasoning_chain": "Positive GEX (+$397M) pins SPX between the 7,700 put wall and 7,715 call wall, and contango (+1.7%) confirms no stress, so mean reversion dominates. The PINNED backtest favors bullish calls (63.4%) and CAG 1.79 adds a contrarian bullish tilt. Bearish aggregate P/C (1.291) is mostly SPX multileg hedging, so it is discounted, while deep ITM single-name calls (TSLA, AMZN) and the QQQ risk-reversal lean bullish. Regime confidence is only 15% and next-day accuracy is 0.0%, so the result is a low-confidence bullish call with tight targets."
+    "reasoning_chain": "Positive GEX (+$432M) pins SPX between the 7700 put wall and 7710 call wall, and contango VIX (16.75) confirms no stress, so mean reversion dominates. SPY lags the SPX-implied $770.4, so I lean mildly bullish. The pinned-regime backtest (63.4% bullish) and wide CAG (1.79, contrarian bullish) support direction, but options flow is neutral (P/C 0.932) with SPY hedging offsetting single-name call buying. Recent feedback (bullish 7.7%, next-day 0%, MEDIUM 0%) caps all short-term confidence at LOW; the 30-day call sits at 52 on base-rate drift."
   },
-  "generated_at": "2026-11-04T19:45:01Z",
-  "next_update": "2026-11-04T21:45:01Z",
+  "generated_at": "2026-11-04T20:45:01Z",
+  "next_update": "2026-11-04T22:45:01Z",
   "model_used": "claude-sonnet-5-5",
   "prices_at_generation": {
-    "SPY": 768.0,
-    "QQQ": 693.335,
-    "IWM": 283.685,
-    "AAPL": 352.75,
-    "NVDA": 203.565,
-    "TSLA": 389.78,
-    "META": 628.66,
-    "MSFT": 557.89,
-    "AMD": 481.49,
-    "AMZN": 268.3,
+    "SPY": 767.195,
+    "QQQ": 691.62,
+    "IWM": 283.66,
+    "AAPL": 351.835,
+    "NVDA": 200.83,
+    "TSLA": 383.54,
+    "META": 630.64,
+    "MSFT": 557.53,
+    "AMD": 481.16,
+    "AMZN": 267.86,
     "NKY": 62188.63,
     "KOSPI": 5683.8,
     "TAIEX": 42948.91,
     "TOPIX": 414.0,
-    "GOLD": 4067.2,
-    "SILVER": 52.22,
-    "WTI": 88.25,
-    "BRENT": 94.71,
-    "VIX": 16.79,
-    "10Y_YIELD": 4.888,
-    "30Y_YIELD": 5.28,
+    "GOLD": 4076.5,
+    "SILVER": 52.445,
+    "WTI": 88.57,
+    "BRENT": 95.23,
+    "VIX": 16.75,
+    "10Y_YIELD": 4.894,
+    "30Y_YIELD": 5.282,
     "3M_YIELD": 4.025,
-    "DXY": 101.597,
-    "captured_at": "2026-11-04T19:45:01Z"
+    "DXY": 101.512,
+    "captured_at": "2026-11-04T20:45:01Z"
   },
   "regime": "low_vol_choppy",
   "signal_snapshot": {
-    "pc_ratio": 1.291,
-    "flow_sentiment": "BEARISH",
-    "top_flow_summary": "BP $2.4M P, BP $1.3M P, QQQ $2.4M C",
-    "vix": 16.79,
+    "pc_ratio": 0.932,
+    "flow_sentiment": "NEUTRAL",
+    "top_flow_summary": "INTC $0.1M P, QQQ $0.1M C, ASML $0.1M C",
+    "vix": 16.75,
     "news_headlines": [
-      "American Financial Group, Inc. (AFG) Q3 2026 Earnings Call Transcript",
-      "Charles River Laboratories International, Inc. (CRL) Q3 2026 Earnings Call Transcript",
-      "Camtek Ltd. (CAMT) Q3 2026 Earnings Call Transcript"
+      "As Vistra and other energy stocks slide, some analysts warn of an \u2018excessive knee-jerk\u2019 reaction",
+      "NexPoint Residential: 13% Yield Unsustainable, But Stock Is Setting Up For A Buy",
+      "Nomad Foods Limited (NOMD) Q3 2026 Earnings Call Transcript"
     ],
     "regime": "low_vol_choppy"
   },
   "data_sources": {
     "headlines_count": 25,
-    "trends_count": 7,
+    "trends_count": 10,
     "trends_sample": [
-      "Post-Midterm Political Policy Shock",
-      "Healthcare Policy & Pharma Earnings Shift",
-      "Semiconductor Cycle & AI Infrastructure"
+      "AI, Robotics, and Mega-Cap Infrastructure",
+      "Healthcare Sector Restructuring Breakup",
+      "Post-Midterm Election Policy Landscape"
     ],
-    "flow_trades": 12315,
+    "flow_trades": 12026,
     "top_trades": 10,
-    "sentiment": "BEARISH",
-    "pc_ratio": 1.291,
+    "sentiment": "NEUTRAL",
+    "pc_ratio": 0.932,
     "price_source": "Yahoo",
     "feedback_patterns": 1,
     "strike_clusters": true
