@@ -1,125 +1,125 @@
 {
   "calibration_notes": {
-    "pattern_acknowledgment": "next_day directional accuracy is 0.0% (n=8) per feedback_loop; MEDIUM tier accuracy is 0.0% (n=9) and underperforms LOW tier (56.2%).",
-    "conviction_audit": "HIGH tier has no data. Threshold for HIGH confidence today: 75% only if 4+ signals align. Defaulting to LOW (30-45) for next-day, MEDIUM (50-65) for intraday/long-term only when 3+ signals converge.",
-    "target_bias_correction": "Undershoot bias detected in next_day predictions (25.57% error). Applying 2x range multiplier per EXPLOSIVE regime backtest to capture wider realized volatility and prevent target compression.",
-    "regime_adjustment": "Current regime: EXPLOSIVE (Negative GEX + Backwardation). Backtested 65.5% bullish accuracy. Strategy: TREND FOLLOWING. Bias: BULLISH ONLY. Widen targets 2x. Do not predict mean reversion.",
+    "pattern_acknowledgment": "Auto-detected WEAK_TIMEFRAME: next_day accuracy is 0.0% (n=8) with a 25.57% undershoot target error. The last 25 scored predictions hit 36.0% (the base rate for this run), and BULLISH calls scored only 7.7%. Recent intraday history is mostly NEUTRAL (30-34% confidence), so this is not a directional-streak rut. The bias check still applies: bull case is CAG +2.40 BULL-DELUDED with Fear z=+4.55 and VIX backwardation, which often marks capitulation. Bear case is negative GEX of $-633M, VIX 24.2 and 10Y at 4.85%, which can extend selling.",
+    "conviction_audit": "HIGH tier has no data, so it is not outperforming anything. MEDIUM is 0% (n=9) against LOW at 56% (n=16). Threshold for HIGH today is 4+ aligned signals, and only 2-3 align (CAG contrarian, explosive-regime bullish bias, base rate). Everything is capped at LOW-to-low-MEDIUM: intraday 42, next-day 36, 30-day 52.",
+    "target_bias_correction": "Next-day shows an undershoot bias (25.57% error) and intraday error is 12.11%, which looks like quote-scale mismatch. Correction: derive SPY from SPX spot (7416.61/10 = 741.66) because the SPY quote of 737.21 differs by 0.60%, beyond the 0.3% tolerance. Next-day and 30-day ranges are widened to 2x for the explosive regime and the weekend gap, and next-day point targets move slightly further from spot.",
+    "regime_adjustment": "No scored track record exists for high_vol_downtrend specifically, and the 25-sample window is too small to override the backtest. The vol regime is EXPLOSIVE (negative GEX, VX2/VX1 -6.3%), where backtested accuracy is 65.5% and bullish-only. The classifier confidence is just 32%, though, so I apply TREND_FOLLOWING with a bullish lean and LOW confidence. Ranges are widened 2x, and I avoid mean-reversion theses.",
     "specific_changes": [
-      "Lower next-day confidence by 10pts to 40% due to 0% accuracy on this timeframe per dynamic_corrections.",
-      "Apply 2x target range multiplier per EXPLOSIVE regime backtest to capture wide realized vol.",
-      "Default to LOW conviction tier unless 3+ signals converge, per feedback_loop correction."
+      "Reconcile SPY to SPX/10 (741.66) instead of the stale SPY quote and state this in price_target_basis, to fix the target-error pattern.",
+      "Subtract 10 points from next-day confidence (46 to 36) per the WEAK_TIMEFRAME correction. Next-day is evaluated at Monday's open, so the range is also widened for weekend gap risk.",
+      "Stay at LOW tier for intraday and next-day because MEDIUM is 0% (n=9). Raise to 52 only for the 30-day horizon, where accuracy is 69.1% and the base rate is bullish."
     ]
   },
-  "calibration_summary": "Next-day accuracy is 0.0% (n=8), forcing confidence down to LOW and widening ranges by 2x. EXPLOSIVE regime mandates TREND_FOLLOWING bias with 65.5% bullish accuracy. CAG shows historic fear (z=4.55) creating a contrarian entry. Deep ITM call flow confirms institutional accumulation despite bearish P/C ratio.",
+  "calibration_summary": "Base rate over the last 25 predictions is 36.0%, with next-day at 0% (n=8), so next-day confidence is cut by 10 points and everything stays in the LOW tier. Today's explosive regime (GEX $-633M, VIX 24.2 backwardation) combined with CAG +2.40 BULL-DELUDED and historic Fear z=+4.55 supports a contrarian-bullish lean. Prices are anchored to SPX-derived SPY (741.66) because the SPY quote diverges by 0.60%.",
   "intraday": {
     "signal": "BULLISH",
-    "confidence": 55,
-    "summary": "Market in EXPLOSIVE regime with negative GEX ($-603M) amplifying moves. CAG indicates historic fear (z=4.55) creating contrarian bullish edge. Strong jobs data reduces recession fears, supporting a relief bounce. Put wall at $7400 on SPX acts as magnet/support; a break below accelerates selling, but current positioning favors a reflexive bounce toward the call wall at $7500.",
-    "key_driver": "Volatility regime + CAG fear dislocation",
-    "primary_driver": "vol_regime",
+    "confidence": 42,
+    "summary": "SPX at 7416.61 sits just above the put wall at 7400 (SPY ~740) and below the call wall at 7450 (SPY ~745). Fear z=+4.55 and VIX backwardation favor a fade of panic and a drift toward the call wall. Deep ITM call premium in NVDA ($38.1M) and AAPL ($26.4M) is supportive, and aggregate P/C of 0.851 is neutral. Negative GEX means a break of 7400 would accelerate selling, so the range is wide.",
+    "key_driver": "Contrarian CAG fear extreme plus the explosive-regime bullish bias, with the put wall at 7400 as the line in the sand",
+    "primary_driver": "regime",
     "predicted_prices": {
-      "SPY": 744.5,
-      "QQQ": 666.8,
-      "IWM": 274.1,
-      "NVDA": 195.4,
-      "AAPL": 345.2
+      "SPY": 742.0,
+      "QQQ": 658.5,
+      "IWM": 274.0,
+      "NVDA": 187.5,
+      "AAPL": 345.0
     },
     "predicted_range": [
-      738.5,
-      748.5
+      736.5,
+      746.0
     ],
-    "price_target_basis": "PUT/CALL WALL: Put wall at $7400 SPX strike ($0.79M OTM put premium) providing support; call wall at $7500 SPX strike ($4.91M OTM call premium) as upside cap.",
+    "price_target_basis": "KEY LEVEL: SPX call wall 7450 (SPY ~745.0) and put wall 7400 (SPY ~740.0) from the GEX block. SPY derived as SPX 7416.61/10 = 741.66 because the 737.21 quote differs by 0.60%. Range widened 2x for negative GEX.",
     "regime_strategy": "TREND_FOLLOWING"
   },
   "next_day": {
     "signal": "BULLISH",
-    "confidence": 40,
-    "summary": "Weekend gap risk and negative GEX ($-603M) suggest continued volatility. However, the EXPLOSIVE regime historically favors bullish trend-following entries on dips. Strong macro data supports a relief rally into Monday open. Confidence lowered due to 0% next-day accuracy in feedback loop.",
-    "key_driver": "Volatility regime bias",
-    "primary_driver": "vol_regime",
+    "confidence": 36,
+    "summary": "Evaluated at Monday's open, so there are two days of weekend news and gap risk. Post-midterm headlines (Hassett: a blue wave won't stop AI build-out; OpenAI CFO: AI data-center spending continues) take away a policy-shock tail. Elevated VIX (24.2) in backwardation tends to mean-revert once fear peaks. Dealer short gamma could still produce a gap in either direction, so confidence is low after the -10 next-day correction.",
+    "key_driver": "Fear-capitulation contrarian signal (CAG 2.40) with a weekend gap risk discount",
+    "primary_driver": "regime",
     "predicted_prices": {
-      "SPY": 746.2,
-      "QQQ": 668.5,
-      "IWM": 275.3,
-      "NVDA": 196.8,
-      "AAPL": 346.5
+      "SPY": 743.5,
+      "QQQ": 660.0,
+      "IWM": 275.0,
+      "NVDA": 188.5,
+      "AAPL": 346.0
     },
     "predicted_range": [
-      736.5,
-      753.5
+      731.0,
+      752.0
     ],
-    "price_target_basis": "PUT/CALL WALL: Call wall at $7500 SPX strike ($4.91M OTM call premium) and put wall at $7400 SPX strike ($0.79M OTM put premium) defining the 2x widened range.",
+    "price_target_basis": "KEY LEVEL: SPX call wall 7450 (SPY ~745) as the upper anchor and put wall 7400 (SPY ~740) as the lower anchor, with the range widened 2x to roughly +/-1.4% for the weekend gap and explosive regime. Next-day undershoot bias (25.57%) corrected by placing the target modestly beyond spot.",
     "regime_strategy": "TREND_FOLLOWING"
   },
   "long_term": {
     "signal": "BULLISH",
-    "confidence": 65,
-    "summary": "30-day base rate is 74% bullish. Negative GEX and backwardation indicate short-term pain but long-term accumulation. Strong jobs data and falling VIX structure (if it stabilizes) will support equity recovery. Deep ITM call flow confirms institutional stock replacement.",
-    "key_driver": "Base rate + Macro data",
-    "primary_driver": "price_data",
+    "confidence": 52,
+    "summary": "Equities rise ~74% of 30-day windows, and 30-day accuracy is 69.1% (n=123). Elevated VIX with backwardation and historic Fear z=+4.55 are historically followed by mean reversion in vol and a recovery bid. The main risks are a 10Y at 4.85% and 30Y at 5.25% (a headwind for growth), a CoreWeave bond yield above 16% (AI credit stress), and WTI at $90. The GEX flip at 6970 (SPY ~697) is the downside tail.",
+    "key_driver": "Base-rate bullishness plus the contrarian fear extreme, tempered by high rates",
+    "primary_driver": "regime",
     "predicted_prices": {
-      "SPY": 758.0,
-      "QQQ": 678.0,
-      "IWM": 281.0,
-      "NVDA": 202.5,
-      "AAPL": 354.0
+      "SPY": 752.0,
+      "QQQ": 672.0,
+      "IWM": 280.0,
+      "NVDA": 195.0,
+      "AAPL": 352.0
     },
     "predicted_range": [
-      745.0,
-      770.0
+      715.0,
+      775.0
     ],
-    "price_target_basis": "HISTORICAL REGIME ANALOG: Median 30-day move in prior explosive-to-stabilizing transitions is +2.8% to +3.5%.",
+    "price_target_basis": "HISTORICAL REGIME ANALOG / KEY LEVEL: explosive regime backtest of 65.5% on bullish calls, with SPX call wall 7450 (SPY ~745) as the first anchor and a 30-day target about +1.4% above derived SPY 741.66. The lower bound is near the GEX flip at 6970 (SPY ~697) plus a buffer.",
     "regime_strategy": "TREND_FOLLOWING"
   },
-  "news_impact": "Strong October jobs report (165k vs exp) reduces immediate recession fears, acting as a catalyst for the contrarian bullish bounce. However, inflation concerns persist, keeping VIX in backwardation and preventing mean reversion plays.",
-  "options_flow_impact": "Heavy put buying ($1.136B) reflects institutional hedging in a negative GEX environment rather than directional conviction. Deep ITM call premium on SPY ($3.80M) and NVDA ($7.98M) confirms institutional stock-replacement bullishness.",
+  "news_impact": "Headlines are mostly earnings transcripts with little index-level signal. The relevant items are post-midterm: Hassett says a blue wave won't stop the AI build-out, and OpenAI's CFO says data-center investment continues, which removes a policy-risk tail for AI/semis. Negatives are the CoreWeave bond yield above 16% (AI financing stress) and valuation-caution themes. Net effect is mildly supportive, but headline skew is negative by nature, so I give it little weight.",
+  "options_flow_impact": "Aggregate flow is NEUTRAL: calls $1,716M vs puts $1,460M, P/C 0.851, across 14,264 trades. SPX/SPXW ($11.9B and $3.5B) are 88-91% multileg, so this is institutional spread and hedge construction, not directional. Directional signals are deep ITM calls in NVDA ($38.1M) and AAPL ($26.4M), which suggest stock replacement. NVDA also has $3.68M in deep ITM puts, which looks like hedging. MU shows $1.62B of premium with a $600 OTM call cluster ($7.38M), which is heavy semis activity. Put buying in the top trades (ORCL $150 puts $233K, NVDA 2028 puts $113K) is small hedging.",
   "risks": [
-    "Break below SPX $7400 put wall triggers accelerated dealer selling.",
-    "Weekend geopolitical news could widen VIX backwardation further.",
-    "Strong jobs data may delay Fed rate cuts, pressuring growth multiples."
+    "A break below the 7400 put wall (SPY ~740) in negative GEX ($-633M) could trigger accelerating dealer selling toward the 6970 flip.",
+    "Rates: 10Y at 4.85% and 30Y at 5.25% could tighten financial conditions and hit QQQ and growth.",
+    "AI-credit stress (CoreWeave bond yield above 16%) and weekend headline or gap risk, with WTI at $90 and Brent at $97.56 adding inflation risk."
   ],
   "benchmarks": {
     "SPY": {
       "intraday_bias": "BULLISH",
       "next_day_bias": "BULLISH",
       "long_term_bias": "BULLISH",
-      "analysis": "SPX spot $7428.56 derives to ~$742.90 SPY; current quote $740.68 reflects intraday dip near put wall. Negative GEX amplifies moves, but CAG shows historic fear (z=4.55) creating a contrarian entry. Deep ITM call flow ($3.80M) confirms institutional accumulation.",
-      "key_driver": "Volatility regime + CAG fear dislocation",
-      "primary_driver": "vol_regime",
-      "conflicting_signals": "Bearish options flow (P/C 1.347) driven by hedging, not conviction.",
-      "predicted_price_2h": 744.5,
-      "predicted_price_nextday": 746.2,
-      "predicted_price_30d": 758.0,
+      "analysis": "SPY is derived at ~741.66 from SPX 7416.61, since the 737.21 quote differs by 0.60%. Spot sits between the put wall at 7400 and the call wall at 7450. The regime is negative GEX with backwardation, CAG is bull-deluded, and fear is at a historic extreme, which favors a contrarian bounce toward the call wall. A break of 7400 invalidates the thesis.",
+      "key_driver": "Explosive regime with the CAG contrarian fear extreme",
+      "primary_driver": "regime",
+      "conflicting_signals": "Negative GEX amplifies downside, VIX at 24.2 in backwardation, 10Y at 4.85%, and recent bullish-call accuracy is just 7.7% (small sample).",
+      "predicted_price_2h": 742.0,
+      "predicted_price_nextday": 743.5,
+      "predicted_price_30d": 752.0,
       "predicted_range_2h": [
-        738.5,
-        748.5
+        736.5,
+        746.0
       ],
       "predicted_range_nextday": [
-        736.5,
-        753.5
+        731.0,
+        752.0
       ],
-      "price_target_basis": "PUT/CALL WALL: Put wall at $7400 SPX strike ($0.79M OTM put premium) and call wall at $7500 SPX strike ($4.91M OTM call premium)"
+      "price_target_basis": "SPX call wall 7450 (SPY ~745) and put wall 7400 (SPY ~740); SPY derived as SPX/10 = 741.66 (quote 737.21 differs by 0.60%, so SPX spot is used)."
     },
     "QQQ": {
       "intraday_bias": "BULLISH",
       "next_day_bias": "BULLISH",
       "long_term_bias": "BULLISH",
-      "analysis": "QQQ tracks tech/growth. Strong jobs data eases recession fears, supporting a relief rally. Negative GEX regime favors trend-following bullish entries on dips. Deep ITM call flow on NVDA ($7.98M) and AAPL ($5.49M) confirms accumulation.",
-      "key_driver": "Tech sector accumulation + regime bias",
-      "primary_driver": "options_flow",
-      "conflicting_signals": "High VIX (25.29) creates volatility headwind for growth multiples.",
-      "predicted_price_2h": 666.8,
-      "predicted_price_nextday": 668.5,
-      "predicted_price_30d": 678.0,
+      "analysis": "QQQ at $656.38 (live quote, not reconciled to NDX). $919.7M of QQQ premium today is 38% multileg and 31% cross, which looks like institutional matched trades and hedges rather than a one-way bet. NVDA deep ITM calls ($38.1M) support the mega-cap AI complex. Rates are the main headwind for growth.",
+      "key_driver": "Contrarian fear extreme plus AI build-out reassurance post-midterms",
+      "primary_driver": "regime",
+      "conflicting_signals": "10Y at 4.85% pressures growth, the CoreWeave bond yield above 16% signals AI financing strain, and NVDA deep ITM puts of $3.68M are hedging.",
+      "predicted_price_2h": 658.5,
+      "predicted_price_nextday": 660.0,
+      "predicted_price_30d": 672.0,
       "predicted_range_2h": [
-        658.0,
-        675.0
+        651.5,
+        663.0
       ],
       "predicted_range_nextday": [
-        650.0,
-        685.0
+        644.0,
+        670.0
       ],
-      "price_target_basis": "HISTORICAL REGIME ANALOG: Median 30-day move in prior explosive-to-stabilizing transitions is +2.8% to +3.5%."
+      "price_target_basis": "No QQQ-specific strike cluster is listed. The target is the SPX call wall 7450 (+0.45% from spot) scaled by QQQ's ~1.2x beta, widened 2x for negative GEX. QQQ quote 656.38 is used as is, since NDX spot is not provided."
     }
   },
   "tickers_to_watch": [
@@ -128,157 +128,192 @@
       "intraday_bias": "BULLISH",
       "next_day_bias": "BULLISH",
       "long_term_bias": "BULLISH",
-      "reasoning": "Deep ITM call premium ($7.98M) indicates stock replacement/bullish conviction. Strong jobs data supports AI capex narrative. Negative GEX regime favors buying dips.",
-      "key_driver": "Institutional flow (Deep ITM calls)",
-      "primary_driver": "options_flow",
-      "conflicting_signals": "Bearish options flow overall, but NVDA specific flow is heavily call-biased.",
-      "predicted_price_2h": 195.4,
-      "predicted_price_nextday": 196.8,
-      "predicted_price_30d": 202.5,
+      "reasoning": "$38.10M of deep ITM calls ($100-$172 strikes, avg 28.9% ITM) point to institutional stock replacement. NVDA also has $582M of premium today with 30% auction and 8% cross. The OpenAI CFO and Hassett comments support the AI build-out narrative.",
+      "key_driver": "$38.1M deep ITM call stock-replacement flow",
+      "primary_driver": "flow",
+      "conflicting_signals": "$3.68M of deep ITM puts at $220-$225 is hedging, and a 2028 $120 put buy ($113K) and the CoreWeave bond yield point to AI-credit stress.",
+      "predicted_price_2h": 187.5,
+      "predicted_price_nextday": 188.5,
+      "predicted_price_30d": 195.0,
       "predicted_range_2h": [
-        191.0,
-        199.0
+        183.5,
+        190.5
       ],
-      "price_target_basis": "PUT/CALL WALL: Call wall at $200 strike ($1.20M OTM call premium on SPX analog) and prior support at $191.00"
+      "price_target_basis": "FLOW CLUSTER: $38.10M deep ITM calls (directional weighting only) with the quote of $186.34 as the base. The target is a +0.6% intraday move, with the range widened 2x for negative GEX."
+    },
+    {
+      "ticker": "AAPL",
+      "intraday_bias": "BULLISH",
+      "next_day_bias": "BULLISH",
+      "long_term_bias": "BULLISH",
+      "reasoning": "$26.39M of deep ITM calls ($150-$302 strikes, avg 26.2% ITM) suggest institutional synthetic-long positioning. AAPL is a relatively defensive mega-cap in a fearful tape, with no earnings in the next 3 days.",
+      "key_driver": "$26.4M deep ITM call stock-replacement flow",
+      "primary_driver": "flow",
+      "conflicting_signals": "Rising 10Y yield at 4.85% and valuation caution on mega-cap tech, with no OTM call cluster to anchor a target.",
+      "predicted_price_2h": 345.0,
+      "predicted_price_nextday": 346.0,
+      "predicted_price_30d": 352.0,
+      "predicted_range_2h": [
+        341.0,
+        348.0
+      ],
+      "price_target_basis": "FLOW CLUSTER: $26.39M deep ITM calls (directional only) with the live quote of $344.06 as base. The 30-day target of $352 is about +2.3%, in line with the SPY 30-day target."
     }
   ],
   "trade_ideas": [
     {
-      "idea": "Long SPY Call Spread for relief bounce",
+      "idea": "Bullish SPY call play on a hold of the SPX 7400 put wall, targeting the 7450 call wall",
       "ticker": "SPY",
       "type": "calls",
       "timeframe": "next-day",
-      "thesis": "EXPLOSIVE regime favors bullish trend-following. CAG shows historic fear (z=4.55) creating contrarian edge. Put wall at $7400 provides support.",
-      "risk": "Break below $7400 triggers accelerated selling.",
-      "instrument": "SPY $745/$750 calls exp 2026-11-21",
-      "entry_zone": "0.80 - 1.10",
-      "stop_invalidation": "738.00",
-      "target": "752.00",
-      "risk_reward": "1:2.5"
+      "thesis": "A contrarian fear extreme (CAG 2.40, Fear z=+4.55) in an explosive regime that is backtested bullish-only, with the put wall at SPX 7400 as defined support and a call wall at 7450.",
+      "risk": "Negative GEX of $-633M can turn a break of 7400 into a fast flush, and a weekend gap can skip the stop. Position size should be reduced.",
+      "instrument": "SPY $745 calls exp Nov 13 2026",
+      "entry_zone": "SPY 739.5-742.5",
+      "stop_invalidation": "SPY closes below 739.0 (SPX 7400 put wall breached)",
+      "target": "SPY 746-748",
+      "risk_reward": "1:2"
+    },
+    {
+      "idea": "NVDA bullish call play following the $38.1M deep ITM call flow",
+      "ticker": "NVDA",
+      "type": "calls",
+      "timeframe": "30-day",
+      "thesis": "Institutional stock replacement ($38.1M deep ITM calls) and post-midterm AI build-out reassurance, with fear elevated enough to offer a contrarian entry.",
+      "risk": "AI credit stress (CoreWeave bond above 16%), rising rates, and hedging puts ($3.68M deep ITM) suggest protection demand.",
+      "instrument": "NVDA $195 calls exp Dec 18 2026",
+      "entry_zone": "NVDA 184-188",
+      "stop_invalidation": "NVDA closes below 180",
+      "target": "NVDA 195-200",
+      "risk_reward": "1:2.2"
     }
   ],
   "notable_divergences": [
     {
-      "ticker": "SPY",
+      "ticker": "NVDA",
       "signal": "BULLISH",
-      "flow_direction": "bearish",
-      "detail": "$1.136B put premium vs $843M call premium",
-      "description": "Heavy put buying reflects institutional hedging in negative GEX regime, not directional conviction. Deep ITM call flow ($3.80M) confirms accumulation.",
-      "inputs_conflicting": "options_flow vs vol_regime",
-      "significance": "high",
-      "expirations": [
-        "2026-11-30"
-      ]
+      "flow_direction": "mixed",
+      "detail": "$38.1M deep ITM calls vs $3.68M deep ITM puts",
+      "description": "Bullish stock-replacement call flow is far larger than put hedging, but the put side suggests some institutions protect gains. This is not a bearish signal absent falling call volume or a negative GEX break.",
+      "inputs_conflicting": "options_flow calls vs options_flow puts",
+      "significance": "medium",
+      "expirations": []
     }
   ],
   "earnings_warnings": {},
   "magnitude_flags": [
     {
-      "ticker": "SPY",
+      "ticker": "SPX",
       "flag": "OUTSIZED_MOVE_EXPECTED",
-      "basis": "Negative GEX ($-603M) + VIX backwardation (-6.8%) + $1.136B put premium concentration"
+      "basis": "$11.9B SPX premium (88% multileg) plus $3.5B SPXW, with negative GEX of $-633M and VIX backwardation of -6.3% VX2/VX1"
+    },
+    {
+      "ticker": "MU",
+      "flag": "OUTSIZED_MOVE_EXPECTED",
+      "basis": "$1.62B session premium (71% multileg) after $3.67B yesterday, with a $600 OTM call cluster of $7.38M"
     }
   ],
   "signal_attribution": {
     "primary_driver": "vol_regime",
     "weights": {
       "headlines": {
-        "weight": 0.1,
-        "values_cited": "165k jobs vs exp, unemployment 4.1%",
-        "influence": "Reduces recession fears, supports bullish relief bounce"
+        "weight": 0.05,
+        "values_cited": "Hassett: blue wave won't stop AI build-out; OpenAI CFO on data centers; CoreWeave bond yield above 16%",
+        "influence": "Slightly supportive of AI tech but mostly earnings transcripts, so low weight."
       },
       "options_flow": {
-        "weight": 0.15,
-        "values_cited": "P/C 1.347, $1.136B put premium, $3.80M deep ITM calls on SPY",
-        "influence": "Put flow is hedging; deep ITM calls confirm institutional bullish accumulation"
+        "weight": 0.12,
+        "values_cited": "P/C 0.851, calls $1716.4M vs puts $1460.3M; NVDA deep ITM calls $38.1M; AAPL $26.4M; SPX 88% multileg",
+        "influence": "Neutral aggregate, SPX is mostly hedging; the deep ITM call flow adds a mild bullish tilt."
       },
       "gex": {
-        "weight": 0.2,
-        "values_cited": "Net GEX $-603M, put wall $7400, call wall $7500",
-        "influence": "Negative GEX amplifies moves; put wall acts as magnet/support"
+        "weight": 0.18,
+        "values_cited": "Net GEX $-633M, put wall 7400, call wall 7450, flip 6970, spot 7416.61",
+        "influence": "Defines targets and the invalidation level, and widens ranges 2x."
       },
       "vix_structure": {
         "weight": 0.15,
-        "values_cited": "VIX 25.29, backwardation -6.8% VX2/VX1",
-        "influence": "Backwardation confirms fear, supports contrarian bullish entry"
+        "values_cited": "VIX 23.68 (quote 24.22), VX2/VX1 -6.3%, backwardation",
+        "influence": "Backwardation signals fear peaks that often precede a bounce, but stress remains."
       },
       "vol_regime": {
-        "weight": 0.25,
-        "values_cited": "EXPLOSIVE regime, 65.5% bullish accuracy, 2x target multiplier",
-        "influence": "Primary driver: mandates TREND_FOLLOWING bias and widened targets"
+        "weight": 0.2,
+        "values_cited": "Explosive regime at 32% confidence; backtested 65.5% bullish-only; CAG 2.40 BULL-DELUDED, Fear z=+4.55",
+        "influence": "Drives the bullish lean and the TREND_FOLLOWING strategy; the low classifier confidence caps conviction."
       },
       "prediction_feedback": {
-        "weight": 0.05,
-        "values_cited": "next_day 0.0% acc (n=8), default to LOW tier",
-        "influence": "Lowers confidence, widens ranges to account for undershoot bias"
+        "weight": 0.12,
+        "values_cited": "Base rate 36.0% (n=25); next-day 0% (n=8); LOW 56% vs MEDIUM 0%; bullish 7.7%",
+        "influence": "Next-day confidence cut by 10 points, LOW tier only, SPY quote reconciled to fix target error."
       },
       "event_trees": {
         "weight": 0.0,
-        "values_cited": "No major event trees active",
-        "influence": "No active event trees this cycle"
+        "values_cited": "No event-tree data provided this cycle",
+        "influence": "Weight is 0 because no inputs were supplied."
       },
       "price_data": {
-        "weight": 0.1,
-        "values_cited": "SPX 7428.56, SPY 740.68, CAG fear z=+4.55",
-        "influence": "Confirms price is near put wall, CAG shows fear dislocation"
+        "weight": 0.18,
+        "values_cited": "SPX 7416.61 \u2192 SPY ~741.66 (quote 737.21, 0.60% gap); regime high_vol_downtrend; 10Y 4.851; DXY 102.18",
+        "influence": "Sets the price anchor and cautions on rates, but the downtrend regime is offset by the fear extreme."
       }
     },
     "weights_sum": 1.0,
-    "reasoning_chain": "EXPLOSIVE vol regime (Negative GEX + Backwardation) mandates TREND_FOLLOWING bias with 65.5% bullish accuracy. CAG indicates historic fear (z=4.55) creating a contrarian entry. Deep ITM call flow ($3.80M on SPY) confirms institutional accumulation despite bearish P/C ratio. Put wall at $7400 provides support; call wall at $7500 caps upside. Feedback loop corrects next-day confidence down to LOW due to 0% accuracy, applying 2x target multiplier to capture wide realized vol."
+    "reasoning_chain": "Negative GEX with VIX backwardation creates an explosive regime, which is backtested bullish-only at 65.5%. CAG at 2.40 with historic Fear (z=+4.55) adds a contrarian bullish edge. Walls at 7400/7450 define the targets and invalidation, and neutral aggregate flow with bullish deep ITM calls does not contradict. Weak recent feedback (36% base rate, 0% next-day) limits confidence to the LOW tier and cuts next-day confidence by 10 points."
   },
-  "generated_at": "2026-11-06T15:00:01Z",
-  "next_update": "2026-11-06T17:00:01Z",
+  "generated_at": "2026-11-06T17:45:01Z",
+  "next_update": "2026-11-06T19:45:01Z",
+  "model_used": "claude-sonnet-5-5",
   "prices_at_generation": {
-    "SPY": 740.68,
-    "QQQ": 662.6,
-    "IWM": 271.98,
-    "AAPL": 342.945,
-    "NVDA": 193.27,
-    "TSLA": 356.131,
-    "META": 615.755,
-    "MSFT": 529.61,
-    "AMD": 456.85,
-    "AMZN": 262.47,
+    "SPY": 737.213,
+    "QQQ": 656.38,
+    "IWM": 273.225,
+    "AAPL": 344.06,
+    "NVDA": 186.34,
+    "TSLA": 358.16,
+    "META": 618.29,
+    "MSFT": 534.885,
+    "AMD": 436.33,
+    "AMZN": 261.67,
     "NKY": 57434.77,
     "KOSPI": 5059.69,
     "TAIEX": 39701.64,
     "TOPIX": 388.6,
-    "GOLD": 4058.2,
-    "SILVER": 52.04,
-    "WTI": 90.67,
-    "BRENT": 97.84,
-    "VIX": 24.75,
-    "10Y_YIELD": 4.876,
-    "30Y_YIELD": 5.27,
-    "3M_YIELD": 4.0,
-    "DXY": 102.228,
-    "captured_at": "2026-11-06T15:00:01Z"
+    "GOLD": 4071.3,
+    "SILVER": 51.96,
+    "WTI": 90.21,
+    "BRENT": 97.56,
+    "VIX": 24.22,
+    "10Y_YIELD": 4.851,
+    "30Y_YIELD": 5.251,
+    "3M_YIELD": 4.003,
+    "DXY": 102.179,
+    "captured_at": "2026-11-06T17:45:01Z"
   },
   "regime": "high_vol_downtrend",
   "signal_snapshot": {
-    "pc_ratio": 1.347,
-    "flow_sentiment": "BEARISH",
-    "top_flow_summary": "LITE $0.1M C, SPY $0.1M P, SPY $0.1M P",
-    "vix": 24.75,
+    "pc_ratio": 0.851,
+    "flow_sentiment": "NEUTRAL",
+    "top_flow_summary": "NDX $0.1M C, MU $0.1M P, NVDA $0.1M P",
+    "vix": 24.22,
     "news_headlines": [
-      "U.S. economy added 165,000 jobs in October, way more than expected; unemployment rate slips to 4.1%",
-      "AMG Critical Materials N.V. 2026 Q3 - Results - Earnings Call Presentation",
-      "Atrium Mortgage Investment Corporation 2026 Q3 - Results - Earnings Call Presentation"
+      "Watch live: Cramer's views on every Club stock. 1 to buy now and others to consider",
+      "Sionna Therapeutics: The Market May Be Wrong About The Science, But Right About The Stock",
+      "Alpha Metallurgical Resources, Inc. (AMR) Q3 2026 Earnings Call Transcript"
     ],
     "regime": "high_vol_downtrend"
   },
   "data_sources": {
     "headlines_count": 25,
-    "trends_count": 9,
+    "trends_count": 10,
     "trends_sample": [
-      "Strong Job Growth and Inflation Concerns",
-      "AI Exuberance and Tech Sector Valuation",
-      "Persistent Earnings Season Volatility"
+      "AI Infrastructure Bubble continues to expand",
+      "Robust US Labor Market Resilience",
+      "Focus on Specialty Biotechnology & Pharma"
     ],
-    "flow_trades": 13198,
+    "flow_trades": 14264,
     "top_trades": 10,
-    "sentiment": "BEARISH",
-    "pc_ratio": 1.347,
+    "sentiment": "NEUTRAL",
+    "pc_ratio": 0.851,
     "price_source": "Yahoo",
     "feedback_patterns": 1,
     "strike_clusters": true
