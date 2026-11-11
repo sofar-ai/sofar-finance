@@ -332,9 +332,17 @@ const AISynthesis = (() => {
             const det = document.getElementById(mc.detId);
             if (sig && m.direction) {
               sig.innerHTML = '<span style="color:' + (mColors[m.direction]||'#f59e0b') + '">' + (mEmojis[m.direction]||'') + ' ' + m.direction + ' (' + m.confidence + '%)</span>';
+              // INPUT_QUALITY_GATE_V1 (SOF-102): amber = degraded badge, red = excluded-from-trading badge
+              const iq = m.input_quality || null;
+              if (m.excluded_from_trading) {
+                sig.innerHTML += ' <span class="iq-badge" style="background:#7f1d1d;color:#fecaca;border-radius:4px;padding:1px 6px;font-size:11px;margin-left:6px" title="Input quality RED — prediction recorded but excluded from the trade constructor and paper book">INPUT RED · NOT TRADED</span>';
+              } else if (m.degraded) {
+                sig.innerHTML += ' <span class="iq-badge" style="background:#78350f;color:#fde68a;border-radius:4px;padding:1px 6px;font-size:11px;margin-left:6px" title="Input quality AMBER — some top features served stale or missing">DEGRADED</span>';
+              }
               det.innerHTML = [
                 '<div class="qc-stat"><span>Horizon</span><span class="qc-val">' + (m.horizon || 'unknown') + '</span></div>',
                 '<div class="qc-stat"><span>Features</span><span class="qc-val">' + (m.signals_used || 0) + '</span></div>',
+                '<div class="qc-stat"><span>Input quality</span><span class="qc-val">' + (iq ? (iq.status.toUpperCase() + ' · ' + (iq.score*100).toFixed(0) + '% of gain with data · ' + iq.n_fresh + ' fresh / ' + iq.n_filled + ' filled / ' + iq.n_missing + ' missing') : 'n/a') + '</span></div>',
                 '<div class="qc-stat"><span>Probability</span><span class="qc-val">' + ((m.probability||0)*100).toFixed(1) + '%</span></div>',
                 '<div class="qc-stat"><span>Data</span><span class="qc-val">' + (m.date || 'n/a') + '</span></div>',
                 '<div class="qc-stat qc-freshness"><span>Updated</span>' + freshness(m.date) + '</div>',
